@@ -6,7 +6,7 @@ import {
   Coffee,
   MapPin,
   Clock,
-  ChevronRight,
+  ChevronLeft,
   PackageOpen,
   CheckCircle2,
   Timer,
@@ -15,8 +15,22 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockTasks, type TaskAssignment } from "@/data/mockData";
 
+const stockItems = [
+  { key: "Soap", label: "סבון" },
+  { key: "Paper Towels", label: "מגבות נייר" },
+  { key: "Sanitizer", label: "חומר חיטוי" },
+  { key: "Trash Bags", label: "שקיות אשפה" },
+];
+
+const issueTypes = [
+  "שפיכה / רצפה רטובה",
+  "נזילה / אינסטלציה",
+  "ציוד שבור",
+  "סכנת בטיחות",
+  "אחר",
+];
+
 const StaffView = () => {
-  // Simulate current staff = Sarah Cohen (s1)
   const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
   const initialIndex = staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
     ? staffAssignments.findIndex((a) => a.status === "in_progress")
@@ -68,8 +82,8 @@ const StaffView = () => {
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="text-center animate-slide-up">
           <CheckCircle2 className="mx-auto mb-4 text-success" size={64} />
-          <h1 className="text-2xl font-bold mb-2">All Tasks Completed!</h1>
-          <p className="text-muted-foreground">Great work today, Sarah.</p>
+          <h1 className="text-2xl font-bold mb-2">כל המשימות הושלמו!</h1>
+          <p className="text-muted-foreground">עבודה מצוינת היום, שרה.</p>
         </div>
       </div>
     );
@@ -84,10 +98,10 @@ const StaffView = () => {
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div>
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">Sarah Cohen</h1>
+          <h1 className="text-lg font-bold">שרה כהן</h1>
         </div>
-        <div className="text-right">
-          <p className="text-xs opacity-75">Progress</p>
+        <div className="text-left">
+          <p className="text-xs opacity-75">התקדמות</p>
           <p className="text-lg font-bold mono">
             {completedCount}/{totalCount}
           </p>
@@ -124,10 +138,10 @@ const StaffView = () => {
                   : "bg-accent/15 text-accent-foreground"
               }`}
             >
-              {current.task.type === "maintenance" ? "Quick Clean" : "Deep Clean"}
+              {current.task.type === "maintenance" ? "ניקוי מהיר" : "ניקוי יסודי"}
             </span>
             <span className="text-xs text-muted-foreground uppercase tracking-wider">
-              Task {currentIndex + 1} of {totalCount}
+              משימה {currentIndex + 1} מתוך {totalCount}
             </span>
           </div>
 
@@ -136,7 +150,7 @@ const StaffView = () => {
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <MapPin size={14} />
               <span className="text-sm">
-                Wing {current.task.zone.wing} · Floor {current.task.zone.floor}
+                אגף {current.task.zone.wing} · קומה {current.task.zone.floor}
               </span>
             </div>
             <h2 className="text-2xl font-bold">{current.task.zone.name}</h2>
@@ -149,11 +163,11 @@ const StaffView = () => {
               <div className="flex items-center gap-2">
                 <Timer size={16} className={isOverdue ? 'text-destructive' : 'text-muted-foreground'} />
                 <span className={`mono text-sm font-medium ${isOverdue ? 'text-destructive' : ''}`}>
-                  {elapsed} min / {current.task.estimatedMinutes} min
+                  {elapsed} דק׳ / {current.task.estimatedMinutes} דק׳
                 </span>
               </div>
               {isOverdue && (
-                <span className="status-badge status-overdue">OVERDUE</span>
+                <span className="status-badge status-overdue">חריגה</span>
               )}
             </div>
             <Progress
@@ -173,7 +187,7 @@ const StaffView = () => {
               }`}
             >
               <Coffee size={16} />
-              {onBreak ? "Resume Work" : "Take Break"}
+              {onBreak ? "חזרה לעבודה" : "הפסקה"}
             </button>
           )}
 
@@ -182,21 +196,21 @@ const StaffView = () => {
             <div className="mb-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                 <PackageOpen size={12} />
-                Stock Check
+                בדיקת מלאי
               </p>
               <div className="flex flex-wrap gap-2">
-                {["Soap", "Paper Towels", "Sanitizer", "Trash Bags"].map((item) => (
+                {stockItems.map(({ key, label }) => (
                   <button
-                    key={item}
-                    onClick={() => toggleStock(item)}
+                    key={key}
+                    onClick={() => toggleStock(key)}
                     className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      stockLowItems.includes(item)
+                      stockLowItems.includes(key)
                         ? "bg-warning/15 border-warning text-warning-foreground"
                         : "border-border text-muted-foreground hover:bg-muted"
                     }`}
                   >
-                    {stockLowItems.includes(item) ? "⚠ " : ""}
-                    {item}
+                    {stockLowItems.includes(key) ? "⚠ " : ""}
+                    {label}
                   </button>
                 ))}
               </div>
@@ -209,12 +223,12 @@ const StaffView = () => {
           {!isRunning ? (
             <button onClick={handleStart} className="btn-action-success w-full flex items-center justify-center gap-3">
               <Play size={24} />
-              START
+              התחל
             </button>
           ) : (
             <button onClick={handleFinish} className="btn-action-primary w-full flex items-center justify-center gap-3">
               <Square size={24} />
-              FINISH
+              סיום
             </button>
           )}
 
@@ -223,26 +237,24 @@ const StaffView = () => {
             className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-destructive text-destructive font-bold transition-colors hover:bg-destructive/10"
           >
             <AlertTriangle size={20} />
-            Report Issue
+            דיווח על תקלה
           </button>
         </div>
 
         {/* Issue panel */}
         {showIssuePanel && (
           <div className="task-card animate-slide-up space-y-2">
-            <p className="font-semibold text-sm mb-3">Select Issue Type:</p>
-            {["Spill / Wet Floor", "Leak / Plumbing", "Broken Equipment", "Safety Hazard", "Other"].map(
-              (issue) => (
-                <button
-                  key={issue}
-                  onClick={() => setShowIssuePanel(false)}
-                  className="w-full text-left px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between"
-                >
-                  <span className="text-sm font-medium">{issue}</span>
-                  <ChevronRight size={16} className="text-muted-foreground" />
-                </button>
-              )
-            )}
+            <p className="font-semibold text-sm mb-3">בחר סוג תקלה:</p>
+            {issueTypes.map((issue) => (
+              <button
+                key={issue}
+                onClick={() => setShowIssuePanel(false)}
+                className="w-full text-right px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between"
+              >
+                <ChevronLeft size={16} className="text-muted-foreground" />
+                <span className="text-sm font-medium">{issue}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>

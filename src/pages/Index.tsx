@@ -1,15 +1,13 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   LayoutDashboard,
   Smartphone,
   Shield,
   Sparkles,
-  ArrowRight,
-  Users,
-  ClipboardCheck,
-  Zap,
+  ArrowLeft,
   Clock,
   CheckCircle2,
+  Zap,
 } from "lucide-react";
 
 const Index = () => {
@@ -21,14 +19,14 @@ const Index = () => {
           <div className="flex items-center gap-2 mb-4">
             <Sparkles size={20} className="text-accent" />
             <span className="text-accent text-sm font-semibold uppercase tracking-wider">
-              Campus Operations
+              ניהול תפעול קמפוס
             </span>
           </div>
           <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tight">
             Clean<span className="text-accent">Flow</span>
           </h1>
           <p className="text-lg md:text-xl opacity-80 max-w-2xl mb-8">
-            Intelligent cleaning logistics for large campus environments. Real-time tracking, smart scheduling, and quality auditing in one platform.
+            לוגיסטיקת ניקיון חכמה לקמפוסים גדולים. מעקב בזמן אמת, תזמון חכם וביקורת איכות בפלטפורמה אחת.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -36,24 +34,24 @@ const Index = () => {
               className="btn-action-success inline-flex items-center gap-2 !text-base !py-3 !px-6"
             >
               <Smartphone size={18} />
-              Staff View
-              <ArrowRight size={16} />
+              תצוגת עובד
+              <ArrowLeft size={16} />
             </Link>
             <Link
               to="/manager"
               className="btn-action-accent inline-flex items-center gap-2 !text-base !py-3 !px-6"
             >
               <LayoutDashboard size={18} />
-              Manager Dashboard
-              <ArrowRight size={16} />
+              לוח בקרה למנהל
+              <ArrowLeft size={16} />
             </Link>
             <Link
               to="/supervisor"
               className="inline-flex items-center gap-2 text-base py-3 px-6 rounded-xl border-2 border-primary-foreground/30 text-primary-foreground font-bold hover:bg-primary-foreground/10 transition-colors"
             >
               <Shield size={18} />
-              Supervisor
-              <ArrowRight size={16} />
+              מפקח
+              <ArrowLeft size={16} />
             </Link>
           </div>
         </div>
@@ -66,9 +64,9 @@ const Index = () => {
             <div className="w-12 h-12 rounded-xl bg-info/15 flex items-center justify-center mb-4">
               <Clock size={24} className="text-info" />
             </div>
-            <h3 className="font-bold text-lg mb-2">Real-Time Tracking</h3>
+            <h3 className="font-bold text-lg mb-2">מעקב בזמן אמת</h3>
             <p className="text-sm text-muted-foreground">
-              Monitor every task in real-time. Automatic SLA alerts when tasks exceed estimated duration by 15%.
+              מעקב אחר כל משימה בזמן אמת. התראות SLA אוטומטיות כאשר משימה חורגת מ-15% מהזמן המוערך.
             </p>
           </div>
 
@@ -76,9 +74,9 @@ const Index = () => {
             <div className="w-12 h-12 rounded-xl bg-success/15 flex items-center justify-center mb-4">
               <CheckCircle2 size={24} className="text-success" />
             </div>
-            <h3 className="font-bold text-lg mb-2">Auto-Sequencing</h3>
+            <h3 className="font-bold text-lg mb-2">רצף אוטומטי</h3>
             <p className="text-sm text-muted-foreground">
-              Tasks auto-advance when completed. Staff see their next assignment instantly — no delays.
+              משימות מתקדמות אוטומטית לאחר השלמה. העובד רואה את המשימה הבאה מיד — ללא עיכובים.
             </p>
           </div>
 
@@ -86,9 +84,9 @@ const Index = () => {
             <div className="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center mb-4">
               <Zap size={24} className="text-accent" />
             </div>
-            <h3 className="font-bold text-lg mb-2">Break-Fix Response</h3>
+            <h3 className="font-bold text-lg mb-2">תגובת חירום</h3>
             <p className="text-sm text-muted-foreground">
-              Supervisors dispatch emergency tasks instantly. High-priority alerts reach available staff in seconds.
+              מפקחים שולחים משימות חירום באופן מיידי. התראות בעדיפות גבוהה מגיעות לעובדים הזמינים תוך שניות.
             </p>
           </div>
         </div>
@@ -98,7 +96,7 @@ const Index = () => {
       <footer className="border-t border-border py-6 px-6">
         <div className="max-w-5xl mx-auto flex items-center justify-between text-sm text-muted-foreground">
           <p>CleanFlow © 2026</p>
-          <p>Campus Cleaning Logistics</p>
+          <p>לוגיסטיקת ניקיון קמפוס</p>
         </div>
       </footer>
     </div>
