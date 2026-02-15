@@ -20,10 +20,12 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockZones, mockAssignments, mockStaff } from "@/data/mockData";
+import DrillDownPanel from "@/components/manager/DrillDownPanel";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 
 const SupervisorView = () => {
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit" | "stock">("dashboard");
+  const [drillDown, setDrillDown] = useState<"staff" | "completed" | "inProgress" | "overdue" | "sla" | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,17 +77,26 @@ const SupervisorView = () => {
           </button>
         </div>
 
-        {activeTab === "dashboard" && <DashboardTab />}
+        {activeTab === "dashboard" && <DashboardTab onDrillDown={setDrillDown} />}
         {activeTab === "breakfix" && <BreakfixTab />}
         {activeTab === "stock" && <StockShortagesTab />}
         {activeTab === "audit" && <AuditTab />}
       </div>
+
+      {drillDown && (
+        <DrillDownPanel
+          type={drillDown}
+          assignments={mockAssignments}
+          staff={mockStaff}
+          onClose={() => setDrillDown(null)}
+        />
+      )}
     </div>
   );
 };
 
 /* ─── Dashboard Tab ─── */
-const DashboardTab = () => {
+const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "completed" | "inProgress" | "overdue" | "sla") => void }) => {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
@@ -123,7 +134,7 @@ const DashboardTab = () => {
     <div className="animate-slide-up space-y-4">
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="kpi-card">
+        <button onClick={() => onDrillDown("staff")} className="kpi-card text-right hover:ring-2 hover:ring-info/30 transition-all cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-info/15 flex items-center justify-center">
               <Users size={20} className="text-info" />
@@ -133,8 +144,8 @@ const DashboardTab = () => {
               <p className="text-xs text-muted-foreground">עובדים פעילים</p>
             </div>
           </div>
-        </div>
-        <div className="kpi-card">
+        </button>
+        <button onClick={() => onDrillDown("completed")} className="kpi-card text-right hover:ring-2 hover:ring-success/30 transition-all cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-success/15 flex items-center justify-center">
               <CheckCircle2 size={20} className="text-success" />
@@ -144,8 +155,8 @@ const DashboardTab = () => {
               <p className="text-xs text-muted-foreground">הושלמו</p>
             </div>
           </div>
-        </div>
-        <div className="kpi-card">
+        </button>
+        <button onClick={() => onDrillDown("inProgress")} className="kpi-card text-right hover:ring-2 hover:ring-accent/30 transition-all cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center">
               <Activity size={20} className="text-accent" />
@@ -155,8 +166,8 @@ const DashboardTab = () => {
               <p className="text-xs text-muted-foreground">בביצוע</p>
             </div>
           </div>
-        </div>
-        <div className="kpi-card">
+        </button>
+        <button onClick={() => onDrillDown("overdue")} className="kpi-card text-right hover:ring-2 hover:ring-destructive/30 transition-all cursor-pointer">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
               <AlertTriangle size={20} className="text-destructive" />
@@ -166,7 +177,7 @@ const DashboardTab = () => {
               <p className="text-xs text-muted-foreground">חריגות</p>
             </div>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Break-fix KPI */}
