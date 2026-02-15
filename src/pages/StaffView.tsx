@@ -145,17 +145,21 @@ const StaffView = () => {
         ))}
       </div>
 
-      {current.isBreakFix && (
-        <div className="mx-4 mb-3 bg-warning/15 border-2 border-warning rounded-xl px-4 py-4 flex items-center gap-3 animate-pulse-slow">
-          <div className="w-12 h-12 rounded-full bg-warning/25 flex items-center justify-center flex-shrink-0">
-            <Zap size={28} className="text-warning" />
+      {(() => {
+        const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
+        if (!pendingBreakFix) return null;
+        return (
+          <div className="mx-4 mb-3 bg-warning/15 border-2 border-warning rounded-xl px-4 py-4 flex items-center gap-3 animate-pulse-slow">
+            <div className="w-12 h-12 rounded-full bg-warning/25 flex items-center justify-center flex-shrink-0">
+              <Zap size={28} className="text-warning" />
+            </div>
+            <div>
+              <p className="text-xl font-black text-warning">טיפול מיידי נדרש!</p>
+              <p className="text-sm text-warning/80">{pendingBreakFix.breakFixDescription || "משימת תקלה בעדיפות גבוהה"}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xl font-black text-warning">טיפול מיידי נדרש!</p>
-            <p className="text-sm text-warning/80">{current.breakFixDescription || "משימת תקלה בעדיפות גבוהה"}</p>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       <div className="px-4 mb-3">
         <PerformanceScore assignments={staffAssignments} />

@@ -94,7 +94,7 @@ export const mockTasks: TaskTemplate[] = [
 export const mockAssignments: TaskAssignment[] = [
   { id: 'a1', staff: mockStaff[0], task: mockTasks[0], date: '2026-02-15', status: 'completed', startedAt: '07:05', completedAt: '07:22', elapsedMinutes: 17, progress: 100 },
   { id: 'a2', staff: mockStaff[0], task: mockTasks[1], date: '2026-02-15', status: 'in_progress', startedAt: '07:30', elapsedMinutes: 12, progress: 65 },
-  { id: 'a3', staff: mockStaff[0], task: mockTasks[6], date: '2026-02-15', status: 'pending', progress: 0 },
+  { id: 'a3', staff: mockStaff[0], task: mockTasks[6], date: '2026-02-15', status: 'pending', progress: 0, isBreakFix: true, breakFixDescription: 'צינור דולף בשירותים קומה 2', breakFixImageUrl: '/placeholder.svg' },
   { id: 'a4', staff: mockStaff[1], task: mockTasks[3], date: '2026-02-15', status: 'overdue', startedAt: '07:00', elapsedMinutes: 75, progress: 80, issues: ['Equipment malfunction'] },
   { id: 'a5', staff: mockStaff[1], task: mockTasks[5], date: '2026-02-15', status: 'pending', progress: 0 },
   { id: 'a6', staff: mockStaff[2], task: mockTasks[2], date: '2026-02-15', status: 'pending', progress: 0 },
