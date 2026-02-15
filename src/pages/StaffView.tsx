@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "@/hooks/use-toast";
 import {
   Play,
   Square,
@@ -109,6 +110,27 @@ const StaffView = () => {
     );
   };
 
+  const overdueAlertSent = useRef(false);
+
+  const taskElapsedMinutes = current ? Math.floor(taskSeconds / 60) : 0;
+  const overdueThreshold = current ? Math.max(Math.round(current.task.estimatedMinutes * 0.15), 2) : 2;
+  const isOverdue = current ? taskElapsedMinutes > current.task.estimatedMinutes + overdueThreshold : false;
+
+  useEffect(() => {
+    if (isOverdue && isRunning && !overdueAlertSent.current && current) {
+      overdueAlertSent.current = true;
+      toast({
+        title: "⚠️ התראת חריגה נשלחה למנהל",
+        description: `${current.task.zone.name} — חריגה של ${taskElapsedMinutes - current.task.estimatedMinutes} דק׳ מעל הזמן המתוכנן`,
+        variant: "destructive",
+      });
+    }
+  }, [isOverdue, isRunning]);
+
+  useEffect(() => {
+    overdueAlertSent.current = false;
+  }, [currentIndex]);
+
   if (screen === "schedule") {
     return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("main")} />;
   }
@@ -132,9 +154,7 @@ const StaffView = () => {
     );
   }
 
-  const taskElapsedMinutes = Math.floor(taskSeconds / 60);
   const progressPercent = Math.min((taskElapsedMinutes / current.task.estimatedMinutes) * 100, 100);
-  const isOverdue = taskElapsedMinutes > current.task.estimatedMinutes * 1.15;
   const taskTimeDisplay = `${String(Math.floor(taskSeconds / 60)).padStart(2, "0")}:${String(taskSeconds % 60).padStart(2, "0")}`;
 
   return (
@@ -262,7 +282,7 @@ const StaffView = () => {
             </div>
           )}
 
-          <div className="mb-6">
+          <div className={`mb-6 ${isOverdue ? 'bg-destructive/10 border border-destructive/30 rounded-xl p-3 animate-pulse-slow' : ''}`}>
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Timer size={16} className={isOverdue ? 'text-destructive' : isRunning ? 'text-success' : 'text-muted-foreground'} />
@@ -271,7 +291,12 @@ const StaffView = () => {
                 </span>
                 <span className="text-xs text-muted-foreground">/ {current.task.estimatedMinutes} דק׳</span>
               </div>
-              {isOverdue && <span className="status-badge status-overdue">חריגה</span>}
+              {isOverdue && (
+                <span className="status-badge status-overdue flex items-center gap-1">
+                  <AlertTriangle size={12} />
+                  חריגה — נשלח למנהל
+                </span>
+              )}
             </div>
             <Progress value={progressPercent} className={`h-3 ${isOverdue ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} />
           </div>
