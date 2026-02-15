@@ -151,6 +151,17 @@ const StaffView = () => {
 
       <div className="flex-1 px-4 pb-4 flex flex-col gap-4">
         <div className={`task-card flex-1 animate-slide-up ${isOverdue ? 'border-destructive border-2' : current.isBreakFix ? 'border-warning border-2' : ''}`}>
+          {current.isBreakFix && (
+            <div className="bg-warning/15 border border-warning/30 rounded-xl px-4 py-3 mb-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center flex-shrink-0">
+                <Zap size={24} className="text-warning" />
+              </div>
+              <div>
+                <p className="text-lg font-black text-warning">טיפול מיידי נדרש!</p>
+                <p className="text-xs text-warning/80">משימת תקלה בעדיפות גבוהה</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             {current.isBreakFix ? (
               <span className="status-badge bg-warning/15 text-warning flex items-center gap-1">
