@@ -90,16 +90,22 @@ const DaySchedule = ({ assignments, currentIndex, onClose }: DayScheduleProps) =
                   <div className="flex items-center justify-between mb-1">
                     <p className="font-semibold text-sm truncate">{a.task.zone.name}</p>
                     {sched && (
-                      <span className="mono text-xs text-muted-foreground">{sched.plannedStart}</span>
+                      <span className="mono text-xs text-muted-foreground">{sched.plannedStart} – {sched.plannedEnd}</span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mb-1">{a.task.name}</p>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                     <span className="flex items-center gap-1">
                       <MapPin size={11} />
                       אגף {a.task.zone.wing}
                     </span>
                     <span className="mono">{a.task.estimatedMinutes} דק׳</span>
+                    {a.startedAt && (
+                      <span className="mono">התחלה: {a.startedAt}</span>
+                    )}
+                    {a.completedAt && (
+                      <span className="mono text-success">סיום: {a.completedAt}</span>
+                    )}
                     {a.elapsedMinutes !== undefined && a.status === "completed" && (
                       <span className={`mono ${a.elapsedMinutes > a.task.estimatedMinutes * 1.15 ? "text-destructive" : "text-success"}`}>
                         בפועל: {a.elapsedMinutes} דק׳

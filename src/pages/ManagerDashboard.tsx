@@ -245,9 +245,13 @@ const ManagerDashboard = () => {
                       </div>
 
                       {currentTask ? (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                           <MapPin size={12} />
                           <span>{currentTask.task.zone.name}</span>
+                          <span>·</span>
+                          {currentTask.startedAt && (
+                            <span className="mono">התחלה: {currentTask.startedAt}</span>
+                          )}
                           <span>·</span>
                           <Clock size={12} />
                           <span className="mono">

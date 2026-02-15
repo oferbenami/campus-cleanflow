@@ -1,9 +1,14 @@
 // Scheduled times for staff assignments (mock data enrichment)
-// Maps assignment ID to planned start time
+// Maps assignment ID to planned start/end time
 export const scheduledTimes: Record<string, { plannedStart: string; plannedEnd: string }> = {
   a1: { plannedStart: "07:00", plannedEnd: "07:20" },
   a2: { plannedStart: "07:25", plannedEnd: "07:40" },
   a3: { plannedStart: "07:45", plannedEnd: "07:55" },
+  a4: { plannedStart: "07:00", plannedEnd: "08:00" },
+  a5: { plannedStart: "08:10", plannedEnd: "08:40" },
+  a6: { plannedStart: "07:00", plannedEnd: "07:45" },
+  a7: { plannedStart: "07:15", plannedEnd: "07:55" },
+  a8: { plannedStart: "07:30", plannedEnd: "07:55" },
 };
 
 export function getPlannedMinutesUpToNow(

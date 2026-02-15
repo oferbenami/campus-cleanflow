@@ -49,6 +49,8 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
     planned: a.task.estimatedMinutes,
     actual: a.elapsedMinutes ?? "-",
     status: a.status,
+    startedAt: a.startedAt || "-",
+    completedAt: a.completedAt || "-",
     diff:
       a.elapsedMinutes !== undefined
         ? a.elapsedMinutes - a.task.estimatedMinutes
@@ -136,8 +138,9 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
             <thead>
               <tr className="border-b border-border text-right">
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מיקום</th>
-                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מתוכנן</th>
-                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">בפועל</th>
+                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">התחלה</th>
+                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סיום</th>
+                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">משך (דק׳)</th>
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">הפרש</th>
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סטטוס</th>
               </tr>
@@ -146,8 +149,9 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
               {tableData.map((row, i) => (
                 <tr key={i} className="border-b border-border/50">
                   <td className="py-2 px-2 text-xs font-medium truncate max-w-[100px]">{row.zone}</td>
-                  <td className="py-2 px-2 mono text-xs">{row.planned} דק׳</td>
-                  <td className="py-2 px-2 mono text-xs">{row.actual === "-" ? "-" : `${row.actual} דק׳`}</td>
+                  <td className="py-2 px-2 mono text-xs">{row.startedAt}</td>
+                  <td className="py-2 px-2 mono text-xs">{row.completedAt}</td>
+                  <td className="py-2 px-2 mono text-xs">{row.actual === "-" ? "-" : `${row.actual}`}</td>
                   <td className={`py-2 px-2 mono text-xs ${
                     row.diff === null ? "" : row.diff > 0 ? "text-destructive" : "text-success"
                   }`}>
