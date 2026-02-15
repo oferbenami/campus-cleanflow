@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, type TaskAssignment } from "@/data/mockData";
+import { scheduledTimes } from "@/data/staffSchedule";
 import NextTaskPreview from "@/components/staff/NextTaskPreview";
 import PerformanceScore from "@/components/staff/PerformanceScore";
 import DaySchedule from "@/components/staff/DaySchedule";
@@ -200,6 +201,11 @@ const StaffView = () => {
             </div>
             <h2 className="text-2xl font-bold">{current.task.zone.name}</h2>
             <p className="text-muted-foreground mt-1">{current.task.name}</p>
+            {scheduledTimes[current.id] && (
+              <p className="text-sm mono text-muted-foreground mt-1">
+                מתוכנן: {scheduledTimes[current.id].plannedStart} – {scheduledTimes[current.id].plannedEnd}
+              </p>
+            )}
           </div>
 
           {/* Timer */}

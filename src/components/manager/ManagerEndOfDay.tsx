@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Legend,
 } from "recharts";
 import { mockAssignments, mockStaff, type TaskAssignment, type StaffMember } from "@/data/mockData";
+import { scheduledTimes } from "@/data/staffSchedule";
 
 interface ManagerEndOfDayProps {
   onClose: () => void;
@@ -282,7 +283,9 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מיקום</th>
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סוג</th>
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מתוכנן</th>
-                  <th className="py-2 px-2 text-xs text-muted-foreground font-medium">בפועל</th>
+                  <th className="py-2 px-2 text-xs text-muted-foreground font-medium">התחלה</th>
+                  <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סיום</th>
+                  <th className="py-2 px-2 text-xs text-muted-foreground font-medium">משך</th>
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">הפרש</th>
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סטטוס</th>
                   <th className="py-2 px-2 text-xs text-muted-foreground font-medium">SLA</th>
@@ -292,12 +295,15 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                 {assignments.map((a) => {
                   const diff = a.elapsedMinutes !== undefined ? a.elapsedMinutes - a.task.estimatedMinutes : null;
                   const breached = a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15;
+                  const sched = scheduledTimes[a.id];
                   return (
                     <tr key={a.id} className="border-b border-border/50">
                       <td className="py-2 px-2 text-xs font-medium">{a.staff.name}</td>
                       <td className="py-2 px-2 text-xs truncate max-w-[100px]">{a.task.zone.name}</td>
                       <td className="py-2 px-2 text-xs">{a.task.type === "maintenance" ? "מהיר" : "יסודי"}</td>
-                      <td className="py-2 px-2 mono text-xs">{a.task.estimatedMinutes} דק׳</td>
+                      <td className="py-2 px-2 mono text-xs">{sched ? `${sched.plannedStart}–${sched.plannedEnd}` : `${a.task.estimatedMinutes} דק׳`}</td>
+                      <td className="py-2 px-2 mono text-xs">{a.startedAt || "-"}</td>
+                      <td className="py-2 px-2 mono text-xs">{a.completedAt || "-"}</td>
                       <td className="py-2 px-2 mono text-xs">{a.elapsedMinutes !== undefined ? `${a.elapsedMinutes} דק׳` : "-"}</td>
                       <td className={`py-2 px-2 mono text-xs ${diff === null ? "" : diff > 0 ? "text-destructive" : "text-success"}`}>
                         {diff === null ? "-" : diff > 0 ? `+${diff}` : diff}

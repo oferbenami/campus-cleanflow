@@ -19,7 +19,7 @@ const NextTaskPreview = ({ assignment }: NextTaskPreviewProps) => {
         {sched && (
           <span className="text-xs mono text-muted-foreground flex items-center gap-1">
             <Clock size={12} />
-            {sched.plannedStart}
+            {sched.plannedStart} – {sched.plannedEnd}
           </span>
         )}
       </div>

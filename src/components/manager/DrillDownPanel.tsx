@@ -1,5 +1,6 @@
 import { ArrowRight, MapPin, Clock, AlertTriangle, CheckCircle2, Play, Timer } from "lucide-react";
 import type { TaskAssignment, StaffMember } from "@/data/mockData";
+import { scheduledTimes } from "@/data/staffSchedule";
 
 type DrillDownType = "staff" | "completed" | "inProgress" | "overdue" | "sla";
 
@@ -83,6 +84,7 @@ const DrillDownPanel = ({ type, assignments, staff, onClose }: DrillDownPanelPro
 
 const AssignmentRow = ({ assignment: a }: { assignment: TaskAssignment }) => {
   const isOvertime = a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15;
+  const sched = scheduledTimes[a.id];
   return (
     <div className={`rounded-xl border p-4 ${isOvertime ? "grid-row-overdue" : "border-border"}`}>
       <div className="flex items-center justify-between mb-2">
@@ -96,17 +98,31 @@ const AssignmentRow = ({ assignment: a }: { assignment: TaskAssignment }) => {
           </span>
           <span className="text-xs text-muted-foreground">{a.staff.name}</span>
         </div>
-        {a.elapsedMinutes !== undefined && (
-          <span className="mono text-xs text-muted-foreground flex items-center gap-1">
-            <Timer size={12} />
-            {a.elapsedMinutes}/{a.task.estimatedMinutes} דק׳
-          </span>
-        )}
       </div>
       <p className="font-semibold text-sm">{a.task.name}</p>
       <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
         <MapPin size={11} />
         <span>{a.task.zone.name} · אגף {a.task.zone.wing} · קומה {a.task.zone.floor}</span>
+      </div>
+      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2 flex-wrap">
+        {sched && (
+          <span className="mono flex items-center gap-1">
+            <Clock size={11} />
+            מתוכנן: {sched.plannedStart} – {sched.plannedEnd}
+          </span>
+        )}
+        {a.startedAt && (
+          <span className="mono">התחלה: {a.startedAt}</span>
+        )}
+        {a.completedAt && (
+          <span className="mono text-success">סיום: {a.completedAt}</span>
+        )}
+        {a.elapsedMinutes !== undefined && (
+          <span className="mono flex items-center gap-1">
+            <Timer size={11} />
+            {a.elapsedMinutes}/{a.task.estimatedMinutes} דק׳
+          </span>
+        )}
       </div>
       {a.issues && a.issues.length > 0 && (
         <div className="mt-2 flex gap-1.5 flex-wrap">
@@ -161,8 +177,9 @@ const SLATable = ({ assignments }: { assignments: TaskAssignment[] }) => {
             <tr className="border-b border-border text-right">
               <th className="py-2 px-2 text-xs text-muted-foreground font-medium">עובד</th>
               <th className="py-2 px-2 text-xs text-muted-foreground font-medium">משימה</th>
-              <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מתוכנן</th>
-              <th className="py-2 px-2 text-xs text-muted-foreground font-medium">בפועל</th>
+              <th className="py-2 px-2 text-xs text-muted-foreground font-medium">התחלה</th>
+              <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סיום</th>
+              <th className="py-2 px-2 text-xs text-muted-foreground font-medium">משך</th>
               <th className="py-2 px-2 text-xs text-muted-foreground font-medium">הפרש</th>
               <th className="py-2 px-2 text-xs text-muted-foreground font-medium">SLA</th>
             </tr>
@@ -172,8 +189,9 @@ const SLATable = ({ assignments }: { assignments: TaskAssignment[] }) => {
               <tr key={r.id} className="border-b border-border/50">
                 <td className="py-2 px-2 text-xs font-medium">{r.staff.name}</td>
                 <td className="py-2 px-2 text-xs truncate max-w-[120px]">{r.task.zone.name}</td>
-                <td className="py-2 px-2 mono text-xs">{r.task.estimatedMinutes} דק׳</td>
-                <td className="py-2 px-2 mono text-xs">{r.elapsedMinutes} דק׳</td>
+                <td className="py-2 px-2 mono text-xs">{r.startedAt || "-"}</td>
+                <td className="py-2 px-2 mono text-xs">{r.completedAt || "-"}</td>
+                <td className="py-2 px-2 mono text-xs">{r.elapsedMinutes}/{r.task.estimatedMinutes} דק׳</td>
                 <td className={`py-2 px-2 mono text-xs ${r.diff > 0 ? "text-destructive" : "text-success"}`}>
                   {r.diff > 0 ? `+${r.diff}` : r.diff}
                 </td>
