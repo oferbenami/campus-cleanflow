@@ -221,6 +221,78 @@ export type Database = {
           },
         ]
       }
+      task_set_items: {
+        Row: {
+          created_at: string
+          id: string
+          planned_end: string
+          planned_start: string
+          sequence_order: number
+          set_template_id: string
+          task_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          planned_end?: string
+          planned_start?: string
+          sequence_order?: number
+          set_template_id: string
+          task_template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          planned_end?: string
+          planned_start?: string
+          sequence_order?: number
+          set_template_id?: string
+          task_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_set_items_set_template_id_fkey"
+            columns: ["set_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_set_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_set_items_task_template_id_fkey"
+            columns: ["task_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      task_set_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          shift: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          shift?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          shift?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       task_templates: {
         Row: {
           created_at: string
