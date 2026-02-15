@@ -1,74 +1,330 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
-  MapPin,
   Star,
   Send,
   ClipboardCheck,
   Zap,
   CheckCircle2,
+  Users,
+  Activity,
+  BarChart3,
+  Coffee,
+  MapPin,
+  Clock,
+  TrendingUp,
 } from "lucide-react";
-import { mockZones, mockAssignments } from "@/data/mockData";
+import { Progress } from "@/components/ui/progress";
+import { mockZones, mockAssignments, mockStaff } from "@/data/mockData";
+import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 
 const SupervisorView = () => {
-  const [activeTab, setActiveTab] = useState<"breakfix" | "audit">("breakfix");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit">("dashboard");
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="bg-primary text-primary-foreground px-4 py-3">
+        <div className="max-w-3xl mx-auto">
+          <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
+          <h1 className="text-lg font-bold">פאנל מפקח</h1>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto p-4">
+        {/* Tabs */}
+        <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6">
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === "dashboard" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            <BarChart3 size={16} />
+            לוח בקרה
+          </button>
+          <button
+            onClick={() => setActiveTab("breakfix")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === "breakfix" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            <Zap size={16} />
+            חירום
+          </button>
+          <button
+            onClick={() => setActiveTab("audit")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === "audit" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            <ClipboardCheck size={16} />
+            ביקורת
+          </button>
+        </div>
+
+        {activeTab === "dashboard" && <DashboardTab />}
+        {activeTab === "breakfix" && <BreakfixTab />}
+        {activeTab === "audit" && <AuditTab />}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Dashboard Tab ─── */
+const DashboardTab = () => {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const activeStaff = mockStaff.filter((s) => s.role === "staff");
+  const totalTasks = mockAssignments.length;
+  const completedTasks = mockAssignments.filter((a) => a.status === "completed").length;
+  const inProgress = mockAssignments.filter((a) => a.status === "in_progress").length;
+  const overdueTasks = mockAssignments.filter((a) => a.status === "overdue").length;
+
+  // Progress score: what % of planned-by-now is done
+  const { shouldBeCompleted } = getPlannedMinutesUpToNow(
+    mockAssignments,
+    now.getHours(),
+    now.getMinutes()
+  );
+  const completedMinutes = mockAssignments
+    .filter((a) => a.status === "completed")
+    .reduce((s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes), 0);
+  const progressScore = shouldBeCompleted > 0
+    ? Math.min(Math.round((completedMinutes / shouldBeCompleted) * 100), 100)
+    : completedTasks > 0 ? 100 : 0;
+
+  const staffGroups = activeStaff.map((staff) => ({
+    staff,
+    assignments: mockAssignments.filter((a) => a.staff.id === staff.id),
+  }));
+
+  return (
+    <div className="animate-slide-up space-y-4">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="kpi-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-info/15 flex items-center justify-center">
+              <Users size={20} className="text-info" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{activeStaff.length}</p>
+              <p className="text-xs text-muted-foreground">עובדים פעילים</p>
+            </div>
+          </div>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-success/15 flex items-center justify-center">
+              <CheckCircle2 size={20} className="text-success" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{completedTasks}/{totalTasks}</p>
+              <p className="text-xs text-muted-foreground">הושלמו</p>
+            </div>
+          </div>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-accent/15 flex items-center justify-center">
+              <Activity size={20} className="text-accent" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{inProgress}</p>
+              <p className="text-xs text-muted-foreground">בביצוע</p>
+            </div>
+          </div>
+        </div>
+        <div className="kpi-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-destructive/15 flex items-center justify-center">
+              <AlertTriangle size={20} className="text-destructive" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{overdueTasks}</p>
+              <p className="text-xs text-muted-foreground">חריגות</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Score */}
+      <div className="kpi-card">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp size={16} className="text-success" />
+          <h3 className="text-sm font-semibold">ציון מקדמות</h3>
+          <span className="text-[10px] text-muted-foreground mono mr-auto">
+            עדכון: {now.getHours().toString().padStart(2, "0")}:{now.getMinutes().toString().padStart(2, "0")}
+          </span>
+        </div>
+        <div className="flex items-center gap-4">
+          <p className={`text-3xl font-bold mono ${progressScore >= 90 ? "text-success" : progressScore >= 70 ? "text-warning" : "text-destructive"}`}>
+            {progressScore}%
+          </p>
+          <Progress
+            value={progressScore}
+            className={`flex-1 h-3 ${progressScore >= 90 ? "[&>div]:bg-success" : progressScore >= 70 ? "[&>div]:bg-warning" : "[&>div]:bg-destructive"}`}
+          />
+        </div>
+      </div>
+
+      {/* Staff tracking */}
+      <div className="task-card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold flex items-center gap-2">
+            <BarChart3 size={16} />
+            מעקב עובדים
+          </h2>
+          <span className="status-badge status-active">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            חי
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {staffGroups.map(({ staff, assignments }) => {
+            const done = assignments.filter((a) => a.status === "completed").length;
+            const total = assignments.length;
+            const pct = total > 0 ? (done / total) * 100 : 0;
+            const currentTask = assignments.find((a) => a.status === "in_progress");
+            const hasOverdue = assignments.some((a) => a.status === "overdue");
+
+            return (
+              <div
+                key={staff.id}
+                className={`rounded-xl border p-3 ${hasOverdue ? "grid-row-overdue" : "border-border"}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
+                      staff.status === "active"
+                        ? "bg-primary text-primary-foreground"
+                        : staff.status === "break"
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {staff.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="font-semibold text-sm">{staff.name}</p>
+                      {staff.status === "break" && (
+                        <span className="status-badge status-pending text-[10px]">
+                          <Coffee size={10} /> הפסקה
+                        </span>
+                      )}
+                      {hasOverdue && (
+                        <span className="status-badge status-overdue text-[10px]">
+                          <AlertTriangle size={10} /> SLA
+                        </span>
+                      )}
+                    </div>
+                    {currentTask ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <MapPin size={11} />
+                        <span>{currentTask.task.zone.name}</span>
+                        <span>·</span>
+                        <Clock size={11} />
+                        <span className="mono">{currentTask.elapsedMinutes} / {currentTask.task.estimatedMinutes} דק׳</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        {done === total ? "כל המשימות הושלמו" : "ממתין"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="w-20 text-left">
+                    <p className="text-xs text-muted-foreground mono mb-0.5">{done}/{total}</p>
+                    <Progress value={pct} className="h-1.5" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Break-Fix Tab ─── */
+const BreakfixTab = () => {
   const [selectedZone, setSelectedZone] = useState("");
   const [breakfixDesc, setBreakfixDesc] = useState("");
   const [breakfixSent, setBreakfixSent] = useState(false);
 
+  const handleSubmit = () => {
+    setBreakfixSent(true);
+    setTimeout(() => { setBreakfixSent(false); setSelectedZone(""); setBreakfixDesc(""); }, 2000);
+  };
+
+  return (
+    <div className="animate-slide-up space-y-4">
+      <div className="task-card">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle size={20} className="text-destructive" />
+          <h2 className="font-bold">משימת חירום</h2>
+        </div>
+        <label className="block mb-4">
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">מיקום</span>
+          <select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)}
+            className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">בחר מיקום...</option>
+            {mockZones.map((z) => (
+              <option key={z.id} value={z.id}>{z.name} (אגף {z.wing}, קומה {z.floor})</option>
+            ))}
+          </select>
+        </label>
+        <label className="block mb-4">
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">תיאור</span>
+          <textarea value={breakfixDesc} onChange={(e) => setBreakfixDesc(e.target.value)}
+            placeholder="תאר את מצב החירום..." rows={3}
+            className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
+        </label>
+        {breakfixSent ? (
+          <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
+            <CheckCircle2 size={20} /> משימת חירום נשלחה!
+          </div>
+        ) : (
+          <button onClick={handleSubmit} disabled={!selectedZone || !breakfixDesc}
+            className="btn-action-danger w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+            <Send size={18} /> שלח משימת חירום
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Audit Tab ─── */
+const AuditTab = () => {
   const completedTasks = mockAssignments.filter((a) => a.status === "completed");
   const [selectedTask, setSelectedTask] = useState("");
-  const [ratings, setRatings] = useState({
-    cleanliness: 0,
-    thoroughness: 0,
-    timeliness: 0,
-    supplies: 0,
-    safety: 0,
-  });
+  const [ratings, setRatings] = useState({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
   const [auditNotes, setAuditNotes] = useState("");
   const [auditSent, setAuditSent] = useState(false);
 
-  const handleBreakfixSubmit = () => {
-    setBreakfixSent(true);
-    setTimeout(() => {
-      setBreakfixSent(false);
-      setSelectedZone("");
-      setBreakfixDesc("");
-    }, 2000);
-  };
-
-  const handleAuditSubmit = () => {
+  const handleSubmit = () => {
     setAuditSent(true);
     setTimeout(() => {
-      setAuditSent(false);
-      setSelectedTask("");
+      setAuditSent(false); setSelectedTask("");
       setRatings({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
       setAuditNotes("");
     }, 2000);
   };
 
-  const StarRating = ({
-    value,
-    onChange,
-    label,
-  }: {
-    value: number;
-    onChange: (v: number) => void;
-    label: string;
-  }) => (
+  const StarRating = ({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) => (
     <div className="flex items-center justify-between py-2">
       <span className="text-sm font-medium">{label}</span>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            onClick={() => onChange(star)}
-            className="transition-colors"
-          >
-            <Star
-              size={22}
-              className={star <= value ? "text-accent fill-accent" : "text-muted"}
-            />
+          <button key={star} onClick={() => onChange(star)} className="transition-colors">
+            <Star size={22} className={star <= value ? "text-accent fill-accent" : "text-muted"} />
           </button>
         ))}
       </div>
@@ -76,190 +332,48 @@ const SupervisorView = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground px-4 py-3">
-        <div className="max-w-2xl mx-auto">
-          <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">פאנל מפקח</h1>
+    <div className="animate-slide-up space-y-4">
+      <div className="task-card">
+        <div className="flex items-center gap-2 mb-4">
+          <ClipboardCheck size={20} className="text-info" />
+          <h2 className="font-bold">בדיקת איכות</h2>
         </div>
-      </header>
-
-      <div className="max-w-2xl mx-auto p-4">
-        {/* Tabs */}
-        <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6">
-          <button
-            onClick={() => setActiveTab("breakfix")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "breakfix"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Zap size={16} />
-            תיקון חירום
-          </button>
-          <button
-            onClick={() => setActiveTab("audit")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "audit"
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground"
-            }`}
-          >
-            <ClipboardCheck size={16} />
-            ביקורת איכות
-          </button>
-        </div>
-
-        {/* Break-Fix Tab */}
-        {activeTab === "breakfix" && (
-          <div className="animate-slide-up space-y-4">
-            <div className="task-card">
-              <div className="flex items-center gap-2 mb-4">
-                <AlertTriangle size={20} className="text-destructive" />
-                <h2 className="font-bold">משימת חירום</h2>
-              </div>
-
-              <label className="block mb-4">
-                <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  מיקום
-                </span>
-                <select
-                  value={selectedZone}
-                  onChange={(e) => setSelectedZone(e.target.value)}
-                  className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">בחר מיקום...</option>
-                  {mockZones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name} (אגף {z.wing}, קומה {z.floor})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block mb-4">
-                <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  תיאור
-                </span>
-                <textarea
-                  value={breakfixDesc}
-                  onChange={(e) => setBreakfixDesc(e.target.value)}
-                  placeholder="תאר את מצב החירום..."
-                  rows={3}
-                  className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                />
-              </label>
-
-              {breakfixSent ? (
-                <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-                  <CheckCircle2 size={20} />
-                  משימת חירום נשלחה!
-                </div>
-              ) : (
-                <button
-                  onClick={handleBreakfixSubmit}
-                  disabled={!selectedZone || !breakfixDesc}
-                  className="btn-action-danger w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send size={18} />
-                  שלח משימת חירום
-                </button>
-              )}
+        <label className="block mb-4">
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">בחר משימה שהושלמה</span>
+          <select value={selectedTask} onChange={(e) => setSelectedTask(e.target.value)}
+            className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="">בחר משימה...</option>
+            {completedTasks.map((a) => (
+              <option key={a.id} value={a.id}>{a.task.name} — {a.staff.name} ({a.completedAt})</option>
+            ))}
+          </select>
+        </label>
+        {selectedTask && (
+          <>
+            <div className="border-t border-border pt-4 space-y-1">
+              <StarRating label="ניקיון" value={ratings.cleanliness} onChange={(v) => setRatings((r) => ({ ...r, cleanliness: v }))} />
+              <StarRating label="יסודיות" value={ratings.thoroughness} onChange={(v) => setRatings((r) => ({ ...r, thoroughness: v }))} />
+              <StarRating label="עמידה בזמנים" value={ratings.timeliness} onChange={(v) => setRatings((r) => ({ ...r, timeliness: v }))} />
+              <StarRating label="ציוד וחומרים" value={ratings.supplies} onChange={(v) => setRatings((r) => ({ ...r, supplies: v }))} />
+              <StarRating label="בטיחות" value={ratings.safety} onChange={(v) => setRatings((r) => ({ ...r, safety: v }))} />
             </div>
-          </div>
-        )}
-
-        {/* Audit Tab */}
-        {activeTab === "audit" && (
-          <div className="animate-slide-up space-y-4">
-            <div className="task-card">
-              <div className="flex items-center gap-2 mb-4">
-                <ClipboardCheck size={20} className="text-info" />
-                <h2 className="font-bold">בדיקת איכות</h2>
+            <label className="block my-4">
+              <span className="text-sm font-medium text-muted-foreground mb-1.5 block">הערות (אופציונלי)</span>
+              <textarea value={auditNotes} onChange={(e) => setAuditNotes(e.target.value)}
+                placeholder="הערות נוספות..." rows={2}
+                className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
+            </label>
+            {auditSent ? (
+              <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
+                <CheckCircle2 size={20} /> הביקורת נשלחה!
               </div>
-
-              <label className="block mb-4">
-                <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  בחר משימה שהושלמה
-                </span>
-                <select
-                  value={selectedTask}
-                  onChange={(e) => setSelectedTask(e.target.value)}
-                  className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="">בחר משימה...</option>
-                  {completedTasks.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.task.name} — {a.staff.name} ({a.completedAt})
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {selectedTask && (
-                <>
-                  <div className="border-t border-border pt-4 space-y-1">
-                    <StarRating
-                      label="ניקיון"
-                      value={ratings.cleanliness}
-                      onChange={(v) => setRatings((r) => ({ ...r, cleanliness: v }))}
-                    />
-                    <StarRating
-                      label="יסודיות"
-                      value={ratings.thoroughness}
-                      onChange={(v) => setRatings((r) => ({ ...r, thoroughness: v }))}
-                    />
-                    <StarRating
-                      label="עמידה בזמנים"
-                      value={ratings.timeliness}
-                      onChange={(v) => setRatings((r) => ({ ...r, timeliness: v }))}
-                    />
-                    <StarRating
-                      label="ציוד וחומרים"
-                      value={ratings.supplies}
-                      onChange={(v) => setRatings((r) => ({ ...r, supplies: v }))}
-                    />
-                    <StarRating
-                      label="בטיחות"
-                      value={ratings.safety}
-                      onChange={(v) => setRatings((r) => ({ ...r, safety: v }))}
-                    />
-                  </div>
-
-                  <label className="block my-4">
-                    <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                      הערות (אופציונלי)
-                    </span>
-                    <textarea
-                      value={auditNotes}
-                      onChange={(e) => setAuditNotes(e.target.value)}
-                      placeholder="הערות נוספות..."
-                      rows={2}
-                      className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
-                    />
-                  </label>
-
-                  {auditSent ? (
-                    <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-                      <CheckCircle2 size={20} />
-                      הביקורת נשלחה!
-                    </div>
-                  ) : (
-                    <button
-                      onClick={handleAuditSubmit}
-                      disabled={Object.values(ratings).some((v) => v === 0)}
-                      className="btn-action-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Send size={18} />
-                      שלח ביקורת
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
+            ) : (
+              <button onClick={handleSubmit} disabled={Object.values(ratings).some((v) => v === 0)}
+                className="btn-action-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                <Send size={18} /> שלח ביקורת
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
