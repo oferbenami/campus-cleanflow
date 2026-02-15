@@ -161,7 +161,8 @@
   }
 
   .grid-row-overdue {
-    @apply bg-destructive/8 border-l-4 border-l-destructive;
+    background-color: hsl(var(--destructive) / 0.08);
+    @apply border-l-4 border-l-destructive;
   }
 
   .mono {
