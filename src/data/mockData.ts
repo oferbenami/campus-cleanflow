@@ -1,0 +1,96 @@
+// Mock data for the CleanFlow application
+
+export interface Zone {
+  id: string;
+  name: string;
+  wing: string;
+  floor: string;
+  roomType: string;
+}
+
+export interface TaskTemplate {
+  id: string;
+  name: string;
+  type: 'maintenance' | 'deep_clean';
+  shift: 'morning' | 'evening';
+  estimatedMinutes: number;
+  zone: Zone;
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  avatar: string;
+  role: 'staff' | 'supervisor' | 'manager';
+  status: 'active' | 'idle' | 'break' | 'offline';
+}
+
+export interface TaskAssignment {
+  id: string;
+  staff: StaffMember;
+  task: TaskTemplate;
+  date: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'overdue';
+  startedAt?: string;
+  completedAt?: string;
+  elapsedMinutes?: number;
+  progress: number; // 0-100
+  issues?: string[];
+  stockLow?: string[];
+}
+
+export interface AuditEntry {
+  id: string;
+  taskAssignment: TaskAssignment;
+  ratings: {
+    cleanliness: number;
+    thoroughness: number;
+    timeliness: number;
+    supplies: number;
+    safety: number;
+  };
+  notes?: string;
+  createdAt: string;
+}
+
+export const mockZones: Zone[] = [
+  { id: 'z1', name: 'Main Lobby', wing: 'A', floor: '1', roomType: 'Lobby' },
+  { id: 'z2', name: 'Conference Room A1', wing: 'A', floor: '1', roomType: 'Meeting Room' },
+  { id: 'z3', name: 'Restroom A1-M', wing: 'A', floor: '1', roomType: 'Restroom' },
+  { id: 'z4', name: 'Cafeteria', wing: 'B', floor: '1', roomType: 'Dining' },
+  { id: 'z5', name: 'Lab 201', wing: 'B', floor: '2', roomType: 'Laboratory' },
+  { id: 'z6', name: 'Office Wing C', wing: 'C', floor: '2', roomType: 'Open Office' },
+  { id: 'z7', name: 'Restroom B2-F', wing: 'B', floor: '2', roomType: 'Restroom' },
+  { id: 'z8', name: 'Server Room', wing: 'A', floor: '3', roomType: 'Technical' },
+];
+
+export const mockStaff: StaffMember[] = [
+  { id: 's1', name: 'Sarah Cohen', avatar: 'SC', role: 'staff', status: 'active' },
+  { id: 's2', name: 'David Levi', avatar: 'DL', role: 'staff', status: 'active' },
+  { id: 's3', name: 'Maya Katz', avatar: 'MK', role: 'staff', status: 'break' },
+  { id: 's4', name: 'Oren Mor', avatar: 'OM', role: 'staff', status: 'active' },
+  { id: 's5', name: 'Noa Peretz', avatar: 'NP', role: 'staff', status: 'idle' },
+  { id: 's6', name: 'Yael Shapira', avatar: 'YS', role: 'supervisor', status: 'active' },
+];
+
+export const mockTasks: TaskTemplate[] = [
+  { id: 't1', name: 'Quick Clean - Lobby', type: 'maintenance', shift: 'morning', estimatedMinutes: 20, zone: mockZones[0] },
+  { id: 't2', name: 'Sanitize Conference Room', type: 'maintenance', shift: 'morning', estimatedMinutes: 15, zone: mockZones[1] },
+  { id: 't3', name: 'Deep Clean Restroom', type: 'deep_clean', shift: 'evening', estimatedMinutes: 45, zone: mockZones[2] },
+  { id: 't4', name: 'Cafeteria Full Service', type: 'deep_clean', shift: 'evening', estimatedMinutes: 60, zone: mockZones[3] },
+  { id: 't5', name: 'Lab Sterilization', type: 'deep_clean', shift: 'evening', estimatedMinutes: 40, zone: mockZones[4] },
+  { id: 't6', name: 'Office Vacuuming', type: 'maintenance', shift: 'morning', estimatedMinutes: 30, zone: mockZones[5] },
+  { id: 't7', name: 'Restroom Quick Check', type: 'maintenance', shift: 'morning', estimatedMinutes: 10, zone: mockZones[6] },
+  { id: 't8', name: 'Server Room Dusting', type: 'maintenance', shift: 'morning', estimatedMinutes: 25, zone: mockZones[7] },
+];
+
+export const mockAssignments: TaskAssignment[] = [
+  { id: 'a1', staff: mockStaff[0], task: mockTasks[0], date: '2026-02-15', status: 'completed', startedAt: '07:05', completedAt: '07:22', elapsedMinutes: 17, progress: 100 },
+  { id: 'a2', staff: mockStaff[0], task: mockTasks[1], date: '2026-02-15', status: 'in_progress', startedAt: '07:30', elapsedMinutes: 12, progress: 65 },
+  { id: 'a3', staff: mockStaff[0], task: mockTasks[6], date: '2026-02-15', status: 'pending', progress: 0 },
+  { id: 'a4', staff: mockStaff[1], task: mockTasks[3], date: '2026-02-15', status: 'overdue', startedAt: '07:00', elapsedMinutes: 75, progress: 80, issues: ['Equipment malfunction'] },
+  { id: 'a5', staff: mockStaff[1], task: mockTasks[5], date: '2026-02-15', status: 'pending', progress: 0 },
+  { id: 'a6', staff: mockStaff[2], task: mockTasks[2], date: '2026-02-15', status: 'pending', progress: 0 },
+  { id: 'a7', staff: mockStaff[3], task: mockTasks[4], date: '2026-02-15', status: 'in_progress', startedAt: '07:15', elapsedMinutes: 35, progress: 70, stockLow: ['Soap', 'Paper Towels'] },
+  { id: 'a8', staff: mockStaff[4], task: mockTasks[7], date: '2026-02-15', status: 'pending', progress: 0 },
+];
