@@ -1,14 +1,7 @@
-import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3 } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import type { TaskAssignment } from "@/data/mockData";
 
@@ -20,30 +13,23 @@ interface EndOfDayAnalysisProps {
 const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
   const completed = assignments.filter((a) => a.status === "completed");
   const overdue = assignments.filter(
-    (a) =>
-      a.status === "completed" &&
-      a.elapsedMinutes !== undefined &&
-      a.elapsedMinutes > a.task.estimatedMinutes * 1.15
+    (a) => a.status === "completed" && a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15
   );
   const totalPlanned = assignments.reduce((s, a) => s + a.task.estimatedMinutes, 0);
-  const totalActual = completed.reduce(
-    (s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes),
-    0
-  );
+  const totalActual = completed.reduce((s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes), 0);
   const completionRate = assignments.length > 0 ? Math.round((completed.length / assignments.length) * 100) : 0;
   const efficiency = totalPlanned > 0 ? Math.round((totalPlanned / Math.max(totalActual, 1)) * 100) : 0;
 
-  // Chart data
+  const breakFixTasks = assignments.filter((a) => a.isBreakFix);
+  const breakFixMinutes = breakFixTasks.reduce((s, a) => s + (a.elapsedMinutes || 0), 0);
+
   const chartData = assignments.map((a) => ({
     name: a.task.zone.name.split(" ").slice(0, 2).join(" "),
     מתוכנן: a.task.estimatedMinutes,
     בפועל: a.elapsedMinutes || 0,
-    overdue:
-      a.elapsedMinutes !== undefined &&
-      a.elapsedMinutes > a.task.estimatedMinutes * 1.15,
+    overdue: a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15,
   }));
 
-  // Summary table data
   const tableData = assignments.map((a) => ({
     zone: a.task.zone.name,
     planned: a.task.estimatedMinutes,
@@ -51,10 +37,8 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
     status: a.status,
     startedAt: a.startedAt || "-",
     completedAt: a.completedAt || "-",
-    diff:
-      a.elapsedMinutes !== undefined
-        ? a.elapsedMinutes - a.task.estimatedMinutes
-        : null,
+    isBreakFix: a.isBreakFix || false,
+    diff: a.elapsedMinutes !== undefined ? a.elapsedMinutes - a.task.estimatedMinutes : null,
   }));
 
   return (
@@ -64,10 +48,7 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           <p className="text-xs opacity-75 uppercase tracking-wider">ניתוח סוף יום</p>
           <h1 className="text-lg font-bold">שרה כהן</h1>
         </div>
-        <button
-          onClick={onClose}
-          className="px-3 py-1.5 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium"
-        >
+        <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium">
           חזרה
         </button>
       </header>
@@ -97,6 +78,26 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           </div>
         </div>
 
+        {/* Break-fix stats */}
+        {breakFixTasks.length > 0 && (
+          <div className="kpi-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Zap size={16} className="text-warning" />
+              <h3 className="text-sm font-semibold">תקלות מיידיות</h3>
+            </div>
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-2xl font-bold mono">{breakFixTasks.length}</p>
+                <p className="text-xs text-muted-foreground">תקלות</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold mono text-warning">{breakFixMinutes}</p>
+                <p className="text-xs text-muted-foreground">דק׳ מסדר היום</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Bar chart */}
         <div className="task-card">
           <div className="flex items-center gap-2 mb-3">
@@ -109,21 +110,11 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="מתוכנן" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="בפועל" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, index) => (
-                    <Cell
-                      key={index}
-                      fill={entry.overdue ? "hsl(var(--destructive))" : "hsl(var(--success))"}
-                    />
+                    <Cell key={index} fill={entry.overdue ? "hsl(var(--destructive))" : "hsl(var(--success))"} />
                   ))}
                 </Bar>
               </BarChart>
@@ -138,6 +129,7 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
             <thead>
               <tr className="border-b border-border text-right">
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">מיקום</th>
+                <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סוג</th>
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">התחלה</th>
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">סיום</th>
                 <th className="py-2 px-2 text-xs text-muted-foreground font-medium">משך (דק׳)</th>
@@ -148,25 +140,30 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
             <tbody>
               {tableData.map((row, i) => (
                 <tr key={i} className="border-b border-border/50">
-                  <td className="py-2 px-2 text-xs font-medium truncate max-w-[100px]">{row.zone}</td>
+                  <td className="py-2 px-2 text-xs font-medium truncate max-w-[100px]">
+                    {row.zone}
+                    {row.isBreakFix && <span className="text-warning mr-1">⚡</span>}
+                  </td>
+                  <td className="py-2 px-2 text-xs">
+                    {row.isBreakFix ? (
+                      <span className="status-badge bg-warning/15 text-warning text-[10px]">תקלה</span>
+                    ) : (
+                      <span className="text-muted-foreground">רגיל</span>
+                    )}
+                  </td>
                   <td className="py-2 px-2 mono text-xs">{row.startedAt}</td>
                   <td className="py-2 px-2 mono text-xs">{row.completedAt}</td>
                   <td className="py-2 px-2 mono text-xs">{row.actual === "-" ? "-" : `${row.actual}`}</td>
-                  <td className={`py-2 px-2 mono text-xs ${
-                    row.diff === null ? "" : row.diff > 0 ? "text-destructive" : "text-success"
-                  }`}>
+                  <td className={`py-2 px-2 mono text-xs ${row.diff === null ? "" : row.diff > 0 ? "text-destructive" : "text-success"}`}>
                     {row.diff === null ? "-" : row.diff > 0 ? `+${row.diff}` : row.diff}
                   </td>
                   <td className="py-2 px-2">
                     <span className={`status-badge text-[10px] ${
                       row.status === "completed" ? "status-active" :
                       row.status === "overdue" ? "status-overdue" :
-                      row.status === "in_progress" ? "bg-info/15 text-info" :
-                      "status-pending"
+                      row.status === "in_progress" ? "bg-info/15 text-info" : "status-pending"
                     }`}>
-                      {row.status === "completed" ? "הושלם" :
-                       row.status === "overdue" ? "חריגה" :
-                       row.status === "in_progress" ? "בביצוע" : "ממתין"}
+                      {row.status === "completed" ? "הושלם" : row.status === "overdue" ? "חריגה" : row.status === "in_progress" ? "בביצוע" : "ממתין"}
                     </span>
                   </td>
                 </tr>

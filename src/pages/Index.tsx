@@ -84,9 +84,9 @@ const Index = () => {
             <div className="w-12 h-12 rounded-xl bg-accent/15 flex items-center justify-center mb-4">
               <Zap size={24} className="text-accent" />
             </div>
-            <h3 className="font-bold text-lg mb-2">תגובת חירום</h3>
+            <h3 className="font-bold text-lg mb-2">תקלה מיידית</h3>
             <p className="text-sm text-muted-foreground">
-              מפקחים שולחים משימות חירום באופן מיידי. התראות בעדיפות גבוהה מגיעות לעובדים הזמינים תוך שניות.
+              מפקחים שולחים דיווחי תקלה מיידית עם תמונה. התראות בעדיפות גבוהה מגיעות לעובדים הזמינים תוך שניות.
             </p>
           </div>
         </div>
