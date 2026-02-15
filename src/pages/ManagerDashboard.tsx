@@ -16,12 +16,14 @@ import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
+import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
 
 const ManagerDashboard = () => {
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
+  const [showEndOfDay, setShowEndOfDay] = useState(false);
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -307,6 +309,17 @@ const ManagerDashboard = () => {
         </div>
       </div>
 
+      {/* End of Day button */}
+      <div className="max-w-7xl mx-auto px-6 pb-6">
+        <button
+          onClick={() => setShowEndOfDay(true)}
+          className="btn-action-primary w-full flex items-center justify-center gap-3"
+        >
+          <BarChart3 size={20} />
+          ניתוח סוף יום
+        </button>
+      </div>
+
       {/* Drill-down modal */}
       {drillDown && (
         <DrillDownPanel
@@ -315,6 +328,11 @@ const ManagerDashboard = () => {
           staff={mockStaff}
           onClose={() => setDrillDown(null)}
         />
+      )}
+
+      {/* End of Day analysis */}
+      {showEndOfDay && (
+        <ManagerEndOfDay onClose={() => setShowEndOfDay(false)} />
       )}
     </div>
   );
