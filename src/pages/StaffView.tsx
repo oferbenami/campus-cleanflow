@@ -18,13 +18,13 @@ import { mockAssignments, mockTasks, type TaskAssignment } from "@/data/mockData
 const StaffView = () => {
   // Simulate current staff = Sarah Cohen (s1)
   const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
-  const [currentIndex, setCurrentIndex] = useState(
-    staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
-      ? staffAssignments.findIndex((a) => a.status === "in_progress")
-      : staffAssignments.findIndex((a) => a.status === "pending")
-  );
+  const initialIndex = staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
+    ? staffAssignments.findIndex((a) => a.status === "in_progress")
+    : staffAssignments.findIndex((a) => a.status === "pending");
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [allDone, setAllDone] = useState(initialIndex === -1);
   const [isRunning, setIsRunning] = useState(
-    staffAssignments[currentIndex]?.status === "in_progress"
+    staffAssignments[initialIndex]?.status === "in_progress"
   );
   const [onBreak, setOnBreak] = useState(false);
   const [elapsed, setElapsed] = useState(
@@ -52,6 +52,8 @@ const StaffView = () => {
     setStockLowItems([]);
     if (currentIndex < staffAssignments.length - 1) {
       setCurrentIndex(currentIndex + 1);
+    } else {
+      setAllDone(true);
     }
   };
 
@@ -61,7 +63,7 @@ const StaffView = () => {
     );
   };
 
-  if (!current) {
+  if (allDone || !current) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <div className="text-center animate-slide-up">
