@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import StaffView from "./pages/StaffView";
 import ManagerDashboard from "./pages/ManagerDashboard";
 import SupervisorView from "./pages/SupervisorView";
+import PropertyManagerView from "./pages/PropertyManagerView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/staff" element={<StaffView />} />
           <Route path="/manager" element={<ManagerDashboard />} />
           <Route path="/supervisor" element={<SupervisorView />} />
+          <Route path="/property-manager" element={<PropertyManagerView />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
