@@ -53,6 +53,14 @@ const Index = () => {
               מפקח
               <ArrowLeft size={16} />
             </Link>
+            <Link
+              to="/property-manager"
+              className="inline-flex items-center gap-2 text-base py-3 px-6 rounded-xl border-2 border-primary-foreground/30 text-primary-foreground font-bold hover:bg-primary-foreground/10 transition-colors"
+            >
+              <LayoutDashboard size={18} />
+              מנהל נכס
+              <ArrowLeft size={16} />
+            </Link>
           </div>
         </div>
       </div>

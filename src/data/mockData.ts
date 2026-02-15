@@ -23,6 +23,8 @@ export interface StaffMember {
   avatar: string;
   role: 'staff' | 'supervisor' | 'manager';
   status: 'active' | 'idle' | 'break' | 'offline';
+  phone?: string;
+  securityBadgeNumber?: string;
 }
 
 export interface TaskAssignment {
@@ -68,12 +70,14 @@ export const mockZones: Zone[] = [
 ];
 
 export const mockStaff: StaffMember[] = [
-  { id: 's1', name: 'Sarah Cohen', avatar: 'SC', role: 'staff', status: 'active' },
-  { id: 's2', name: 'David Levi', avatar: 'DL', role: 'staff', status: 'active' },
-  { id: 's3', name: 'Maya Katz', avatar: 'MK', role: 'staff', status: 'break' },
-  { id: 's4', name: 'Oren Mor', avatar: 'OM', role: 'staff', status: 'active' },
-  { id: 's5', name: 'Noa Peretz', avatar: 'NP', role: 'staff', status: 'idle' },
-  { id: 's6', name: 'Yael Shapira', avatar: 'YS', role: 'supervisor', status: 'active' },
+  { id: 's1', name: 'שרה כהן', avatar: 'SC', role: 'staff', status: 'active', phone: '050-1234567', securityBadgeNumber: 'SEC-1001' },
+  { id: 's2', name: 'דוד לוי', avatar: 'DL', role: 'staff', status: 'active', phone: '050-2345678', securityBadgeNumber: 'SEC-1002' },
+  { id: 's3', name: 'מאיה כץ', avatar: 'MK', role: 'staff', status: 'break', phone: '050-3456789', securityBadgeNumber: 'SEC-1003' },
+  { id: 's4', name: 'אורן מור', avatar: 'OM', role: 'staff', status: 'active', phone: '050-4567890', securityBadgeNumber: 'SEC-1004' },
+  { id: 's5', name: 'נועה פרץ', avatar: 'NP', role: 'staff', status: 'idle', phone: '050-5678901', securityBadgeNumber: 'SEC-1005' },
+  { id: 's6', name: 'יעל שפירא', avatar: 'YS', role: 'supervisor', status: 'active', phone: '050-6789012', securityBadgeNumber: 'SEC-2001' },
+  { id: 's7', name: 'רון אביב', avatar: 'RA', role: 'staff', status: 'offline', phone: '050-7890123', securityBadgeNumber: 'SEC-1006' },
+  { id: 's8', name: 'ליאת גולן', avatar: 'LG', role: 'staff', status: 'offline', phone: '050-8901234', securityBadgeNumber: 'SEC-1007' },
 ];
 
 export const mockTasks: TaskTemplate[] = [
