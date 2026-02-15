@@ -2,95 +2,92 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 20% 97%;
+    --foreground: 220 60% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 60% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 60% 10%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 220 60% 15%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 25% 92%;
+    --secondary-foreground: 220 60% 15%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 215 15% 48%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 38 95% 55%;
+    --accent-foreground: 220 60% 10%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 85% 55%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --success: 145 65% 42%;
+    --success-foreground: 0 0% 98%;
 
-    --radius: 0.5rem;
+    --warning: 38 95% 55%;
+    --warning-foreground: 220 60% 10%;
 
-    --sidebar-background: 0 0% 98%;
+    --info: 205 85% 50%;
+    --info-foreground: 0 0% 98%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --border: 214 25% 88%;
+    --input: 214 25% 88%;
+    --ring: 220 60% 15%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --radius: 0.75rem;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-background: 220 60% 12%;
+    --sidebar-foreground: 210 20% 90%;
+    --sidebar-primary: 38 95% 55%;
+    --sidebar-primary-foreground: 220 60% 10%;
+    --sidebar-accent: 220 50% 20%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 220 40% 22%;
+    --sidebar-ring: 38 95% 55%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --staff-gradient: linear-gradient(135deg, hsl(220 60% 15%), hsl(220 50% 25%));
+    --accent-gradient: linear-gradient(135deg, hsl(38 95% 55%), hsl(30 95% 50%));
+    --success-gradient: linear-gradient(135deg, hsl(145 65% 42%), hsl(155 60% 38%));
+    --danger-gradient: linear-gradient(135deg, hsl(0 85% 55%), hsl(10 80% 50%));
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 47% 6%;
     --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 8%;
     --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 8%;
     --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 38 95% 55%;
+    --primary-foreground: 220 60% 10%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 38 95% 55%;
+    --accent-foreground: 220 60% 10%;
+    --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 212 27% 84%;
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 224 76% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -100,6 +97,74 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', system-ui, sans-serif;
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer components {
+  .task-card {
+    @apply bg-card rounded-xl border border-border shadow-sm p-5 transition-all duration-200;
+  }
+
+  .task-card:hover {
+    @apply shadow-md;
+  }
+
+  .status-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider;
+  }
+
+  .status-active {
+    @apply bg-success/15 text-success;
+  }
+
+  .status-pending {
+    @apply bg-warning/15 text-warning;
+  }
+
+  .status-overdue {
+    @apply bg-destructive/15 text-destructive;
+  }
+
+  .status-done {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  .btn-action-primary {
+    background: var(--staff-gradient);
+    @apply text-primary-foreground font-bold text-lg py-6 px-8 rounded-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .btn-action-success {
+    background: var(--success-gradient);
+    @apply text-white font-bold text-lg py-6 px-8 rounded-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .btn-action-danger {
+    background: var(--danger-gradient);
+    @apply text-white font-bold text-lg py-6 px-8 rounded-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .btn-action-accent {
+    background: var(--accent-gradient);
+    @apply text-accent-foreground font-bold text-lg py-6 px-8 rounded-xl shadow-lg transition-all duration-200 active:scale-95;
+  }
+
+  .kpi-card {
+    @apply bg-card rounded-xl border border-border p-6 shadow-sm;
+  }
+
+  .grid-row-overdue {
+    @apply bg-destructive/8 border-l-4 border-l-destructive;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', monospace;
   }
 }
