@@ -57,6 +57,15 @@ const StaffView = () => {
   const [showIssuePanel, setShowIssuePanel] = useState(false);
   const [screen, setScreen] = useState<StaffScreen>("main");
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
+  const [breakFixSeconds, setBreakFixSeconds] = useState(0);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (breakFixStatus === "in_progress") {
+      interval = setInterval(() => setBreakFixSeconds((s) => s + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [breakFixStatus]);
 
   const current = staffAssignments[currentIndex];
   const nextTask = currentIndex < staffAssignments.length - 1 ? staffAssignments[currentIndex + 1] : null;
@@ -169,13 +178,21 @@ const StaffView = () => {
                 התחל טיפול
               </button>
             ) : (
-              <button
-                onClick={() => setBreakFixStatus("done")}
-                className="w-full py-3 rounded-xl bg-success text-success-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-success/90 transition-colors"
-              >
-                <CheckCircle2 size={20} />
-                סיום טיפול
-              </button>
+              <div className="space-y-3">
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <Timer size={18} className="text-warning" />
+                  <span className="text-2xl font-black mono text-warning">
+                    {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setBreakFixStatus("done")}
+                  className="w-full py-3 rounded-xl bg-success text-success-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-success/90 transition-colors"
+                >
+                  <CheckCircle2 size={20} />
+                  סיום טיפול
+                </button>
+              </div>
             )}
           </div>
         );
