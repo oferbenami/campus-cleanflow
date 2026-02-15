@@ -59,6 +59,10 @@ const StaffView = () => {
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
 
+  const [taskSeconds, setTaskSeconds] = useState(
+    (staffAssignments[initialIndex]?.elapsedMinutes || 0) * 60
+  );
+
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (breakFixStatus === "in_progress") {
@@ -75,15 +79,22 @@ const StaffView = () => {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isRunning && !onBreak) {
-      interval = setInterval(() => setElapsed((e) => e + 1), 60000);
+      interval = setInterval(() => {
+        setElapsed((e) => e + 1);
+        setTaskSeconds((s) => s + 1);
+      }, 1000);
     }
     return () => clearInterval(interval);
   }, [isRunning, onBreak]);
 
-  const handleStart = () => setIsRunning(true);
+  const handleStart = () => {
+    setIsRunning(true);
+    setTaskSeconds(0);
+  };
   const handleFinish = () => {
     setIsRunning(false);
     setElapsed(0);
+    setTaskSeconds(0);
     setStockLowItems([]);
     if (currentIndex < staffAssignments.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -121,8 +132,10 @@ const StaffView = () => {
     );
   }
 
-  const progressPercent = Math.min((elapsed / current.task.estimatedMinutes) * 100, 100);
-  const isOverdue = elapsed > current.task.estimatedMinutes * 1.15;
+  const taskElapsedMinutes = Math.floor(taskSeconds / 60);
+  const progressPercent = Math.min((taskElapsedMinutes / current.task.estimatedMinutes) * 100, 100);
+  const isOverdue = taskElapsedMinutes > current.task.estimatedMinutes * 1.15;
+  const taskTimeDisplay = `${String(Math.floor(taskSeconds / 60)).padStart(2, "0")}:${String(taskSeconds % 60).padStart(2, "0")}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -252,10 +265,11 @@ const StaffView = () => {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Timer size={16} className={isOverdue ? 'text-destructive' : 'text-muted-foreground'} />
-                <span className={`mono text-sm font-medium ${isOverdue ? 'text-destructive' : ''}`}>
-                  {elapsed} דק׳ / {current.task.estimatedMinutes} דק׳
+                <Timer size={16} className={isOverdue ? 'text-destructive' : isRunning ? 'text-success' : 'text-muted-foreground'} />
+                <span className={`mono text-2xl font-bold ${isOverdue ? 'text-destructive' : isRunning ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {taskTimeDisplay}
                 </span>
+                <span className="text-xs text-muted-foreground">/ {current.task.estimatedMinutes} דק׳</span>
               </div>
               {isOverdue && <span className="status-badge status-overdue">חריגה</span>}
             </div>
