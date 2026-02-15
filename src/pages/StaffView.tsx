@@ -5,15 +5,19 @@ import {
   AlertTriangle,
   Coffee,
   MapPin,
-  Clock,
   ChevronLeft,
   PackageOpen,
   CheckCircle2,
   Timer,
+  CalendarDays,
+  BarChart3,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { mockAssignments, mockTasks, type TaskAssignment } from "@/data/mockData";
+import { mockAssignments, type TaskAssignment } from "@/data/mockData";
+import NextTaskPreview from "@/components/staff/NextTaskPreview";
+import PerformanceScore from "@/components/staff/PerformanceScore";
+import DaySchedule from "@/components/staff/DaySchedule";
+import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 
 const stockItems = [
   { key: "Soap", label: "סבון" },
@@ -29,6 +33,8 @@ const issueTypes = [
   "סכנת בטיחות",
   "אחר",
 ];
+
+type StaffScreen = "main" | "schedule" | "analysis";
 
 const StaffView = () => {
   const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
@@ -46,8 +52,10 @@ const StaffView = () => {
   );
   const [stockLowItems, setStockLowItems] = useState<string[]>([]);
   const [showIssuePanel, setShowIssuePanel] = useState(false);
+  const [screen, setScreen] = useState<StaffScreen>("main");
 
   const current = staffAssignments[currentIndex];
+  const nextTask = currentIndex < staffAssignments.length - 1 ? staffAssignments[currentIndex + 1] : null;
   const completedCount = staffAssignments.filter((a) => a.status === "completed").length;
   const totalCount = staffAssignments.length;
 
@@ -77,14 +85,30 @@ const StaffView = () => {
     );
   };
 
+  // Sub-screens
+  if (screen === "schedule") {
+    return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("main")} />;
+  }
+  if (screen === "analysis") {
+    return <EndOfDayAnalysis assignments={staffAssignments} onClose={() => setScreen("main")} />;
+  }
+
+  // All done screen
   if (allDone || !current) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <div className="text-center animate-slide-up">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+        <div className="text-center animate-slide-up mb-6">
           <CheckCircle2 className="mx-auto mb-4 text-success" size={64} />
           <h1 className="text-2xl font-bold mb-2">כל המשימות הושלמו!</h1>
           <p className="text-muted-foreground">עבודה מצוינת היום, שרה.</p>
         </div>
+        <button
+          onClick={() => setScreen("analysis")}
+          className="btn-action-primary flex items-center justify-center gap-3 w-full max-w-xs"
+        >
+          <BarChart3 size={20} />
+          ניתוח סוף יום
+        </button>
       </div>
     );
   }
@@ -100,11 +124,27 @@ const StaffView = () => {
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
           <h1 className="text-lg font-bold">שרה כהן</h1>
         </div>
-        <div className="text-left">
-          <p className="text-xs opacity-75">התקדמות</p>
-          <p className="text-lg font-bold mono">
-            {completedCount}/{totalCount}
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setScreen("schedule")}
+            className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+            title="סדר יום"
+          >
+            <CalendarDays size={18} />
+          </button>
+          <button
+            onClick={() => setScreen("analysis")}
+            className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+            title="ניתוח ביצועים"
+          >
+            <BarChart3 size={18} />
+          </button>
+          <div className="text-left">
+            <p className="text-xs opacity-75">התקדמות</p>
+            <p className="text-lg font-bold mono">
+              {completedCount}/{totalCount}
+            </p>
+          </div>
         </div>
       </header>
 
@@ -124,6 +164,11 @@ const StaffView = () => {
             }`}
           />
         ))}
+      </div>
+
+      {/* Performance Score */}
+      <div className="px-4 mb-3">
+        <PerformanceScore assignments={staffAssignments} />
       </div>
 
       {/* Current Task Card */}
@@ -217,6 +262,11 @@ const StaffView = () => {
             </div>
           )}
         </div>
+
+        {/* Next task preview */}
+        {nextTask && !isRunning && (
+          <NextTaskPreview assignment={nextTask} />
+        )}
 
         {/* Action buttons */}
         <div className="space-y-3">
