@@ -156,7 +156,7 @@ const DashboardTab = () => {
       <div className="kpi-card">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp size={16} className="text-success" />
-          <h3 className="text-sm font-semibold">ציון מקדמות</h3>
+          <h3 className="text-sm font-semibold">ציון התקדמות</h3>
           <span className="text-[10px] text-muted-foreground mono mr-auto">
             עדכון: {now.getHours().toString().padStart(2, "0")}:{now.getMinutes().toString().padStart(2, "0")}
           </span>
