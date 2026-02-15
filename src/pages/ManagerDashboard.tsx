@@ -22,18 +22,10 @@ const ManagerDashboard = () => {
   const inProgress = mockAssignments.filter((a) => a.status === "in_progress").length;
   const overdueTasks = mockAssignments.filter((a) => a.status === "overdue").length;
 
-  // Group assignments by staff
   const staffGroups = activeStaff.map((staff) => ({
     staff,
     assignments: mockAssignments.filter((a) => a.staff.id === staff.id),
   }));
-
-  const getStatusColor = (a: TaskAssignment) => {
-    if (a.status === "overdue") return "text-destructive";
-    if (a.status === "completed") return "text-success";
-    if (a.status === "in_progress") return "text-info";
-    return "text-muted-foreground";
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,19 +34,19 @@ const ManagerDashboard = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold">CleanFlow</h1>
-            <p className="text-sm opacity-75">Campus Operations Dashboard</p>
+            <p className="text-sm opacity-75">לוח בקרה תפעולי</p>
           </div>
           <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-xs opacity-75">Today</p>
-              <p className="text-sm font-semibold mono">Feb 15, 2026</p>
+            <div className="text-left">
+              <p className="text-xs opacity-75">היום</p>
+              <p className="text-sm font-semibold mono">15 בפבר׳ 2026</p>
             </div>
             <div className="flex gap-1">
               <button className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'morning' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
-                Morning
+                בוקר
               </button>
               <button className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'evening' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
-                Evening
+                ערב
               </button>
             </div>
           </div>
@@ -71,7 +63,7 @@ const ManagerDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{activeStaff.length}</p>
-                <p className="text-xs text-muted-foreground">Active Staff</p>
+                <p className="text-xs text-muted-foreground">עובדים פעילים</p>
               </div>
             </div>
           </div>
@@ -83,7 +75,7 @@ const ManagerDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{completedTasks}/{totalTasks}</p>
-                <p className="text-xs text-muted-foreground">Tasks Done</p>
+                <p className="text-xs text-muted-foreground">משימות הושלמו</p>
               </div>
             </div>
           </div>
@@ -95,7 +87,7 @@ const ManagerDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{inProgress}</p>
-                <p className="text-xs text-muted-foreground">In Progress</p>
+                <p className="text-xs text-muted-foreground">בביצוע</p>
               </div>
             </div>
           </div>
@@ -107,7 +99,7 @@ const ManagerDashboard = () => {
               </div>
               <div>
                 <p className="text-2xl font-bold">{overdueTasks}</p>
-                <p className="text-xs text-muted-foreground">Overdue</p>
+                <p className="text-xs text-muted-foreground">חריגות</p>
               </div>
             </div>
           </div>
@@ -118,11 +110,11 @@ const ManagerDashboard = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <BarChart3 size={20} />
-              Real-Time Staff Tracking
+              מעקב עובדים בזמן אמת
             </h2>
             <span className="status-badge status-active">
               <span className="w-2 h-2 rounded-full bg-success animate-pulse-slow" />
-              Live
+              חי
             </span>
           </div>
 
@@ -162,13 +154,13 @@ const ManagerDashboard = () => {
                         {staff.status === "break" && (
                           <span className="status-badge status-pending">
                             <Coffee size={10} />
-                            Break
+                            הפסקה
                           </span>
                         )}
                         {hasOverdue && (
                           <span className="status-badge status-overdue">
                             <AlertTriangle size={10} />
-                            SLA Breach
+                            חריגת SLA
                           </span>
                         )}
                       </div>
@@ -180,20 +172,20 @@ const ManagerDashboard = () => {
                           <span>·</span>
                           <Clock size={12} />
                           <span className="mono">
-                            {currentTask.elapsedMinutes}m / {currentTask.task.estimatedMinutes}m
+                            {currentTask.elapsedMinutes} דק׳ / {currentTask.task.estimatedMinutes} דק׳
                           </span>
                         </div>
                       ) : (
                         <p className="text-xs text-muted-foreground">
-                          {staffCompleted === staffTotal ? "All tasks completed" : "Waiting for next task"}
+                          {staffCompleted === staffTotal ? "כל המשימות הושלמו" : "ממתין למשימה הבאה"}
                         </p>
                       )}
                     </div>
 
                     {/* Progress */}
-                    <div className="w-32 text-right">
+                    <div className="w-32 text-left">
                       <p className="text-xs text-muted-foreground mb-1 mono">
-                        {staffCompleted}/{staffTotal} tasks
+                        {staffCompleted}/{staffTotal} משימות
                       </p>
                       <Progress
                         value={overallProgress}
@@ -203,7 +195,7 @@ const ManagerDashboard = () => {
                   </div>
 
                   {/* Task pills */}
-                  <div className="flex gap-1.5 mt-3 ml-14">
+                  <div className="flex gap-1.5 mt-3 mr-14">
                     {assignments.map((a) => (
                       <div
                         key={a.id}
@@ -232,7 +224,7 @@ const ManagerDashboard = () => {
         <div className="kpi-card">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp size={18} className="text-success" />
-            <h3 className="font-semibold">Today's Completion Rate</h3>
+            <h3 className="font-semibold">אחוז השלמה היום</h3>
           </div>
           <div className="flex items-center gap-4">
             <p className="text-4xl font-bold mono">

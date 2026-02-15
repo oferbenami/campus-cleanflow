@@ -16,7 +16,6 @@ const SupervisorView = () => {
   const [breakfixDesc, setBreakfixDesc] = useState("");
   const [breakfixSent, setBreakfixSent] = useState(false);
 
-  // Audit state
   const completedTasks = mockAssignments.filter((a) => a.status === "completed");
   const [selectedTask, setSelectedTask] = useState("");
   const [ratings, setRatings] = useState({
@@ -82,7 +81,7 @@ const SupervisorView = () => {
       <header className="bg-primary text-primary-foreground px-4 py-3">
         <div className="max-w-2xl mx-auto">
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">Supervisor Panel</h1>
+          <h1 className="text-lg font-bold">פאנל מפקח</h1>
         </div>
       </header>
 
@@ -98,7 +97,7 @@ const SupervisorView = () => {
             }`}
           >
             <Zap size={16} />
-            Break-Fix
+            תיקון חירום
           </button>
           <button
             onClick={() => setActiveTab("audit")}
@@ -109,7 +108,7 @@ const SupervisorView = () => {
             }`}
           >
             <ClipboardCheck size={16} />
-            Quality Audit
+            ביקורת איכות
           </button>
         </div>
 
@@ -119,22 +118,22 @@ const SupervisorView = () => {
             <div className="task-card">
               <div className="flex items-center gap-2 mb-4">
                 <AlertTriangle size={20} className="text-destructive" />
-                <h2 className="font-bold">Emergency Task</h2>
+                <h2 className="font-bold">משימת חירום</h2>
               </div>
 
               <label className="block mb-4">
                 <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  Location
+                  מיקום
                 </span>
                 <select
                   value={selectedZone}
                   onChange={(e) => setSelectedZone(e.target.value)}
                   className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="">Select location...</option>
+                  <option value="">בחר מיקום...</option>
                   {mockZones.map((z) => (
                     <option key={z.id} value={z.id}>
-                      {z.name} (Wing {z.wing}, Floor {z.floor})
+                      {z.name} (אגף {z.wing}, קומה {z.floor})
                     </option>
                   ))}
                 </select>
@@ -142,12 +141,12 @@ const SupervisorView = () => {
 
               <label className="block mb-4">
                 <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  Description
+                  תיאור
                 </span>
                 <textarea
                   value={breakfixDesc}
                   onChange={(e) => setBreakfixDesc(e.target.value)}
-                  placeholder="Describe the emergency..."
+                  placeholder="תאר את מצב החירום..."
                   rows={3}
                   className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                 />
@@ -156,7 +155,7 @@ const SupervisorView = () => {
               {breakfixSent ? (
                 <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
                   <CheckCircle2 size={20} />
-                  Emergency task dispatched!
+                  משימת חירום נשלחה!
                 </div>
               ) : (
                 <button
@@ -165,7 +164,7 @@ const SupervisorView = () => {
                   className="btn-action-danger w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send size={18} />
-                  Dispatch Emergency
+                  שלח משימת חירום
                 </button>
               )}
             </div>
@@ -178,19 +177,19 @@ const SupervisorView = () => {
             <div className="task-card">
               <div className="flex items-center gap-2 mb-4">
                 <ClipboardCheck size={20} className="text-info" />
-                <h2 className="font-bold">Quality Inspection</h2>
+                <h2 className="font-bold">בדיקת איכות</h2>
               </div>
 
               <label className="block mb-4">
                 <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                  Select Completed Task
+                  בחר משימה שהושלמה
                 </span>
                 <select
                   value={selectedTask}
                   onChange={(e) => setSelectedTask(e.target.value)}
                   className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="">Select task...</option>
+                  <option value="">בחר משימה...</option>
                   {completedTasks.map((a) => (
                     <option key={a.id} value={a.id}>
                       {a.task.name} — {a.staff.name} ({a.completedAt})
@@ -203,27 +202,27 @@ const SupervisorView = () => {
                 <>
                   <div className="border-t border-border pt-4 space-y-1">
                     <StarRating
-                      label="Cleanliness"
+                      label="ניקיון"
                       value={ratings.cleanliness}
                       onChange={(v) => setRatings((r) => ({ ...r, cleanliness: v }))}
                     />
                     <StarRating
-                      label="Thoroughness"
+                      label="יסודיות"
                       value={ratings.thoroughness}
                       onChange={(v) => setRatings((r) => ({ ...r, thoroughness: v }))}
                     />
                     <StarRating
-                      label="Timeliness"
+                      label="עמידה בזמנים"
                       value={ratings.timeliness}
                       onChange={(v) => setRatings((r) => ({ ...r, timeliness: v }))}
                     />
                     <StarRating
-                      label="Supplies"
+                      label="ציוד וחומרים"
                       value={ratings.supplies}
                       onChange={(v) => setRatings((r) => ({ ...r, supplies: v }))}
                     />
                     <StarRating
-                      label="Safety"
+                      label="בטיחות"
                       value={ratings.safety}
                       onChange={(v) => setRatings((r) => ({ ...r, safety: v }))}
                     />
@@ -231,12 +230,12 @@ const SupervisorView = () => {
 
                   <label className="block my-4">
                     <span className="text-sm font-medium text-muted-foreground mb-1.5 block">
-                      Notes (Optional)
+                      הערות (אופציונלי)
                     </span>
                     <textarea
                       value={auditNotes}
                       onChange={(e) => setAuditNotes(e.target.value)}
-                      placeholder="Additional comments..."
+                      placeholder="הערות נוספות..."
                       rows={2}
                       className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
                     />
@@ -245,7 +244,7 @@ const SupervisorView = () => {
                   {auditSent ? (
                     <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
                       <CheckCircle2 size={20} />
-                      Audit submitted!
+                      הביקורת נשלחה!
                     </div>
                   ) : (
                     <button
@@ -254,7 +253,7 @@ const SupervisorView = () => {
                       className="btn-action-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Send size={18} />
-                      Submit Audit
+                      שלח ביקורת
                     </button>
                   )}
                 </>
