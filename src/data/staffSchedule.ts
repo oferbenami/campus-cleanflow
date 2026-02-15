@@ -9,6 +9,8 @@ export const scheduledTimes: Record<string, { plannedStart: string; plannedEnd: 
   a6: { plannedStart: "07:00", plannedEnd: "07:45" },
   a7: { plannedStart: "07:15", plannedEnd: "07:55" },
   a8: { plannedStart: "07:30", plannedEnd: "07:55" },
+  a9: { plannedStart: "09:10", plannedEnd: "09:30" },
+  a10: { plannedStart: "10:00", plannedEnd: "10:20" },
 };
 
 export function getPlannedMinutesUpToNow(

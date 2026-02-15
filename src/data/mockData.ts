@@ -37,6 +37,9 @@ export interface TaskAssignment {
   progress: number; // 0-100
   issues?: string[];
   stockLow?: string[];
+  isBreakFix?: boolean;
+  breakFixImageUrl?: string;
+  breakFixDescription?: string;
 }
 
 export interface AuditEntry {
@@ -93,4 +96,6 @@ export const mockAssignments: TaskAssignment[] = [
   { id: 'a6', staff: mockStaff[2], task: mockTasks[2], date: '2026-02-15', status: 'pending', progress: 0 },
   { id: 'a7', staff: mockStaff[3], task: mockTasks[4], date: '2026-02-15', status: 'in_progress', startedAt: '07:15', elapsedMinutes: 35, progress: 70, stockLow: ['Soap', 'Paper Towels'] },
   { id: 'a8', staff: mockStaff[4], task: mockTasks[7], date: '2026-02-15', status: 'pending', progress: 0 },
+  { id: 'a9', staff: mockStaff[0], task: mockTasks[2], date: '2026-02-15', status: 'completed', startedAt: '09:10', completedAt: '09:30', elapsedMinutes: 20, progress: 100, isBreakFix: true, breakFixDescription: 'שפיכת מים בלובי', breakFixImageUrl: '/placeholder.svg' },
+  { id: 'a10', staff: mockStaff[3], task: mockTasks[6], date: '2026-02-15', status: 'in_progress', startedAt: '10:00', elapsedMinutes: 15, progress: 50, isBreakFix: true, breakFixDescription: 'צינור דולף בשירותים' },
 ];

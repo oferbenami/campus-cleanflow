@@ -1,4 +1,4 @@
-import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, ArrowLeft } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, ArrowLeft, Zap, PackageOpen, Truck } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { mockAssignments, mockStaff, type TaskAssignment, type StaffMember } from "@/data/mockData";
 import { scheduledTimes } from "@/data/staffSchedule";
+import { useState } from "react";
 
 interface ManagerEndOfDayProps {
   onClose: () => void;
@@ -14,11 +15,14 @@ interface ManagerEndOfDayProps {
 const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
   const assignments = mockAssignments;
   const activeStaff = mockStaff.filter((s) => s.role === "staff");
+  const [sentToWarehouse, setSentToWarehouse] = useState(false);
 
   const completed = assignments.filter((a) => a.status === "completed");
   const inProgress = assignments.filter((a) => a.status === "in_progress");
   const pending = assignments.filter((a) => a.status === "pending");
   const overdue = assignments.filter((a) => a.status === "overdue");
+  const breakFixTasks = assignments.filter((a) => a.isBreakFix);
+  const breakFixMinutes = breakFixTasks.reduce((s, a) => s + (a.elapsedMinutes || 0), 0);
 
   const totalPlanned = assignments.reduce((s, a) => s + a.task.estimatedMinutes, 0);
   const totalActual = assignments
@@ -35,7 +39,21 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
     ? Math.round(((assignments.filter((a) => a.elapsedMinutes !== undefined).length - slaBreach.length) / assignments.filter((a) => a.elapsedMinutes !== undefined).length) * 100)
     : 100;
 
-  // Status pie chart
+  // Stock shortages aggregation
+  const shortageMap: Record<string, { zones: string[]; staffNames: string[] }> = {};
+  assignments.forEach((a) => {
+    if (a.stockLow && a.stockLow.length > 0) {
+      a.stockLow.forEach((item) => {
+        if (!shortageMap[item]) shortageMap[item] = { zones: [], staffNames: [] };
+        const zoneName = a.task.zone.name;
+        if (!shortageMap[item].zones.includes(zoneName)) shortageMap[item].zones.push(zoneName);
+        if (!shortageMap[item].staffNames.includes(a.staff.name)) shortageMap[item].staffNames.push(a.staff.name);
+      });
+    }
+  });
+  const shortageItems = Object.entries(shortageMap);
+  const stockLabels: Record<string, string> = { "Soap": "סבון", "Paper Towels": "מגבות נייר", "Sanitizer": "חומר חיטוי", "Trash Bags": "שקיות אשפה" };
+
   const pieData = [
     { name: "הושלם", value: completed.length, fill: "hsl(var(--success))" },
     { name: "בביצוע", value: inProgress.length, fill: "hsl(var(--info))" },
@@ -43,16 +61,13 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
     { name: "ממתין", value: pending.length, fill: "hsl(var(--muted-foreground))" },
   ].filter((d) => d.value > 0);
 
-  // Per-staff bar chart
   const staffChartData = activeStaff.map((s) => {
     const sa = assignments.filter((a) => a.staff.id === s.id);
     const planned = sa.reduce((sum, a) => sum + a.task.estimatedMinutes, 0);
     const actual = sa.reduce((sum, a) => sum + (a.elapsedMinutes || 0), 0);
-    const done = sa.filter((a) => a.status === "completed").length;
-    return { name: s.name.split(" ")[0], מתוכנן: planned, בפועל: actual, done, total: sa.length };
+    return { name: s.name.split(" ")[0], מתוכנן: planned, בפועל: actual };
   });
 
-  // Per-task bar chart
   const taskChartData = assignments.map((a) => ({
     name: a.task.zone.name.split(" ").slice(0, 2).join(" "),
     מתוכנן: a.task.estimatedMinutes,
@@ -60,38 +75,34 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
     overdue: a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15,
   }));
 
-  // Per-staff detail table
   const staffDetails = activeStaff.map((s) => {
     const sa = assignments.filter((a) => a.staff.id === s.id);
     const done = sa.filter((a) => a.status === "completed").length;
     const planned = sa.reduce((sum, a) => sum + a.task.estimatedMinutes, 0);
     const actual = sa.reduce((sum, a) => sum + (a.elapsedMinutes || 0), 0);
     const breaches = sa.filter((a) => a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15).length;
-    return { staff: s, done, total: sa.length, planned, actual, breaches };
+    const bf = sa.filter((a) => a.isBreakFix).length;
+    const bfMin = sa.filter((a) => a.isBreakFix).reduce((sum, a) => sum + (a.elapsedMinutes || 0), 0);
+    return { staff: s, done, total: sa.length, planned, actual, breaches, breakFixCount: bf, breakFixMinutes: bfMin };
   });
 
   return (
     <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
-      {/* Header */}
       <header className="bg-primary text-primary-foreground px-6 py-4 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
             <p className="text-xs opacity-75 uppercase tracking-wider">ניתוח סוף יום</p>
             <h1 className="text-xl font-bold">סיכום כלל העבודות</h1>
           </div>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium hover:bg-primary-foreground/20 transition-colors"
-          >
-            <ArrowLeft size={16} />
-            חזרה ללוח בקרה
+          <button onClick={onClose} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium hover:bg-primary-foreground/20 transition-colors">
+            <ArrowLeft size={16} /> חזרה ללוח בקרה
           </button>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         {/* Top KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
           <div className="kpi-card text-center">
             <CheckCircle2 size={22} className="mx-auto mb-1 text-success" />
             <p className="text-3xl font-bold mono">{completionRate}%</p>
@@ -117,11 +128,15 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
             <p className={`text-3xl font-bold mono ${slaRate >= 90 ? "text-success" : slaRate >= 70 ? "text-warning" : "text-destructive"}`}>{slaRate}%</p>
             <p className="text-xs text-muted-foreground">עמידה ב-SLA</p>
           </div>
+          <div className="kpi-card text-center">
+            <Zap size={22} className="mx-auto mb-1 text-warning" />
+            <p className="text-3xl font-bold mono">{breakFixTasks.length}</p>
+            <p className="text-xs text-muted-foreground">תקלות · {breakFixMinutes} דק׳</p>
+          </div>
         </div>
 
         {/* Charts row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Status distribution pie */}
           <div className="task-card">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 size={16} />
@@ -130,19 +145,8 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
             <div className="h-56" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
-                    labelLine={false}
-                  >
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.fill} />
-                    ))}
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ name, value }) => `${name}: ${value}`} labelLine={false}>
+                    {pieData.map((entry, i) => (<Cell key={i} fill={entry.fill} />))}
                   </Pie>
                   <Legend />
                   <Tooltip />
@@ -151,7 +155,6 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
             </div>
           </div>
 
-          {/* Per-staff performance bar */}
           <div className="task-card">
             <div className="flex items-center gap-2 mb-4">
               <Users size={16} />
@@ -163,14 +166,7 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
-                  />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                   <Bar dataKey="מתוכנן" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="בפועל" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -191,19 +187,10 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                />
+                <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="מתוכנן" fill="hsl(var(--info))" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="בפועל" radius={[4, 4, 0, 0]}>
-                  {taskChartData.map((entry, i) => (
-                    <Cell key={i} fill={entry.overdue ? "hsl(var(--destructive))" : "hsl(var(--success))"} />
-                  ))}
+                  {taskChartData.map((entry, i) => (<Cell key={i} fill={entry.overdue ? "hsl(var(--destructive))" : "hsl(var(--success))"} />))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -213,8 +200,7 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
         {/* Staff summary table */}
         <div className="task-card">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Users size={16} />
-            סיכום ביצוע לפי עובד
+            <Users size={16} /> סיכום ביצוע לפי עובד
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -222,10 +208,11 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                 <tr className="border-b border-border text-right">
                   <th className="py-2 px-3 text-xs text-muted-foreground font-medium">עובד</th>
                   <th className="py-2 px-3 text-xs text-muted-foreground font-medium">הושלמו</th>
-                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">מתוכנן (דק׳)</th>
-                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">בפועל (דק׳)</th>
+                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">מתוכנן</th>
+                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">בפועל</th>
                   <th className="py-2 px-3 text-xs text-muted-foreground font-medium">הפרש</th>
-                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">חריגות SLA</th>
+                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">SLA</th>
+                  <th className="py-2 px-3 text-xs text-muted-foreground font-medium">תקלות</th>
                   <th className="py-2 px-3 text-xs text-muted-foreground font-medium">יעילות</th>
                 </tr>
               </thead>
@@ -237,9 +224,7 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                     <tr key={row.staff.id} className="border-b border-border/50">
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
-                            {row.staff.avatar}
-                          </div>
+                          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">{row.staff.avatar}</div>
                           <span className="font-medium text-sm">{row.staff.name}</span>
                         </div>
                       </td>
@@ -257,9 +242,12 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                         )}
                       </td>
                       <td className="py-3 px-3">
-                        <span className={`mono text-sm font-semibold ${eff >= 90 ? "text-success" : eff >= 70 ? "text-warning" : "text-destructive"}`}>
-                          {eff}%
-                        </span>
+                        {row.breakFixCount > 0 ? (
+                          <span className="status-badge bg-warning/15 text-warning text-[10px]">{row.breakFixCount} · {row.breakFixMinutes} דק׳</span>
+                        ) : "-"}
+                      </td>
+                      <td className="py-3 px-3">
+                        <span className={`mono text-sm font-semibold ${eff >= 90 ? "text-success" : eff >= 70 ? "text-warning" : "text-destructive"}`}>{eff}%</span>
                       </td>
                     </tr>
                   );
@@ -272,8 +260,7 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
         {/* Full task detail table */}
         <div className="task-card">
           <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <BarChart3 size={16} />
-            פירוט כל המשימות
+            <BarChart3 size={16} /> פירוט כל המשימות
           </h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -300,7 +287,11 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                     <tr key={a.id} className="border-b border-border/50">
                       <td className="py-2 px-2 text-xs font-medium">{a.staff.name}</td>
                       <td className="py-2 px-2 text-xs truncate max-w-[100px]">{a.task.zone.name}</td>
-                      <td className="py-2 px-2 text-xs">{a.task.type === "maintenance" ? "מהיר" : "יסודי"}</td>
+                      <td className="py-2 px-2 text-xs">
+                        {a.isBreakFix ? (
+                          <span className="status-badge bg-warning/15 text-warning text-[10px]">תקלה</span>
+                        ) : a.task.type === "maintenance" ? "מהיר" : "יסודי"}
+                      </td>
                       <td className="py-2 px-2 mono text-xs">{sched ? `${sched.plannedStart}–${sched.plannedEnd}` : `${a.task.estimatedMinutes} דק׳`}</td>
                       <td className="py-2 px-2 mono text-xs">{a.startedAt || "-"}</td>
                       <td className="py-2 px-2 mono text-xs">{a.completedAt || "-"}</td>
@@ -310,20 +301,14 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
                       </td>
                       <td className="py-2 px-2">
                         <span className={`status-badge text-[10px] ${
-                          a.status === "completed" ? "status-active" :
-                          a.status === "in_progress" ? "bg-info/15 text-info" :
-                          a.status === "overdue" ? "status-overdue" : "status-pending"
+                          a.status === "completed" ? "status-active" : a.status === "in_progress" ? "bg-info/15 text-info" : a.status === "overdue" ? "status-overdue" : "status-pending"
                         }`}>
                           {a.status === "completed" ? "הושלם" : a.status === "in_progress" ? "בביצוע" : a.status === "overdue" ? "חריגה" : "ממתין"}
                         </span>
                       </td>
                       <td className="py-2 px-2">
                         {a.elapsedMinutes !== undefined ? (
-                          breached ? (
-                            <span className="status-badge status-overdue text-[10px]">חריגה</span>
-                          ) : (
-                            <span className="status-badge status-active text-[10px]">תקין</span>
-                          )
+                          breached ? <span className="status-badge status-overdue text-[10px]">חריגה</span> : <span className="status-badge status-active text-[10px]">תקין</span>
                         ) : "-"}
                       </td>
                     </tr>
@@ -333,6 +318,36 @@ const ManagerEndOfDay = ({ onClose }: ManagerEndOfDayProps) => {
             </table>
           </div>
         </div>
+
+        {/* Stock shortages */}
+        {shortageItems.length > 0 && (
+          <div className="task-card">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <PackageOpen size={16} className="text-warning" /> חוסרים במלאי
+            </h3>
+            <div className="space-y-3 mb-4">
+              {shortageItems.map(([item, data]) => (
+                <div key={item} className="rounded-xl border border-warning/30 bg-warning/5 p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-semibold text-sm">{stockLabels[item] || item}</p>
+                    <span className="status-badge bg-warning/15 text-warning text-[10px]">{data.zones.length} מיקומים</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{data.zones.join(", ")} · דווח ע״י: {data.staffNames.join(", ")}</p>
+                </div>
+              ))}
+            </div>
+            {sentToWarehouse ? (
+              <div className="flex items-center justify-center gap-2 py-3 text-success font-semibold">
+                <CheckCircle2 size={18} /> נשלח למחסנאי!
+              </div>
+            ) : (
+              <button onClick={() => { setSentToWarehouse(true); setTimeout(() => setSentToWarehouse(false), 2500); }}
+                className="btn-action-primary w-full flex items-center justify-center gap-2">
+                <Truck size={18} /> שלח למחסנאי
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

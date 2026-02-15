@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, Minus, Trophy } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Trophy, Zap } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { TaskAssignment } from "@/data/mockData";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
@@ -11,7 +11,6 @@ interface PerformanceScoreProps {
 const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
   const [now, setNow] = useState(new Date());
 
-  // Update every 15 minutes
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
     return () => clearInterval(interval);
@@ -19,12 +18,14 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
 
   const completedCount = assignments.filter((a) => a.status === "completed").length;
   const totalCount = assignments.length;
+  const breakFixCount = assignments.filter((a) => a.isBreakFix).length;
+  const breakFixMinutes = assignments
+    .filter((a) => a.isBreakFix && a.elapsedMinutes)
+    .reduce((sum, a) => sum + (a.elapsedMinutes || 0), 0);
 
-  // End-of-day score: completion percentage
   const endOfDayScore = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  // Progress score: actual completed minutes vs what should be done by now
-  const { shouldBeCompleted, totalPlanned } = getPlannedMinutesUpToNow(
+  const { shouldBeCompleted } = getPlannedMinutesUpToNow(
     assignments,
     now.getHours(),
     now.getMinutes()
@@ -38,7 +39,6 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
     ? Math.min(Math.round((completedMinutes / shouldBeCompleted) * 100), 100)
     : completedCount > 0 ? 100 : 0;
 
-  // Time efficiency: planned vs actual
   const plannedMinutesForCompleted = assignments
     .filter((a) => a.status === "completed")
     .reduce((sum, a) => sum + a.task.estimatedMinutes, 0);
@@ -67,7 +67,6 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        {/* Progress vs plan */}
         <div className="text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
             {getTrendIcon(progressScore)}
@@ -82,7 +81,6 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
           />
         </div>
 
-        {/* Efficiency */}
         <div className="text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
             {getTrendIcon(efficiencyScore)}
@@ -97,7 +95,6 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
           />
         </div>
 
-        {/* End of day projection */}
         <div className="text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
             {getTrendIcon(endOfDayScore)}
@@ -112,6 +109,19 @@ const PerformanceScore = ({ assignments }: PerformanceScoreProps) => {
           />
         </div>
       </div>
+
+      {/* Break-fix stats */}
+      {breakFixCount > 0 && (
+        <div className="mt-3 pt-3 border-t border-border flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <Zap size={14} className="text-warning" />
+            <span className="text-xs font-semibold">תקלות מיידיות:</span>
+          </div>
+          <span className="text-xs mono font-bold">{breakFixCount}</span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs text-muted-foreground">{breakFixMinutes} דק׳ מסדר היום</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -11,6 +11,8 @@ import {
   Timer,
   CalendarDays,
   BarChart3,
+  Zap,
+  Image,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, type TaskAssignment } from "@/data/mockData";
@@ -86,7 +88,6 @@ const StaffView = () => {
     );
   };
 
-  // Sub-screens
   if (screen === "schedule") {
     return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("main")} />;
   }
@@ -94,7 +95,6 @@ const StaffView = () => {
     return <EndOfDayAnalysis assignments={staffAssignments} onClose={() => setScreen("main")} />;
   }
 
-  // All done screen
   if (allDone || !current) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -103,10 +103,7 @@ const StaffView = () => {
           <h1 className="text-2xl font-bold mb-2">כל המשימות הושלמו!</h1>
           <p className="text-muted-foreground">עבודה מצוינת היום, שרה.</p>
         </div>
-        <button
-          onClick={() => setScreen("analysis")}
-          className="btn-action-primary flex items-center justify-center gap-3 w-full max-w-xs"
-        >
+        <button onClick={() => setScreen("analysis")} className="btn-action-primary flex items-center justify-center gap-3 w-full max-w-xs">
           <BarChart3 size={20} />
           ניתוח סוף יום
         </button>
@@ -119,88 +116,68 @@ const StaffView = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div>
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
           <h1 className="text-lg font-bold">שרה כהן</h1>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setScreen("schedule")}
-            className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-            title="סדר יום"
-          >
+          <button onClick={() => setScreen("schedule")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="סדר יום">
             <CalendarDays size={18} />
           </button>
-          <button
-            onClick={() => setScreen("analysis")}
-            className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-            title="ניתוח ביצועים"
-          >
+          <button onClick={() => setScreen("analysis")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="ניתוח ביצועים">
             <BarChart3 size={18} />
           </button>
           <div className="text-left">
             <p className="text-xs opacity-75">התקדמות</p>
-            <p className="text-lg font-bold mono">
-              {completedCount}/{totalCount}
-            </p>
+            <p className="text-lg font-bold mono">{completedCount}/{totalCount}</p>
           </div>
         </div>
       </header>
 
-      {/* Task progress steps */}
       <div className="px-4 py-3 flex gap-1.5">
         {staffAssignments.map((a, i) => (
-          <div
-            key={a.id}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${
-              a.status === "completed"
-                ? "bg-success"
-                : i === currentIndex
-                ? isRunning
-                  ? "bg-accent animate-pulse-slow"
-                  : "bg-accent"
-                : "bg-muted"
-            }`}
-          />
+          <div key={a.id} className={`h-1.5 flex-1 rounded-full transition-colors ${
+            a.status === "completed" ? "bg-success" :
+            i === currentIndex ? (isRunning ? "bg-accent animate-pulse-slow" : "bg-accent") :
+            a.isBreakFix ? "bg-warning" : "bg-muted"
+          }`} />
         ))}
       </div>
 
-      {/* Performance Score */}
       <div className="px-4 mb-3">
         <PerformanceScore assignments={staffAssignments} />
       </div>
 
-      {/* Current Task Card */}
       <div className="flex-1 px-4 pb-4 flex flex-col gap-4">
-        <div className={`task-card flex-1 animate-slide-up ${isOverdue ? 'border-destructive border-2' : ''}`}>
-          {/* Task type badge */}
+        <div className={`task-card flex-1 animate-slide-up ${isOverdue ? 'border-destructive border-2' : current.isBreakFix ? 'border-warning border-2' : ''}`}>
           <div className="flex items-center justify-between mb-4">
-            <span
-              className={`status-badge ${
-                current.task.type === "maintenance"
-                  ? "bg-info/15 text-info"
-                  : "bg-accent/15 text-accent-foreground"
-              }`}
-            >
-              {current.task.type === "maintenance" ? "ניקוי מהיר" : "ניקוי יסודי"}
-            </span>
+            {current.isBreakFix ? (
+              <span className="status-badge bg-warning/15 text-warning flex items-center gap-1">
+                <Zap size={14} />
+                תקלה מיידית
+              </span>
+            ) : (
+              <span className={`status-badge ${
+                current.task.type === "maintenance" ? "bg-info/15 text-info" : "bg-accent/15 text-accent-foreground"
+              }`}>
+                {current.task.type === "maintenance" ? "ניקוי מהיר" : "ניקוי יסודי"}
+              </span>
+            )}
             <span className="text-xs text-muted-foreground uppercase tracking-wider">
               משימה {currentIndex + 1} מתוך {totalCount}
             </span>
           </div>
 
-          {/* Room info */}
           <div className="mb-6">
             <div className="flex items-center gap-2 text-muted-foreground mb-1">
               <MapPin size={14} />
-              <span className="text-sm">
-                אגף {current.task.zone.wing} · קומה {current.task.zone.floor}
-              </span>
+              <span className="text-sm">אגף {current.task.zone.wing} · קומה {current.task.zone.floor}</span>
             </div>
             <h2 className="text-2xl font-bold">{current.task.zone.name}</h2>
-            <p className="text-muted-foreground mt-1">{current.task.name}</p>
+            <p className="text-muted-foreground mt-1">
+              {current.isBreakFix && current.breakFixDescription ? current.breakFixDescription : current.task.name}
+            </p>
             {scheduledTimes[current.id] && (
               <p className="text-sm mono text-muted-foreground mt-1">
                 מתוכנן: {scheduledTimes[current.id].plannedStart} – {scheduledTimes[current.id].plannedEnd}
@@ -208,7 +185,17 @@ const StaffView = () => {
             )}
           </div>
 
-          {/* Timer */}
+          {/* Break-fix image */}
+          {current.isBreakFix && current.breakFixImageUrl && (
+            <div className="mb-4">
+              <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                <Image size={12} />
+                תמונת תקלה מהמפקח
+              </p>
+              <img src={current.breakFixImageUrl} alt="תמונת תקלה" className="w-full h-48 object-cover rounded-lg border border-border" />
+            </div>
+          )}
+
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -217,32 +204,20 @@ const StaffView = () => {
                   {elapsed} דק׳ / {current.task.estimatedMinutes} דק׳
                 </span>
               </div>
-              {isOverdue && (
-                <span className="status-badge status-overdue">חריגה</span>
-              )}
+              {isOverdue && <span className="status-badge status-overdue">חריגה</span>}
             </div>
-            <Progress
-              value={progressPercent}
-              className={`h-3 ${isOverdue ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`}
-            />
+            <Progress value={progressPercent} className={`h-3 ${isOverdue ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} />
           </div>
 
-          {/* Break toggle */}
           {isRunning && (
-            <button
-              onClick={() => setOnBreak(!onBreak)}
-              className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg border text-sm font-medium transition-colors mb-4 ${
-                onBreak
-                  ? "bg-accent/15 border-accent text-accent-foreground"
-                  : "border-border text-muted-foreground hover:bg-muted"
-              }`}
-            >
+            <button onClick={() => setOnBreak(!onBreak)} className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg border text-sm font-medium transition-colors mb-4 ${
+              onBreak ? "bg-accent/15 border-accent text-accent-foreground" : "border-border text-muted-foreground hover:bg-muted"
+            }`}>
               <Coffee size={16} />
               {onBreak ? "חזרה לעבודה" : "הפסקה"}
             </button>
           )}
 
-          {/* Stock low toggles */}
           {isRunning && (
             <div className="mb-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
@@ -251,17 +226,12 @@ const StaffView = () => {
               </p>
               <div className="flex flex-wrap gap-2">
                 {stockItems.map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => toggleStock(key)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      stockLowItems.includes(key)
-                        ? "bg-warning/15 border-warning text-warning-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {stockLowItems.includes(key) ? "⚠ " : ""}
-                    {label}
+                  <button key={key} onClick={() => toggleStock(key)} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    stockLowItems.includes(key)
+                      ? "bg-warning/15 border-warning text-warning-foreground"
+                      : "border-border text-muted-foreground hover:bg-muted"
+                  }`}>
+                    {stockLowItems.includes(key) ? "⚠ " : ""}{label}
                   </button>
                 ))}
               </div>
@@ -269,12 +239,8 @@ const StaffView = () => {
           )}
         </div>
 
-        {/* Next task preview */}
-        {nextTask && !isRunning && (
-          <NextTaskPreview assignment={nextTask} />
-        )}
+        {nextTask && !isRunning && <NextTaskPreview assignment={nextTask} />}
 
-        {/* Action buttons */}
         <div className="space-y-3">
           {!isRunning ? (
             <button onClick={handleStart} className="btn-action-success w-full flex items-center justify-center gap-3">
@@ -287,26 +253,17 @@ const StaffView = () => {
               סיום
             </button>
           )}
-
-          <button
-            onClick={() => setShowIssuePanel(!showIssuePanel)}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-destructive text-destructive font-bold transition-colors hover:bg-destructive/10"
-          >
+          <button onClick={() => setShowIssuePanel(!showIssuePanel)} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-destructive text-destructive font-bold transition-colors hover:bg-destructive/10">
             <AlertTriangle size={20} />
             דיווח על תקלה
           </button>
         </div>
 
-        {/* Issue panel */}
         {showIssuePanel && (
           <div className="task-card animate-slide-up space-y-2">
             <p className="font-semibold text-sm mb-3">בחר סוג תקלה:</p>
             {issueTypes.map((issue) => (
-              <button
-                key={issue}
-                onClick={() => setShowIssuePanel(false)}
-                className="w-full text-right px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between"
-              >
+              <button key={issue} onClick={() => setShowIssuePanel(false)} className="w-full text-right px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between">
                 <ChevronLeft size={16} className="text-muted-foreground" />
                 <span className="text-sm font-medium">{issue}</span>
               </button>
