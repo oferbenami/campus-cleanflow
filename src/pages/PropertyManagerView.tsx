@@ -17,6 +17,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { mockStaff, mockTasks, type StaffMember, type TaskTemplate } from "@/data/mockData";
+import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 
 type PMTab = "staff" | "planning" | "assign";
 
@@ -72,7 +73,7 @@ const PropertyManagerView = () => {
 
         {activeTab === "staff" && <StaffListTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
-        {activeTab === "assign" && <TaskAssignmentTab />}
+        {activeTab === "assign" && <ZonePlanningTab />}
       </div>
     </div>
   );
@@ -345,206 +346,6 @@ const ShiftPlanningTab = () => {
         >
           <Send size={18} /> שמור תכנון
         </button>
-      )}
-    </div>
-  );
-};
-
-/* ─── Task Assignment Tab ─── */
-interface PendingAssignment {
-  staffId: string;
-  taskId: string;
-  shift: "morning" | "evening";
-}
-
-const TaskAssignmentTab = () => {
-  const staffOnly = mockStaff.filter((s) => s.role === "staff");
-  const [shift, setShift] = useState<"morning" | "evening">("morning");
-  const [assignments, setAssignments] = useState<PendingAssignment[]>([]);
-  const [selectedStaffId, setSelectedStaffId] = useState("");
-  const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [sent, setSent] = useState(false);
-
-  const shiftTasks = mockTasks.filter((t) => t.shift === shift);
-
-  const addAssignment = () => {
-    if (!selectedStaffId || !selectedTaskId) return;
-    setAssignments((prev) => [
-      ...prev,
-      { staffId: selectedStaffId, taskId: selectedTaskId, shift },
-    ]);
-    setSelectedTaskId("");
-  };
-
-  const removeAssignment = (index: number) => {
-    setAssignments((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSend = () => {
-    setSent(true);
-    setTimeout(() => {
-      setSent(false);
-      setAssignments([]);
-    }, 2500);
-  };
-
-  const getStaffName = (id: string) => staffOnly.find((s) => s.id === id)?.name || id;
-  const getTaskName = (id: string) => mockTasks.find((t) => t.id === id)?.name || id;
-  const getTaskZone = (id: string) => mockTasks.find((t) => t.id === id)?.zone.name || "";
-
-  // Group assignments by staff
-  const groupedByStaff: Record<string, PendingAssignment[]> = {};
-  assignments.filter((a) => a.shift === shift).forEach((a) => {
-    if (!groupedByStaff[a.staffId]) groupedByStaff[a.staffId] = [];
-    groupedByStaff[a.staffId].push(a);
-  });
-
-  return (
-    <div className="space-y-4 animate-slide-up">
-      {/* Shift toggle */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setShift("morning")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
-            shift === "morning"
-              ? "bg-warning/15 border-2 border-warning text-warning"
-              : "bg-muted border-2 border-transparent text-muted-foreground"
-          }`}
-        >
-          <Sun size={18} /> משמרת בוקר
-        </button>
-        <button
-          onClick={() => setShift("evening")}
-          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${
-            shift === "evening"
-              ? "bg-info/15 border-2 border-info text-info"
-              : "bg-muted border-2 border-transparent text-muted-foreground"
-          }`}
-        >
-          <Moon size={18} /> משמרת ערב
-        </button>
-      </div>
-
-      {/* Add assignment form */}
-      <div className="task-card">
-        <h3 className="font-bold mb-3 flex items-center gap-2">
-          <UserPlus size={16} />
-          הוסף שיבוץ
-        </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <label className="block">
-            <span className="text-xs text-muted-foreground mb-1 block">עובד</span>
-            <select
-              value={selectedStaffId}
-              onChange={(e) => setSelectedStaffId(e.target.value)}
-              className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">בחר עובד...</option>
-              {staffOnly.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.securityBadgeNumber})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="text-xs text-muted-foreground mb-1 block">משימה</span>
-            <select
-              value={selectedTaskId}
-              onChange={(e) => setSelectedTaskId(e.target.value)}
-              className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="">בחר משימה...</option>
-              {shiftTasks.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name} — {t.zone.name} ({t.estimatedMinutes} דק׳)
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="flex items-end">
-            <button
-              onClick={addAssignment}
-              disabled={!selectedStaffId || !selectedTaskId}
-              className="btn-action-primary flex items-center justify-center gap-2 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Plus size={16} /> הוסף
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Assignment preview grouped by staff */}
-      {Object.keys(groupedByStaff).length > 0 && (
-        <div className="task-card">
-          <h3 className="font-bold mb-3 flex items-center gap-2">
-            <ClipboardList size={16} />
-            שיבוצים ל{shift === "morning" ? "משמרת בוקר" : "משמרת ערב"}
-          </h3>
-          <div className="space-y-4">
-            {Object.entries(groupedByStaff).map(([staffId, tasks]) => {
-              const staff = staffOnly.find((s) => s.id === staffId);
-              const totalMinutes = tasks.reduce((sum, a) => {
-                const task = mockTasks.find((t) => t.id === a.taskId);
-                return sum + (task?.estimatedMinutes || 0);
-              }, 0);
-
-              return (
-                <div key={staffId} className="rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                      {staff?.avatar}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">{staff?.name}</p>
-                      <p className="text-xs text-muted-foreground mono">
-                        {tasks.length} משימות · {totalMinutes} דק׳
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    {tasks.map((a, i) => {
-                      const globalIndex = assignments.indexOf(a);
-                      return (
-                        <div
-                          key={i}
-                          className="flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 text-sm"
-                        >
-                          <div>
-                            <p className="font-medium text-xs">{getTaskName(a.taskId)}</p>
-                            <p className="text-[10px] text-muted-foreground">{getTaskZone(a.taskId)}</p>
-                          </div>
-                          <button
-                            onClick={() => removeAssignment(globalIndex)}
-                            className="text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Send button */}
-      {assignments.length > 0 && (
-        sent ? (
-          <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-            <CheckCircle2 size={20} /> שיבוצים נשלחו לעובדים!
-          </div>
-        ) : (
-          <button
-            onClick={handleSend}
-            className="btn-action-success w-full flex items-center justify-center gap-2"
-          >
-            <Send size={18} /> שלח שיבוצים ({assignments.length} משימות)
-          </button>
-        )
       )}
     </div>
   );
