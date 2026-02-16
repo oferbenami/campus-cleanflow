@@ -516,6 +516,33 @@ export type Database = {
         }
         Relationships: []
       }
+      supply_alerts: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          id: string
+          item: string
+          staff_id: string
+          zone_name: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          id?: string
+          item: string
+          staff_id: string
+          zone_name: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          item?: string
+          staff_id?: string
+          zone_name?: string
+        }
+        Relationships: []
+      }
       task_assignments: {
         Row: {
           assignment_date: string

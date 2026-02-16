@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import {
   Play,
@@ -26,6 +26,7 @@ import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import TaskTile from "@/components/staff/TaskTile";
 import { useI18n } from "@/i18n/I18nContext";
 import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
+import { supabase } from "@/integrations/supabase/client";
 
 const stockItems = [
   { key: "Soap", labelKey: "stock.soap" },
@@ -50,6 +51,8 @@ const StaffView = () => {
   const [onBreak, setOnBreak] = useState(false);
   const [stockLowItems, setStockLowItems] = useState<string[]>([]);
   const [showIssuePanel, setShowIssuePanel] = useState(false);
+  const [stockReporting, setStockReporting] = useState(false);
+  const [reportedItems, setReportedItems] = useState<Set<string>>(new Set());
   const [screen, setScreen] = useState<StaffScreen>("home");
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
@@ -115,6 +118,32 @@ const StaffView = () => {
       prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
     );
   };
+
+  const handleReportShortage = useCallback(async () => {
+    if (stockLowItems.length === 0 || !current) return;
+    setStockReporting(true);
+    try {
+      const rows = stockLowItems.map((item) => ({
+        staff_id: current.staff.id,
+        assignment_id: current.id,
+        item,
+        zone_name: current.task.zone.name,
+      }));
+      const { error } = await supabase.from("supply_alerts").insert(rows);
+      if (error) throw error;
+      setReportedItems((prev) => {
+        const next = new Set(prev);
+        stockLowItems.forEach((i) => next.add(i));
+        return next;
+      });
+      setStockLowItems([]);
+      toast({ title: "✓ דיווח חוסר נשלח", description: `${rows.length} פריטים דווחו בהצלחה` });
+    } catch {
+      toast({ title: "שגיאה", description: "לא ניתן לשלוח דיווח כרגע", variant: "destructive" });
+    } finally {
+      setStockReporting(false);
+    }
+  }, [stockLowItems, current]);
 
   const overdueAlertSent = useRef(false);
   const taskElapsedMinutes = current ? Math.floor(taskSeconds / 60) : 0;
@@ -319,17 +348,37 @@ const StaffView = () => {
                   <PackageOpen size={12} />
                   {t("worker.stockCheck")}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {stockItems.map(({ key, labelKey }) => (
-                    <button key={key} onClick={() => toggleStock(key)} className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      stockLowItems.includes(key)
-                        ? "bg-warning/15 border-warning text-warning-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}>
-                      {stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
-                    </button>
-                  ))}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {stockItems.map(({ key, labelKey }) => {
+                    const alreadyReported = reportedItems.has(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => !alreadyReported && toggleStock(key)}
+                        disabled={alreadyReported}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          alreadyReported
+                            ? "bg-success/15 border-success text-success cursor-default"
+                            : stockLowItems.includes(key)
+                            ? "bg-warning/15 border-warning text-warning-foreground"
+                            : "border-border text-muted-foreground hover:bg-muted"
+                        }`}
+                      >
+                        {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
+                      </button>
+                    );
+                  })}
                 </div>
+                {stockLowItems.length > 0 && (
+                  <button
+                    onClick={handleReportShortage}
+                    disabled={stockReporting}
+                    className="w-full py-2.5 rounded-lg bg-warning text-warning-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
+                  >
+                    <PackageOpen size={16} />
+                    {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
+                  </button>
+                )}
               </div>
             )}
           </div>
