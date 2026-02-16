@@ -163,11 +163,13 @@
     "eveningShift": "משמרת ערב"
   },
   "audit": {
-    "cleanliness": "ניקיון",
-    "thoroughness": "יסודיות",
-    "timeliness": "עמידה בזמנים",
+    "floor": "רצפה",
+    "surfaces": "משטחים",
+    "bins": "פחי אשפה",
+    "odor": "ריח",
     "supplies": "ציוד וחומרים",
-    "safety": "בטיחות"
+    "avgScore": "ציון ממוצע",
+    "failedAudit": "ציון נמוך — נדרשת פעולה מתקנת"
   },
   "schedule": {
     "daySchedule": "סדר יום",

@@ -408,31 +408,30 @@ const StockShortagesTab = () => {
   );
 };
 
-/* ─── Audit Tab (with weighted scoring + CAPA) ─── */
+/* ─── Audit Tab (5-item checklist scoring) ─── */
 const AuditTab = () => {
   const { t } = useI18n();
   const completedTasks = mockAssignments.filter((a) => a.status === "completed");
   const [selectedTask, setSelectedTask] = useState("");
-  const [ratings, setRatings] = useState({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
+  const [ratings, setRatings] = useState({ floor: 0, surfaces: 0, bins: 0, odor: 0, supplies: 0 });
   const [auditNotes, setAuditNotes] = useState("");
   const [auditSent, setAuditSent] = useState(false);
   const [showCAPA, setShowCAPA] = useState(false);
   const [capaTitle, setCapaTitle] = useState("");
   const [capaCreated, setCapaCreated] = useState(false);
 
-  const weights = { cleanliness: 1.0, thoroughness: 0.9, timeliness: 0.8, supplies: 0.7, safety: 1.0 };
   const categories = [
-    { key: "cleanliness" as const, label: t("audit.cleanliness"), weight: weights.cleanliness },
-    { key: "thoroughness" as const, label: t("audit.thoroughness"), weight: weights.thoroughness },
-    { key: "timeliness" as const, label: t("audit.timeliness"), weight: weights.timeliness },
-    { key: "supplies" as const, label: t("audit.supplies"), weight: weights.supplies },
-    { key: "safety" as const, label: t("audit.safety"), weight: weights.safety },
+    { key: "floor" as const, label: t("audit.floor") },
+    { key: "surfaces" as const, label: t("audit.surfaces") },
+    { key: "bins" as const, label: t("audit.bins") },
+    { key: "odor" as const, label: t("audit.odor") },
+    { key: "supplies" as const, label: t("audit.supplies") },
   ];
 
-  const totalWeight = categories.reduce((s, c) => s + c.weight, 0);
-  const weightedScore = categories.reduce((s, c) => s + ratings[c.key] * c.weight, 0) / totalWeight;
-  const isAllRated = Object.values(ratings).every((v) => v > 0);
-  const auditFailed = isAllRated && weightedScore < 3.0;
+  const ratedCount = Object.values(ratings).filter((v) => v > 0).length;
+  const isAllRated = ratedCount === 5;
+  const avgScore = isAllRated ? Object.values(ratings).reduce((s, v) => s + v, 0) / 5 : 0;
+  const auditFailed = isAllRated && avgScore < 3.0;
 
   const handleSubmit = () => {
     setAuditSent(true);
@@ -441,7 +440,7 @@ const AuditTab = () => {
     } else {
       setTimeout(() => {
         setAuditSent(false); setSelectedTask("");
-        setRatings({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
+        setRatings({ floor: 0, surfaces: 0, bins: 0, odor: 0, supplies: 0 });
         setAuditNotes("");
       }, 2000);
     }
@@ -452,17 +451,14 @@ const AuditTab = () => {
     toast({ title: t("supervisor.capaCreated"), description: capaTitle });
     setTimeout(() => {
       setCapaCreated(false); setShowCAPA(false); setAuditSent(false); setSelectedTask("");
-      setRatings({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
+      setRatings({ floor: 0, surfaces: 0, bins: 0, odor: 0, supplies: 0 });
       setAuditNotes(""); setCapaTitle("");
     }, 2000);
   };
 
-  const StarRating = ({ value, onChange, label, weight }: { value: number; onChange: (v: number) => void; label: string; weight: number }) => (
+  const StarRating = ({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) => (
     <div className="flex items-center justify-between py-2">
-      <div>
-        <span className="text-sm font-medium">{label}</span>
-        <span className="text-[10px] text-muted-foreground mr-2">(×{weight})</span>
-      </div>
+      <span className="text-sm font-medium">{label}</span>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button key={star} onClick={() => onChange(star)} className="transition-colors">
@@ -497,26 +493,25 @@ const AuditTab = () => {
                 <StarRating
                   key={cat.key}
                   label={cat.label}
-                  weight={cat.weight}
                   value={ratings[cat.key]}
                   onChange={(v) => setRatings((r) => ({ ...r, [cat.key]: v }))}
                 />
               ))}
             </div>
 
-            {/* Weighted score display */}
+            {/* Average score display */}
             {isAllRated && (
               <div className={`my-4 p-3 rounded-xl border-2 ${auditFailed ? "border-destructive bg-destructive/5" : "border-success bg-success/5"}`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold">{t("supervisor.weightedScore")}</span>
+                  <span className="text-sm font-semibold">{t("audit.avgScore")}</span>
                   <span className={`text-2xl font-bold mono ${auditFailed ? "text-destructive" : "text-success"}`}>
-                    {weightedScore.toFixed(1)} / 5.0
+                    {avgScore.toFixed(1)} / 5.0
                   </span>
                 </div>
                 {auditFailed && (
                   <p className="text-xs text-destructive mt-1 flex items-center gap-1">
                     <ShieldAlert size={12} />
-                    {t("supervisor.auditFailed")}
+                    {t("audit.failedAudit")}
                   </p>
                 )}
               </div>

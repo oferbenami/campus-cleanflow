@@ -163,11 +163,13 @@
     "eveningShift": "Evening Shift"
   },
   "audit": {
-    "cleanliness": "Cleanliness",
-    "thoroughness": "Thoroughness",
-    "timeliness": "Timeliness",
+    "floor": "Floor",
+    "surfaces": "Surfaces",
+    "bins": "Bins",
+    "odor": "Odor",
     "supplies": "Supplies",
-    "safety": "Safety"
+    "avgScore": "Average Score",
+    "failedAudit": "Low score — corrective action required"
   },
   "schedule": {
     "daySchedule": "Day Schedule",
