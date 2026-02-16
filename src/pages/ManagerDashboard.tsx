@@ -16,6 +16,7 @@ import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
 import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
+import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
 import {
@@ -225,7 +226,10 @@ const ManagerDashboard = () => {
           <VarianceWidget summary={varianceSummary} />
         </div>
 
-        {/* Supply Alerts */}
+        {/* Time Standards Validation */}
+        <TimeStandardsValidation assignments={assignments} />
+
+
         {(() => {
           const alertMap: Record<string, string[]> = {};
           assignments.forEach((a) => {
