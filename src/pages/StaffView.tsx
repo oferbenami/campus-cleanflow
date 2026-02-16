@@ -517,6 +517,7 @@ const StaffView = () => {
             isActive={isRunning}
             isCurrent={true}
             onTap={() => setScreen("taskDetail")}
+            onReportIssue={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
           />
         )}
 

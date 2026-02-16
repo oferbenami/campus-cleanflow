@@ -48,6 +48,8 @@
     "start": "Start",
     "complete": "Complete",
     "reportIssue": "Report Issue",
+    "priorityNormal": "Normal",
+    "priorityUrgent": "Urgent",
     "cannotPerform": "Cannot Perform",
     "allDone": "All Tasks Completed!",
     "greatWork": "Great work today.",

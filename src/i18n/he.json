@@ -48,6 +48,8 @@
     "start": "התחל",
     "complete": "סיים",
     "reportIssue": "דיווח על תקלה",
+    "priorityNormal": "רגיל",
+    "priorityUrgent": "דחוף",
     "cannotPerform": "לא ניתן לבצע",
     "allDone": "כל המשימות הושלמו!",
     "greatWork": "עבודה מצוינת היום.",
