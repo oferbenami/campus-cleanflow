@@ -14,6 +14,256 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_checklist_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          name_he: string
+          sort_order: number
+          weight: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          name_he: string
+          sort_order?: number
+          weight?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_he?: string
+          sort_order?: number
+          weight?: number
+        }
+        Relationships: []
+      }
+      buildings: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          name: string
+          site_id: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          site_id: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buildings_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corrective_actions: {
+        Row: {
+          assigned_to: string | null
+          audit_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          audit_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          audit_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corrective_actions_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_audit_id_fkey"
+            columns: ["audit_id"]
+            isOneToOne: false
+            referencedRelation: "quality_audits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_routing_rules: {
+        Row: {
+          auto_assign_role: string | null
+          created_at: string
+          event_type: string
+          id: string
+          is_active: boolean
+          priority: number
+          source: string
+          zone_id: string | null
+        }
+        Insert: {
+          auto_assign_role?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          source?: string
+          zone_id?: string | null
+        }
+        Update: {
+          auto_assign_role?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          source?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_routing_rules_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_triggers: {
+        Row: {
+          assigned_task_id: string | null
+          created_at: string
+          description: string | null
+          event_type: string
+          id: string
+          location_id: string | null
+          metadata: Json | null
+          reported_by: string | null
+          resolved_at: string | null
+          severity: string
+          source: string
+          status: string
+          title: string
+          zone_id: string | null
+        }
+        Insert: {
+          assigned_task_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          reported_by?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title: string
+          zone_id?: string | null
+        }
+        Update: {
+          assigned_task_id?: string | null
+          created_at?: string
+          description?: string | null
+          event_type?: string
+          id?: string
+          location_id?: string | null
+          metadata?: Json | null
+          reported_by?: string | null
+          resolved_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          title?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_triggers_assigned_task_id_fkey"
+            columns: ["assigned_task_id"]
+            isOneToOne: false
+            referencedRelation: "task_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_triggers_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_triggers_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_triggers_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           created_at: string
@@ -301,6 +551,8 @@ export type Database = {
           location_id: string | null
           name: string
           shift: string
+          sla_minutes: number | null
+          sla_warning_minutes: number | null
           task_type: string
         }
         Insert: {
@@ -310,6 +562,8 @@ export type Database = {
           location_id?: string | null
           name: string
           shift?: string
+          sla_minutes?: number | null
+          sla_warning_minutes?: number | null
           task_type?: string
         }
         Update: {
@@ -319,6 +573,8 @@ export type Database = {
           location_id?: string | null
           name?: string
           shift?: string
+          sla_minutes?: number | null
+          sla_warning_minutes?: number | null
           task_type?: string
         }
         Relationships: [
@@ -351,6 +607,7 @@ export type Database = {
       }
       zones: {
         Row: {
+          building_id: string | null
           created_at: string
           floor: string | null
           id: string
@@ -359,6 +616,7 @@ export type Database = {
           wing: string | null
         }
         Insert: {
+          building_id?: string | null
           created_at?: string
           floor?: string | null
           id?: string
@@ -367,6 +625,7 @@ export type Database = {
           wing?: string | null
         }
         Update: {
+          building_id?: string | null
           created_at?: string
           floor?: string | null
           id?: string
@@ -375,6 +634,13 @@ export type Database = {
           wing?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "zones_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "zones_site_id_fkey"
             columns: ["site_id"]
