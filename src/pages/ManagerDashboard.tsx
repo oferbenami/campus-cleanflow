@@ -17,7 +17,7 @@ import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
 import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
-import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget } from "@/components/manager/SchedulingWidgets";
+import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -68,6 +68,7 @@ const ManagerDashboard = () => {
   const variances = useMemo(() => computeVariancesFromAssignments(mockAssignments), []);
   const varianceSummary = useMemo(() => computeVarianceSummary(variances), [variances]);
   const slaRiskTasks = useMemo(() => getSlaRiskTasks(mockAssignments), []);
+  const workerBalances = useMemo(() => computeWorkerBalances(mockAssignments, mockStaff), []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -198,6 +199,9 @@ const ManagerDashboard = () => {
             <p className="text-[10px] text-info flex items-center gap-1 mt-2"><ChevronLeft size={10} /> לחץ לדוח מפורט</p>
           </button>
         </div>
+
+        {/* Workload Balancing */}
+        <WorkloadBalancingPanel balances={workerBalances} />
 
         {/* Scheduling Engine Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
