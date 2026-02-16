@@ -1,6 +1,8 @@
-import { ArrowRight, MapPin, Clock, AlertTriangle, CheckCircle2, Play, Timer } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, MapPin, Clock, AlertTriangle, CheckCircle2, Play, Timer, ChevronDown, ChevronUp } from "lucide-react";
 import type { TaskAssignment, StaffMember } from "@/data/mockData";
 import { scheduledTimes } from "@/data/staffSchedule";
+import ActivityTimeline from "./ActivityTimeline";
 
 type DrillDownType = "staff" | "completed" | "inProgress" | "overdue" | "sla";
 
@@ -83,6 +85,7 @@ const DrillDownPanel = ({ type, assignments, staff, onClose }: DrillDownPanelPro
 };
 
 const AssignmentRow = ({ assignment: a }: { assignment: TaskAssignment }) => {
+  const [showTimeline, setShowTimeline] = useState(false);
   const isOvertime = a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15;
   const sched = scheduledTimes[a.id];
   return (
@@ -131,6 +134,20 @@ const AssignmentRow = ({ assignment: a }: { assignment: TaskAssignment }) => {
               {issue}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Activity log toggle */}
+      <button
+        onClick={() => setShowTimeline(!showTimeline)}
+        className="mt-3 flex items-center gap-1.5 text-[11px] text-info font-medium hover:underline"
+      >
+        {showTimeline ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+        יומן פעילות
+      </button>
+      {showTimeline && (
+        <div className="mt-2 pr-2 border-r-2 border-border">
+          <ActivityTimeline assignmentId={a.id} />
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { logActivity } from "@/components/manager/ActivityTimeline";
 import {
   Users,
   AlertTriangle,
@@ -68,10 +69,21 @@ const ManagerDashboard = () => {
   const handleReassign = useCallback((assignmentId: string, newStaffId: string) => {
     const newStaff = mockStaff.find((s) => s.id === newStaffId);
     if (!newStaff) return;
+    const oldAssignment = assignments.find((a) => a.id === assignmentId);
     setAssignments((prev) =>
       prev.map((a) => (a.id === assignmentId ? { ...a, staff: newStaff } : a))
     );
-  }, []);
+    // Log the reassignment
+    logActivity({
+      action_type: "reassignment",
+      actor_id: "manager-1",
+      actor_name: "מנהל קמפוס",
+      assignment_id: assignmentId,
+      target_staff_id: newStaffId,
+      target_staff_name: newStaff.name,
+      details: `שובץ מחדש מ-${oldAssignment?.staff.name || "?"} ל-${newStaff.name}`,
+    });
+  }, [assignments]);
 
   return (
     <div className="min-h-screen bg-background">
