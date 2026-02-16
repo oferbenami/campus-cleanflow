@@ -76,6 +76,57 @@ export type Database = {
           },
         ]
       }
+      cleaning_protocols: {
+        Row: {
+          checklist: Json
+          created_at: string
+          frequency_per_day: number
+          id: string
+          is_active: boolean
+          name: string
+          name_he: string
+          notes: string | null
+          required_equipment: Json
+          required_materials: Json
+          sla_minutes: number
+          sla_warning_minutes: number
+          space_category: string
+          updated_at: string
+        }
+        Insert: {
+          checklist?: Json
+          created_at?: string
+          frequency_per_day?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          name_he: string
+          notes?: string | null
+          required_equipment?: Json
+          required_materials?: Json
+          sla_minutes?: number
+          sla_warning_minutes?: number
+          space_category: string
+          updated_at?: string
+        }
+        Update: {
+          checklist?: Json
+          created_at?: string
+          frequency_per_day?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_he?: string
+          notes?: string | null
+          required_equipment?: Json
+          required_materials?: Json
+          sla_minutes?: number
+          sla_warning_minutes?: number
+          space_category?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       corrective_actions: {
         Row: {
           assigned_to: string | null
@@ -264,29 +315,99 @@ export type Database = {
           },
         ]
       }
-      locations: {
+      floors: {
         Row: {
+          building_id: string
           created_at: string
+          floor_number: number
           id: string
           name: string
+        }
+        Insert: {
+          building_id: string
+          created_at?: string
+          floor_number?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          building_id?: string
+          created_at?: string
+          floor_number?: number
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floors_building_id_fkey"
+            columns: ["building_id"]
+            isOneToOne: false
+            referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          area_sqm: number | null
+          created_at: string
+          floor_id: string | null
+          floor_type: string
+          has_active_kitchen: boolean
+          has_glass: boolean
+          id: string
+          name: string
+          protocol_id: string | null
           room_type: string | null
+          space_category: string
+          traffic_level: string
           zone_id: string
         }
         Insert: {
+          area_sqm?: number | null
           created_at?: string
+          floor_id?: string | null
+          floor_type?: string
+          has_active_kitchen?: boolean
+          has_glass?: boolean
           id?: string
           name: string
+          protocol_id?: string | null
           room_type?: string | null
+          space_category?: string
+          traffic_level?: string
           zone_id: string
         }
         Update: {
+          area_sqm?: number | null
           created_at?: string
+          floor_id?: string | null
+          floor_type?: string
+          has_active_kitchen?: boolean
+          has_glass?: boolean
           id?: string
           name?: string
+          protocol_id?: string | null
           room_type?: string | null
+          space_category?: string
+          traffic_level?: string
           zone_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "locations_floor_id_fkey"
+            columns: ["floor_id"]
+            isOneToOne: false
+            referencedRelation: "floors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "locations_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "cleaning_protocols"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "locations_zone_id_fkey"
             columns: ["zone_id"]
@@ -607,30 +728,39 @@ export type Database = {
       }
       zones: {
         Row: {
+          area_sqm: number | null
           building_id: string | null
           created_at: string
           floor: string | null
+          floor_id: string | null
           id: string
           name: string
           site_id: string
+          traffic_level: string
           wing: string | null
         }
         Insert: {
+          area_sqm?: number | null
           building_id?: string | null
           created_at?: string
           floor?: string | null
+          floor_id?: string | null
           id?: string
           name: string
           site_id: string
+          traffic_level?: string
           wing?: string | null
         }
         Update: {
+          area_sqm?: number | null
           building_id?: string | null
           created_at?: string
           floor?: string | null
+          floor_id?: string | null
           id?: string
           name?: string
           site_id?: string
+          traffic_level?: string
           wing?: string | null
         }
         Relationships: [
@@ -639,6 +769,13 @@ export type Database = {
             columns: ["building_id"]
             isOneToOne: false
             referencedRelation: "buildings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zones_floor_id_fkey"
+            columns: ["floor_id"]
+            isOneToOne: false
+            referencedRelation: "floors"
             referencedColumns: ["id"]
           },
           {
