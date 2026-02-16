@@ -77,7 +77,7 @@ const ManagerDashboard = () => {
     // Log the reassignment
     logActivity({
       action_type: "reassignment",
-      actor_id: "manager-1",
+      actor_id: "00000000-0000-0000-0000-000000000099",
       actor_name: "מנהל קמפוס",
       assignment_id: assignmentId,
       target_staff_id: newStaffId,
