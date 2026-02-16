@@ -6,11 +6,12 @@ import {
   Gauge,
   Clock,
   BarChart3,
+  Scale,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { WorkerWorkload, TaskVariance, VarianceSummary } from "@/lib/scheduling-engine";
 import { getHeatLevel } from "@/lib/scheduling-engine";
-import type { TaskAssignment } from "@/data/mockData";
+import type { TaskAssignment, StaffMember } from "@/data/mockData";
 
 /* ─── Workload Heat Indicator ─── */
 export const WorkloadHeatPanel = ({ workloads }: { workloads: WorkerWorkload[] }) => {
@@ -204,6 +205,99 @@ export const VarianceWidget = ({ summary }: { summary: VarianceSummary }) => {
               </span>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Workload Balancing Indicator ─── */
+type BalanceLevel = "underloaded" | "balanced" | "overloaded";
+
+function getBalanceLevel(plannedMinutes: number, shiftMinutes: number): BalanceLevel {
+  const ratio = plannedMinutes / shiftMinutes;
+  if (ratio < 0.6) return "underloaded";
+  if (ratio > 1.0) return "overloaded";
+  return "balanced";
+}
+
+const balanceConfig: Record<BalanceLevel, { label: string; barClass: string; badgeClass: string }> = {
+  underloaded: { label: "תת-עומס", barClass: "[&>div]:bg-info", badgeClass: "bg-info/15 text-info" },
+  balanced: { label: "מאוזן", barClass: "[&>div]:bg-success", badgeClass: "bg-success/15 text-success" },
+  overloaded: { label: "עודף", barClass: "[&>div]:bg-destructive", badgeClass: "bg-destructive/15 text-destructive" },
+};
+
+export interface WorkerBalance {
+  staffId: string;
+  staffName: string;
+  plannedMinutes: number;
+  shiftMinutes: number;
+}
+
+export function computeWorkerBalances(
+  assignments: TaskAssignment[],
+  staff: StaffMember[],
+  shiftMinutes = 420
+): WorkerBalance[] {
+  const activeStaff = staff.filter((s) => s.role === "staff");
+  return activeStaff.map((s) => {
+    const planned = assignments
+      .filter((a) => a.staff.id === s.id)
+      .reduce((sum, a) => sum + a.task.estimatedMinutes, 0);
+    return { staffId: s.id, staffName: s.name, plannedMinutes: planned, shiftMinutes };
+  });
+}
+
+export const WorkloadBalancingPanel = ({ balances }: { balances: WorkerBalance[] }) => {
+  const avgLoad = balances.length > 0
+    ? Math.round(balances.reduce((s, b) => s + b.plannedMinutes, 0) / balances.length)
+    : 0;
+  const maxLoad = Math.max(...balances.map((b) => b.plannedMinutes), 1);
+  const minLoad = Math.min(...balances.map((b) => b.plannedMinutes), 0);
+  const spread = maxLoad - minLoad;
+
+  return (
+    <div className="task-card">
+      <div className="flex items-center gap-2 mb-3">
+        <Scale size={18} className="text-accent" />
+        <h3 className="font-bold text-sm">איזון עומסים</h3>
+        <span className="text-[10px] text-muted-foreground mono mr-auto">
+          ממוצע: {avgLoad} דק׳ · פער: {spread} דק׳
+        </span>
+      </div>
+
+      <div className="space-y-2.5">
+        {balances.map((b) => {
+          const level = getBalanceLevel(b.plannedMinutes, b.shiftMinutes);
+          const cfg = balanceConfig[level];
+          const pct = Math.min(Math.round((b.plannedMinutes / b.shiftMinutes) * 100), 130);
+
+          return (
+            <div key={b.staffId} className="flex items-center gap-3">
+              <span className="text-xs font-medium w-20 truncate text-right">{b.staffName}</span>
+              <div className="flex-1">
+                <Progress
+                  value={Math.min(pct, 100)}
+                  className={`h-2.5 ${cfg.barClass}`}
+                />
+              </div>
+              <span className="text-[10px] font-bold mono w-16 text-left text-muted-foreground">
+                {b.plannedMinutes}/{b.shiftMinutes}
+              </span>
+              <span className={`status-badge text-[9px] ${cfg.badgeClass}`}>
+                {cfg.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {spread > 60 && (
+        <div className="mt-3 p-2.5 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2">
+          <AlertTriangle size={14} className="text-warning shrink-0" />
+          <p className="text-[11px] text-warning">
+            פער עומס של {spread} דקות בין העובדים — שקול לאזן מחדש
+          </p>
         </div>
       )}
     </div>
