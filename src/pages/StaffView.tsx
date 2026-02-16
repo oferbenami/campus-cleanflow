@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { toast } from "@/hooks/use-toast";
 import {
   Play,
@@ -16,6 +16,7 @@ import {
   Home,
   MapPin,
   XCircle,
+  Gauge,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, type TaskAssignment } from "@/data/mockData";
@@ -24,6 +25,7 @@ import DaySchedule from "@/components/staff/DaySchedule";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import TaskTile from "@/components/staff/TaskTile";
 import { useI18n } from "@/i18n/I18nContext";
+import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
 
 const stockItems = [
   { key: "Soap", labelKey: "stock.soap" },
@@ -68,6 +70,17 @@ const StaffView = () => {
   const thirdTask = currentIndex < staffAssignments.length - 2 ? staffAssignments[currentIndex + 2] : null;
   const completedCount = staffAssignments.filter((a) => a.status === "completed").length;
   const totalCount = staffAssignments.length;
+
+  // Shift capacity
+  const defaultShift: ShiftConfig = { startTime: "07:00", endTime: "15:00", breakMinutes: 30 };
+  const workload = useMemo(() => {
+    const durations = staffAssignments.map((a) => a.task.estimatedMinutes);
+    return calculateWorkerWorkload("s1", "", durations, defaultShift);
+  }, [staffAssignments]);
+  const heat = getHeatLevel(workload.utilizationPercent);
+  const remainingMinutes = Math.max(0, workload.availableMinutes - staffAssignments
+    .filter((a) => a.status === "completed")
+    .reduce((s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes), 0) - (isRunning ? Math.floor(taskSeconds / 60) : 0));
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -387,6 +400,36 @@ const StaffView = () => {
             a.isBreakFix ? "bg-warning" : "bg-muted"
           }`} />
         ))}
+      </div>
+
+      {/* Shift capacity indicator */}
+      <div className="mx-4 mb-3 flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/50">
+        <Gauge size={14} className={
+          heat === "cool" ? "text-success" :
+          heat === "warm" ? "text-warning" :
+          heat === "hot" ? "text-accent" :
+          "text-destructive"
+        } />
+        <div className="flex-1">
+          <div className="flex items-center justify-between text-[10px] mb-1">
+            <span className="text-muted-foreground">קיבולת משמרת</span>
+            <span className="mono font-semibold">{remainingMinutes} דק׳ נותרו</span>
+          </div>
+          <Progress
+            value={workload.utilizationPercent}
+            className={`h-1.5 ${
+              heat === "cool" ? "[&>div]:bg-success" :
+              heat === "warm" ? "[&>div]:bg-warning" :
+              heat === "hot" ? "[&>div]:bg-accent" :
+              "[&>div]:bg-destructive"
+            }`}
+          />
+        </div>
+        {current && (
+          <span className="text-[10px] mono text-muted-foreground">
+            ~{current.task.estimatedMinutes} דק׳
+          </span>
+        )}
       </div>
 
       {/* Break-fix banner (compact on home) */}
