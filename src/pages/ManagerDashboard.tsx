@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Clock,
@@ -17,6 +17,13 @@ import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
 import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
+import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget } from "@/components/manager/SchedulingWidgets";
+import {
+  computeWorkloadsFromAssignments,
+  computeVariancesFromAssignments,
+  computeVarianceSummary,
+  getSlaRiskTasks,
+} from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
 
@@ -55,6 +62,12 @@ const ManagerDashboard = () => {
     staff,
     assignments: mockAssignments.filter((a) => a.staff.id === staff.id),
   }));
+
+  // Scheduling engine computations
+  const workloads = useMemo(() => computeWorkloadsFromAssignments(mockAssignments, mockStaff), []);
+  const variances = useMemo(() => computeVariancesFromAssignments(mockAssignments), []);
+  const varianceSummary = useMemo(() => computeVarianceSummary(variances), [variances]);
+  const slaRiskTasks = useMemo(() => getSlaRiskTasks(mockAssignments), []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -184,6 +197,13 @@ const ManagerDashboard = () => {
             </div>
             <p className="text-[10px] text-info flex items-center gap-1 mt-2"><ChevronLeft size={10} /> לחץ לדוח מפורט</p>
           </button>
+        </div>
+
+        {/* Scheduling Engine Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <WorkloadHeatPanel workloads={workloads} />
+          <SlaRiskPanel riskTasks={slaRiskTasks} />
+          <VarianceWidget summary={varianceSummary} />
         </div>
 
         {/* Real-time tracking grid */}
