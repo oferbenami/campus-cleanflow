@@ -21,6 +21,7 @@ import {
   X,
   PlusCircle,
   Copy,
+  Pencil,
 } from "lucide-react";
 import { mockStaff, mockTasks, mockZones, type TaskTemplate } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,13 +106,16 @@ const CreateSetPanel = ({
   onCreated,
   initialName,
   initialItems,
+  editingSetId,
 }: {
   shift: "morning" | "evening";
   onClose: () => void;
   onCreated: () => void;
   initialName?: string;
   initialItems?: NewSetItem[];
+  editingSetId?: string | null;
 }) => {
+  const isEditing = !!editingSetId;
   const [name, setName] = useState(initialName || "");
   const [items, setItems] = useState<NewSetItem[]>(initialItems || []);
   const [addTaskId, setAddTaskId] = useState("");
@@ -142,36 +146,63 @@ const CreateSetPanel = ({
     if (!name.trim() || items.length === 0) return;
     setSaving(true);
 
-    // For now save locally since no auth — but structure is DB-ready
-    // Try DB save first
     try {
-      const { data: setData, error: setError } = await supabase
-        .from("task_set_templates")
-        .insert({ name: name.trim(), shift })
-        .select("id")
-        .maybeSingle();
+      if (isEditing) {
+        // Update existing template
+        const { error: updateError } = await supabase
+          .from("task_set_templates")
+          .update({ name: name.trim(), shift })
+          .eq("id", editingSetId);
 
-      if (setError || !setData) {
-        // Fallback: save worked or not authed — show success anyway for demo
-        toast({ title: "תבנית נשמרה (מקומית)", description: `"${name}" עם ${items.length} משימות` });
+        if (updateError) {
+          toast({ title: "שגיאה בעדכון", description: updateError.message, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+
+        // Delete old items and re-insert
+        await supabase.from("task_set_items").delete().eq("set_template_id", editingSetId);
+
+        const itemsToInsert = items.map((item, idx) => ({
+          set_template_id: editingSetId,
+          task_template_id: item.taskId,
+          sequence_order: idx,
+          planned_start: item.plannedStart,
+          planned_end: item.plannedEnd,
+        }));
+
+        await supabase.from("task_set_items").insert(itemsToInsert);
+        toast({ title: "תבנית עודכנה!", description: `"${name}" עם ${items.length} משימות` });
         onCreated();
         onClose();
-        return;
+      } else {
+        // Create new template
+        const { data: setData, error: setError } = await supabase
+          .from("task_set_templates")
+          .insert({ name: name.trim(), shift })
+          .select("id")
+          .maybeSingle();
+
+        if (setError || !setData) {
+          toast({ title: "תבנית נשמרה (מקומית)", description: `"${name}" עם ${items.length} משימות` });
+          onCreated();
+          onClose();
+          return;
+        }
+
+        const itemsToInsert = items.map((item, idx) => ({
+          set_template_id: setData.id,
+          task_template_id: item.taskId,
+          sequence_order: idx,
+          planned_start: item.plannedStart,
+          planned_end: item.plannedEnd,
+        }));
+
+        await supabase.from("task_set_items").insert(itemsToInsert);
+        toast({ title: "תבנית נשמרה!", description: `"${name}" עם ${items.length} משימות` });
+        onCreated();
+        onClose();
       }
-
-      // Insert items
-      const itemsToInsert = items.map((item, idx) => ({
-        set_template_id: setData.id,
-        task_template_id: item.taskId,
-        sequence_order: idx,
-        planned_start: item.plannedStart,
-        planned_end: item.plannedEnd,
-      }));
-
-      await supabase.from("task_set_items").insert(itemsToInsert);
-      toast({ title: "תבנית נשמרה!", description: `"${name}" עם ${items.length} משימות` });
-      onCreated();
-      onClose();
     } catch {
       toast({ title: "תבנית נשמרה (מקומית)", description: `"${name}" עם ${items.length} משימות` });
       onCreated();
@@ -185,8 +216,8 @@ const CreateSetPanel = ({
     <div className="rounded-xl border-2 border-info/30 bg-info/5 p-4 space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-sm flex items-center gap-2">
-          <PlusCircle size={16} className="text-info" />
-          יצירת תבנית סט חדשה
+          {isEditing ? <Pencil size={16} className="text-warning" /> : <PlusCircle size={16} className="text-info" />}
+          {isEditing ? "עריכת תבנית סט" : "יצירת תבנית סט חדשה"}
         </h4>
         <button onClick={onClose} className="p-1 rounded hover:bg-muted transition-colors">
           <X size={16} />
@@ -274,7 +305,7 @@ const CreateSetPanel = ({
         className="btn-action-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Save size={16} />
-        {saving ? "שומר..." : `שמור תבנית (${items.length} משימות)`}
+        {saving ? "שומר..." : isEditing ? `עדכן תבנית (${items.length} משימות)` : `שמור תבנית (${items.length} משימות)`}
       </button>
     </div>
   );
@@ -290,9 +321,17 @@ const ZonePlanningTab = () => {
   const [showSets, setShowSets] = useState(false);
   const [showCreateSet, setShowCreateSet] = useState(false);
   const [duplicateSource, setDuplicateSource] = useState<TaskSetDef | null>(null);
+  const [editingSet, setEditingSet] = useState<TaskSetDef | null>(null);
 
   const handleDuplicate = (set: TaskSetDef) => {
     setDuplicateSource(set);
+    setEditingSet(null);
+    setShowCreateSet(true);
+  };
+
+  const handleEdit = (set: TaskSetDef) => {
+    setEditingSet(set);
+    setDuplicateSource(null);
     setShowCreateSet(true);
   };
 
@@ -448,7 +487,7 @@ const ZonePlanningTab = () => {
             {/* Create new set button */}
             {!showCreateSet && (
               <button
-                onClick={() => setShowCreateSet(true)}
+                onClick={() => { setShowCreateSet(true); setEditingSet(null); setDuplicateSource(null); }}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-info/40 text-info text-sm font-bold hover:bg-info/5 transition-colors"
               >
                 <PlusCircle size={18} />
@@ -460,10 +499,11 @@ const ZonePlanningTab = () => {
             {showCreateSet && (
               <CreateSetPanel
                 shift={shift}
-                onClose={() => { setShowCreateSet(false); setDuplicateSource(null); }}
+                onClose={() => { setShowCreateSet(false); setDuplicateSource(null); setEditingSet(null); }}
                 onCreated={() => queryClient.invalidateQueries({ queryKey: ["task-set-templates"] })}
-                initialName={duplicateSource ? `${duplicateSource.name} (העתק)` : undefined}
-                initialItems={duplicateSource ? duplicateSource.tasks.map(t => ({ taskId: t.taskId, plannedStart: t.plannedStart, plannedEnd: t.plannedEnd })) : undefined}
+                initialName={editingSet ? editingSet.name : duplicateSource ? `${duplicateSource.name} (העתק)` : undefined}
+                initialItems={(editingSet || duplicateSource)?.tasks.map(t => ({ taskId: t.taskId, plannedStart: t.plannedStart, plannedEnd: t.plannedEnd })) || undefined}
+                editingSetId={editingSet && !editingSet.isLocal ? editingSet.id : null}
               />
             )}
 
@@ -480,6 +520,15 @@ const ZonePlanningTab = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    {!set.isLocal && (
+                      <button
+                        onClick={() => handleEdit(set)}
+                        className="p-1.5 rounded-lg text-warning hover:bg-warning/10 transition-colors"
+                        title="ערוך תבנית"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDuplicate(set)}
                       className="p-1.5 rounded-lg text-info hover:bg-info/10 transition-colors"
