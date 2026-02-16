@@ -20,6 +20,7 @@ import {
   Save,
   X,
   PlusCircle,
+  Copy,
 } from "lucide-react";
 import { mockStaff, mockTasks, mockZones, type TaskTemplate } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,13 +103,17 @@ const CreateSetPanel = ({
   shift,
   onClose,
   onCreated,
+  initialName,
+  initialItems,
 }: {
   shift: "morning" | "evening";
   onClose: () => void;
   onCreated: () => void;
+  initialName?: string;
+  initialItems?: NewSetItem[];
 }) => {
-  const [name, setName] = useState("");
-  const [items, setItems] = useState<NewSetItem[]>([]);
+  const [name, setName] = useState(initialName || "");
+  const [items, setItems] = useState<NewSetItem[]>(initialItems || []);
   const [addTaskId, setAddTaskId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -284,6 +289,12 @@ const ZonePlanningTab = () => {
   const [sent, setSent] = useState(false);
   const [showSets, setShowSets] = useState(false);
   const [showCreateSet, setShowCreateSet] = useState(false);
+  const [duplicateSource, setDuplicateSource] = useState<TaskSetDef | null>(null);
+
+  const handleDuplicate = (set: TaskSetDef) => {
+    setDuplicateSource(set);
+    setShowCreateSet(true);
+  };
 
   const wings = [...new Set(mockZones.map((z) => z.wing))];
   const floors = [...new Set(mockZones.map((z) => z.floor))];
@@ -449,8 +460,10 @@ const ZonePlanningTab = () => {
             {showCreateSet && (
               <CreateSetPanel
                 shift={shift}
-                onClose={() => setShowCreateSet(false)}
+                onClose={() => { setShowCreateSet(false); setDuplicateSource(null); }}
                 onCreated={() => queryClient.invalidateQueries({ queryKey: ["task-set-templates"] })}
+                initialName={duplicateSource ? `${duplicateSource.name} (העתק)` : undefined}
+                initialItems={duplicateSource ? duplicateSource.tasks.map(t => ({ taskId: t.taskId, plannedStart: t.plannedStart, plannedEnd: t.plannedEnd })) : undefined}
               />
             )}
 
@@ -467,6 +480,13 @@ const ZonePlanningTab = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDuplicate(set)}
+                      className="p-1.5 rounded-lg text-info hover:bg-info/10 transition-colors"
+                      title="שכפל תבנית"
+                    >
+                      <Copy size={14} />
+                    </button>
                     {!set.isLocal && (
                       <button
                         onClick={() => deleteSetMutation.mutate(set.id)}
