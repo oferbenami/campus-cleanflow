@@ -79,7 +79,7 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
           <div className="flex items-center gap-1.5">
             {/* Priority badge */}
             {isUrgent ? (
-              <span className="status-badge bg-destructive/15 text-destructive text-[10px] py-0.5 px-1.5 font-bold">
+              <span className="status-badge bg-destructive/15 text-destructive text-[10px] py-0.5 px-1.5 font-bold animate-pulse">
                 {t("worker.priorityUrgent")}
               </span>
             ) : (
