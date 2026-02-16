@@ -1,17 +1,23 @@
 import { useState, useCallback } from "react";
 import {
-  Users,
   Clock,
   AlertTriangle,
-  Activity,
   Coffee,
   MapPin,
   BarChart3,
   GripVertical,
+  ShieldAlert,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import type { TaskAssignment, StaffMember } from "@/data/mockData";
 import { toast } from "sonner";
+
+// Mock audit scores: assignment ID → average checklist score (1-5)
+// In production this would come from the database
+const mockAuditScores: Record<string, number> = {
+  a1: 4.2,
+  a9: 2.4, // Failed audit — flagged red
+};
 
 interface StaffTrackingGridProps {
   assignments: TaskAssignment[];
@@ -188,6 +194,8 @@ const StaffTrackingGrid = ({ assignments, staff, onReassign }: StaffTrackingGrid
                 {workerAssignments.map((a) => {
                   const isPending = a.status === "pending";
                   const isDragging = draggingId === a.id;
+                  const auditScore = mockAuditScores[a.id];
+                  const auditFailed = auditScore !== undefined && auditScore < 3.0;
 
                   return (
                     <div
@@ -196,7 +204,9 @@ const StaffTrackingGrid = ({ assignments, staff, onReassign }: StaffTrackingGrid
                       onDragStart={(e) => handleDragStart(e, a)}
                       onDragEnd={handleDragEnd}
                       className={`px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 ${
-                        a.status === "completed"
+                        auditFailed
+                          ? "bg-destructive/20 text-destructive ring-1 ring-destructive/40"
+                          : a.status === "completed"
                           ? "bg-success/15 text-success"
                           : a.status === "in_progress"
                           ? "bg-info/15 text-info"
@@ -206,8 +216,9 @@ const StaffTrackingGrid = ({ assignments, staff, onReassign }: StaffTrackingGrid
                       } ${isPending ? "cursor-grab hover:ring-1 hover:ring-accent/50 active:cursor-grabbing" : ""} ${
                         isDragging ? "opacity-40" : ""
                       }`}
-                      title={`${a.task.name}${isPending ? " — גרור להעברה" : ""}`}
+                      title={`${a.task.name}${auditFailed ? ` — ביקורת נכשלה (${auditScore.toFixed(1)})` : ""}${isPending ? " — גרור להעברה" : ""}`}
                     >
+                      {auditFailed && <ShieldAlert size={10} className="shrink-0 text-destructive" />}
                       {isPending && <GripVertical size={10} className="shrink-0 opacity-50" />}
                       {a.task.zone.name.split(" ").slice(0, 2).join(" ")}
                     </div>
