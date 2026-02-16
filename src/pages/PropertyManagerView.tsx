@@ -15,11 +15,13 @@ import {
   UserPlus,
   Building,
   ArrowLeft,
+  Database,
 } from "lucide-react";
 import { mockStaff, mockTasks, type StaffMember, type TaskTemplate } from "@/data/mockData";
 import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
+import MasterDataTab from "@/components/property-manager/MasterDataTab";
 
-type PMTab = "staff" | "planning" | "assign";
+type PMTab = "staff" | "planning" | "assign" | "masterdata";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
@@ -69,11 +71,21 @@ const PropertyManagerView = () => {
             <ClipboardList size={16} />
             שיבוץ משימות
           </button>
+          <button
+            onClick={() => setActiveTab("masterdata")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              activeTab === "masterdata" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+            }`}
+          >
+            <Database size={16} />
+            נכסים
+          </button>
         </div>
 
         {activeTab === "staff" && <StaffListTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
         {activeTab === "assign" && <ZonePlanningTab />}
+        {activeTab === "masterdata" && <MasterDataTab />}
       </div>
     </div>
   );
