@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action_type: string
+          actor_id: string
+          actor_name: string
+          assignment_id: string | null
+          created_at: string
+          details: string | null
+          id: string
+          metadata: Json | null
+          target_staff_id: string | null
+          target_staff_name: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_id: string
+          actor_name: string
+          assignment_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          metadata?: Json | null
+          target_staff_id?: string | null
+          target_staff_name?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_id?: string
+          actor_name?: string
+          assignment_id?: string | null
+          created_at?: string
+          details?: string | null
+          id?: string
+          metadata?: Json | null
+          target_staff_id?: string | null
+          target_staff_name?: string | null
+        }
+        Relationships: []
+      }
       audit_checklist_categories: {
         Row: {
           created_at: string
