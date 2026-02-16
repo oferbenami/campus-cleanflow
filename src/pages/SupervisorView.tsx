@@ -17,13 +17,17 @@ import {
   PackageOpen,
   Truck,
   Image,
+  ShieldAlert,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockZones, mockAssignments, mockStaff } from "@/data/mockData";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
+import { useI18n } from "@/i18n/I18nContext";
+import { toast } from "@/hooks/use-toast";
 
 const SupervisorView = () => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit" | "stock">("dashboard");
   const [drillDown, setDrillDown] = useState<"staff" | "completed" | "inProgress" | "overdue" | "sla" | null>(null);
 
@@ -32,49 +36,29 @@ const SupervisorView = () => {
       <header className="bg-primary text-primary-foreground px-4 py-3">
         <div className="max-w-3xl mx-auto">
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">פאנל מפקח</h1>
+          <h1 className="text-lg font-bold">{t("supervisor.panel")}</h1>
         </div>
       </header>
 
       <div className="max-w-3xl mx-auto p-4">
-        {/* Tabs */}
         <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6">
-          <button
-            onClick={() => setActiveTab("dashboard")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "dashboard" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            <BarChart3 size={16} />
-            לוח בקרה
-          </button>
-          <button
-            onClick={() => setActiveTab("breakfix")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "breakfix" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            <Zap size={16} />
-            תקלה מיידית
-          </button>
-          <button
-            onClick={() => setActiveTab("stock")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "stock" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            <PackageOpen size={16} />
-            חוסרים
-          </button>
-          <button
-            onClick={() => setActiveTab("audit")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-              activeTab === "audit" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-            }`}
-          >
-            <ClipboardCheck size={16} />
-            ביקורת
-          </button>
+          {([
+            { key: "dashboard" as const, icon: BarChart3, label: t("supervisor.dashboard") },
+            { key: "breakfix" as const, icon: Zap, label: t("supervisor.breakFix") },
+            { key: "stock" as const, icon: PackageOpen, label: t("supervisor.shortages") },
+            { key: "audit" as const, icon: ClipboardCheck, label: t("supervisor.audit") },
+          ]).map(({ key, icon: Icon, label }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+                activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
         </div>
 
         {activeTab === "dashboard" && <DashboardTab onDrillDown={setDrillDown} />}
@@ -97,6 +81,7 @@ const SupervisorView = () => {
 
 /* ─── Dashboard Tab ─── */
 const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "completed" | "inProgress" | "overdue" | "sla") => void }) => {
+  const { t } = useI18n();
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
@@ -113,11 +98,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
     .filter((a) => a.isBreakFix && a.elapsedMinutes)
     .reduce((s, a) => s + (a.elapsedMinutes || 0), 0);
 
-  const { shouldBeCompleted } = getPlannedMinutesUpToNow(
-    mockAssignments,
-    now.getHours(),
-    now.getMinutes()
-  );
+  const { shouldBeCompleted } = getPlannedMinutesUpToNow(mockAssignments, now.getHours(), now.getMinutes());
   const completedMinutes = mockAssignments
     .filter((a) => a.status === "completed")
     .reduce((s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes), 0);
@@ -132,7 +113,6 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
 
   return (
     <div className="animate-slide-up space-y-4">
-      {/* KPIs */}
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => onDrillDown("staff")} className="kpi-card text-right hover:ring-2 hover:ring-info/30 transition-all cursor-pointer">
           <div className="flex items-center gap-3">
@@ -141,7 +121,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             </div>
             <div>
               <p className="text-2xl font-bold">{activeStaff.length}</p>
-              <p className="text-xs text-muted-foreground">עובדים פעילים</p>
+              <p className="text-xs text-muted-foreground">{t("manager.activeStaff")}</p>
             </div>
           </div>
         </button>
@@ -152,7 +132,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             </div>
             <div>
               <p className="text-2xl font-bold">{completedTasks}/{totalTasks}</p>
-              <p className="text-xs text-muted-foreground">הושלמו</p>
+              <p className="text-xs text-muted-foreground">{t("manager.tasksCompleted")}</p>
             </div>
           </div>
         </button>
@@ -163,7 +143,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             </div>
             <div>
               <p className="text-2xl font-bold">{inProgress}</p>
-              <p className="text-xs text-muted-foreground">בביצוע</p>
+              <p className="text-xs text-muted-foreground">{t("manager.inProgress")}</p>
             </div>
           </div>
         </button>
@@ -174,38 +154,33 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             </div>
             <div>
               <p className="text-2xl font-bold">{overdueTasks}</p>
-              <p className="text-xs text-muted-foreground">חריגות</p>
+              <p className="text-xs text-muted-foreground">{t("manager.overdue")}</p>
             </div>
           </div>
         </button>
       </div>
 
-      {/* Break-fix KPI */}
       <div className="kpi-card">
         <div className="flex items-center gap-2 mb-2">
           <Zap size={16} className="text-warning" />
-          <h3 className="text-sm font-semibold">תקלות מיידיות</h3>
+          <h3 className="text-sm font-semibold">{t("manager.breakFix.title")}</h3>
         </div>
         <div className="flex items-center gap-6">
           <div>
             <p className="text-2xl font-bold mono">{breakFixCount}</p>
-            <p className="text-xs text-muted-foreground">תקלות</p>
+            <p className="text-xs text-muted-foreground">{t("manager.breakFix.count")}</p>
           </div>
           <div>
             <p className="text-2xl font-bold mono text-warning">{breakFixMinutes}</p>
-            <p className="text-xs text-muted-foreground">דק׳ מסדר היום</p>
+            <p className="text-xs text-muted-foreground">{t("manager.breakFix.minutes")}</p>
           </div>
         </div>
       </div>
 
-      {/* Progress Score */}
       <div className="kpi-card">
         <div className="flex items-center gap-2 mb-2">
           <TrendingUp size={16} className="text-success" />
-          <h3 className="text-sm font-semibold">ציון התקדמות</h3>
-          <span className="text-[10px] text-muted-foreground mono mr-auto">
-            עדכון: {now.getHours().toString().padStart(2, "0")}:{now.getMinutes().toString().padStart(2, "0")}
-          </span>
+          <h3 className="text-sm font-semibold">{t("manager.progressScore")}</h3>
         </div>
         <div className="flex items-center gap-4">
           <p className={`text-3xl font-bold mono ${progressScore >= 90 ? "text-success" : progressScore >= 70 ? "text-warning" : "text-destructive"}`}>
@@ -218,16 +193,15 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
         </div>
       </div>
 
-      {/* Staff tracking */}
       <div className="task-card">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-bold flex items-center gap-2">
             <BarChart3 size={16} />
-            מעקב עובדים
+            {t("manager.staffTracking")}
           </h2>
           <span className="status-badge status-active">
             <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-            חי
+            {t("manager.live")}
           </span>
         </div>
 
@@ -241,28 +215,19 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             const staffBreakFix = assignments.filter((a) => a.isBreakFix).length;
 
             return (
-              <div
-                key={staff.id}
-                className={`rounded-xl border p-3 ${hasOverdue ? "grid-row-overdue" : "border-border"}`}
-              >
+              <div key={staff.id} className={`rounded-xl border p-3 ${hasOverdue ? "grid-row-overdue" : "border-border"}`}>
                 <div className="flex items-center gap-3">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
-                      staff.status === "active"
-                        ? "bg-primary text-primary-foreground"
-                        : staff.status === "break"
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {staff.avatar}
-                  </div>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ${
+                    staff.status === "active" ? "bg-primary text-primary-foreground" :
+                    staff.status === "break" ? "bg-accent text-accent-foreground" :
+                    "bg-muted text-muted-foreground"
+                  }`}>{staff.avatar}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="font-semibold text-sm">{staff.name}</p>
                       {staff.status === "break" && (
                         <span className="status-badge status-pending text-[10px]">
-                          <Coffee size={10} /> הפסקה
+                          <Coffee size={10} /> {t("status.break")}
                         </span>
                       )}
                       {hasOverdue && (
@@ -272,7 +237,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
                       )}
                       {staffBreakFix > 0 && (
                         <span className="status-badge bg-warning/15 text-warning text-[10px]">
-                          <Zap size={10} /> {staffBreakFix} תקלות
+                          <Zap size={10} /> {staffBreakFix}
                         </span>
                       )}
                     </div>
@@ -280,20 +245,13 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
                       <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                         <MapPin size={11} />
                         <span>{currentTask.task.zone.name}</span>
-                        {currentTask.isBreakFix && (
-                          <span className="text-warning font-semibold">תקלה מיידית</span>
-                        )}
-                        <span>·</span>
-                        {currentTask.startedAt && (
-                          <span className="mono">התחלה: {currentTask.startedAt}</span>
-                        )}
                         <span>·</span>
                         <Clock size={11} />
-                        <span className="mono">{currentTask.elapsedMinutes} / {currentTask.task.estimatedMinutes} דק׳</span>
+                        <span className="mono">{currentTask.elapsedMinutes} / {currentTask.task.estimatedMinutes} {t("common.minutes")}</span>
                       </div>
                     ) : (
                       <p className="text-xs text-muted-foreground">
-                        {done === total ? "כל המשימות הושלמו" : "ממתין"}
+                        {done === total ? t("manager.allCompleted") : t("manager.waiting")}
                       </p>
                     )}
                   </div>
@@ -311,8 +269,9 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
   );
 };
 
-/* ─── Break-Fix Tab (תקלה מיידית) ─── */
+/* ─── Break-Fix Tab ─── */
 const BreakfixTab = () => {
+  const { t } = useI18n();
   const [selectedZone, setSelectedZone] = useState("");
   const [breakfixDesc, setBreakfixDesc] = useState("");
   const [breakfixSent, setBreakfixSent] = useState(false);
@@ -320,20 +279,12 @@ const BreakfixTab = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setImagePreview(url);
-    }
+    if (file) setImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmit = () => {
     setBreakfixSent(true);
-    setTimeout(() => {
-      setBreakfixSent(false);
-      setSelectedZone("");
-      setBreakfixDesc("");
-      setImagePreview(null);
-    }, 2000);
+    setTimeout(() => { setBreakfixSent(false); setSelectedZone(""); setBreakfixDesc(""); setImagePreview(null); }, 2000);
   };
 
   return (
@@ -341,60 +292,46 @@ const BreakfixTab = () => {
       <div className="task-card">
         <div className="flex items-center gap-2 mb-4">
           <Zap size={20} className="text-warning" />
-          <h2 className="font-bold">תקלה מיידית</h2>
+          <h2 className="font-bold">{t("supervisor.breakFix")}</h2>
         </div>
         <label className="block mb-4">
-          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">מיקום</span>
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("supervisor.location")}</span>
           <select value={selectedZone} onChange={(e) => setSelectedZone(e.target.value)}
             className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">בחר מיקום...</option>
+            <option value="">{t("supervisor.selectLocation")}</option>
             {mockZones.map((z) => (
-              <option key={z.id} value={z.id}>{z.name} (אגף {z.wing}, קומה {z.floor})</option>
+              <option key={z.id} value={z.id}>{z.name} ({z.wing}, {z.floor})</option>
             ))}
           </select>
         </label>
         <label className="block mb-4">
-          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">תיאור</span>
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("supervisor.description")}</span>
           <textarea value={breakfixDesc} onChange={(e) => setBreakfixDesc(e.target.value)}
-            placeholder="תאר את התקלה..." rows={3}
+            placeholder={t("supervisor.describeIssue")} rows={3}
             className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
         </label>
-
-        {/* Image upload */}
         <div className="mb-4">
-          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">צרף תמונה (אופציונלי)</span>
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("supervisor.attachImage")}</span>
           <label className="flex items-center justify-center gap-2 w-full py-4 rounded-lg border-2 border-dashed border-border hover:border-primary cursor-pointer transition-colors">
             <Camera size={20} className="text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">לחץ לצלם או לבחור תמונה</span>
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={handleImageChange}
-              className="hidden"
-            />
+            <span className="text-sm text-muted-foreground">{t("supervisor.clickToCapture")}</span>
+            <input type="file" accept="image/*" capture="environment" onChange={handleImageChange} className="hidden" />
           </label>
           {imagePreview && (
             <div className="mt-3 relative">
-              <img src={imagePreview} alt="תמונת תקלה" className="w-full h-48 object-cover rounded-lg border border-border" />
-              <button
-                onClick={() => setImagePreview(null)}
-                className="absolute top-2 left-2 w-7 h-7 rounded-full bg-background/80 flex items-center justify-center text-destructive text-sm font-bold"
-              >
-                ✕
-              </button>
+              <img src={imagePreview} alt="" className="w-full h-48 object-cover rounded-lg border border-border" />
+              <button onClick={() => setImagePreview(null)} className="absolute top-2 left-2 w-7 h-7 rounded-full bg-background/80 flex items-center justify-center text-destructive text-sm font-bold">✕</button>
             </div>
           )}
         </div>
-
         {breakfixSent ? (
           <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-            <CheckCircle2 size={20} /> תקלה מיידית נשלחה!
+            <CheckCircle2 size={20} /> {t("supervisor.breakFixSent")}
           </div>
         ) : (
           <button onClick={handleSubmit} disabled={!selectedZone || !breakfixDesc}
             className="btn-action-danger w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-            <Send size={18} /> שלח תקלה מיידית
+            <Send size={18} /> {t("supervisor.sendBreakFix")}
           </button>
         )}
       </div>
@@ -404,38 +341,24 @@ const BreakfixTab = () => {
 
 /* ─── Stock Shortages Tab ─── */
 const StockShortagesTab = () => {
+  const { t } = useI18n();
   const [sentToWarehouse, setSentToWarehouse] = useState(false);
 
-  // Aggregate all stock shortages from assignments
   const shortageMap: Record<string, { zones: string[]; staffNames: string[] }> = {};
   mockAssignments.forEach((a) => {
     if (a.stockLow && a.stockLow.length > 0) {
       a.stockLow.forEach((item) => {
-        if (!shortageMap[item]) {
-          shortageMap[item] = { zones: [], staffNames: [] };
-        }
+        if (!shortageMap[item]) shortageMap[item] = { zones: [], staffNames: [] };
         const zoneName = a.task.zone.name;
-        if (!shortageMap[item].zones.includes(zoneName)) {
-          shortageMap[item].zones.push(zoneName);
-        }
-        if (!shortageMap[item].staffNames.includes(a.staff.name)) {
-          shortageMap[item].staffNames.push(a.staff.name);
-        }
+        if (!shortageMap[item].zones.includes(zoneName)) shortageMap[item].zones.push(zoneName);
+        if (!shortageMap[item].staffNames.includes(a.staff.name)) shortageMap[item].staffNames.push(a.staff.name);
       });
     }
   });
-
   const shortageItems = Object.entries(shortageMap);
   const stockLabels: Record<string, string> = {
-    "Soap": "סבון",
-    "Paper Towels": "מגבות נייר",
-    "Sanitizer": "חומר חיטוי",
-    "Trash Bags": "שקיות אשפה",
-  };
-
-  const handleSendToWarehouse = () => {
-    setSentToWarehouse(true);
-    setTimeout(() => setSentToWarehouse(false), 2500);
+    "Soap": t("stock.soap"), "Paper Towels": t("stock.paperTowels"),
+    "Sanitizer": t("stock.sanitizer"), "Trash Bags": t("stock.trashBags"),
   };
 
   return (
@@ -443,11 +366,10 @@ const StockShortagesTab = () => {
       <div className="task-card">
         <div className="flex items-center gap-2 mb-4">
           <PackageOpen size={20} className="text-warning" />
-          <h2 className="font-bold">סיכום חוסרים במלאי</h2>
+          <h2 className="font-bold">{t("supervisor.stockSummary")}</h2>
         </div>
-
         {shortageItems.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">אין חוסרים מדווחים</p>
+          <p className="text-center text-muted-foreground py-8">{t("supervisor.noShortages")}</p>
         ) : (
           <>
             <div className="space-y-3 mb-4">
@@ -459,33 +381,24 @@ const StockShortagesTab = () => {
                       {stockLabels[item] || item}
                     </p>
                     <span className="status-badge bg-warning/15 text-warning text-[10px]">
-                      {data.zones.length} מיקומים
+                      {data.zones.length} {t("supervisor.locations")}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground space-y-1">
-                    <p className="flex items-center gap-1">
-                      <MapPin size={11} />
-                      {data.zones.join(", ")}
-                    </p>
-                    <p className="flex items-center gap-1">
-                      <Users size={11} />
-                      דווח ע״י: {data.staffNames.join(", ")}
-                    </p>
+                    <p className="flex items-center gap-1"><MapPin size={11} />{data.zones.join(", ")}</p>
+                    <p className="flex items-center gap-1"><Users size={11} />{t("supervisor.reportedBy")}: {data.staffNames.join(", ")}</p>
                   </div>
                 </div>
               ))}
             </div>
-
             {sentToWarehouse ? (
               <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-                <CheckCircle2 size={20} /> רשימת חוסרים נשלחה למחסנאי!
+                <CheckCircle2 size={20} /> {t("supervisor.sentToWarehouse")}
               </div>
             ) : (
-              <button
-                onClick={handleSendToWarehouse}
-                className="btn-action-primary w-full flex items-center justify-center gap-2"
-              >
-                <Truck size={18} /> שלח למחסנאי
+              <button onClick={() => { setSentToWarehouse(true); setTimeout(() => setSentToWarehouse(false), 2500); }}
+                className="btn-action-primary w-full flex items-center justify-center gap-2">
+                <Truck size={18} /> {t("supervisor.sendToWarehouse")}
               </button>
             )}
           </>
@@ -495,26 +408,61 @@ const StockShortagesTab = () => {
   );
 };
 
-/* ─── Audit Tab ─── */
+/* ─── Audit Tab (with weighted scoring + CAPA) ─── */
 const AuditTab = () => {
+  const { t } = useI18n();
   const completedTasks = mockAssignments.filter((a) => a.status === "completed");
   const [selectedTask, setSelectedTask] = useState("");
   const [ratings, setRatings] = useState({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
   const [auditNotes, setAuditNotes] = useState("");
   const [auditSent, setAuditSent] = useState(false);
+  const [showCAPA, setShowCAPA] = useState(false);
+  const [capaTitle, setCapaTitle] = useState("");
+  const [capaCreated, setCapaCreated] = useState(false);
+
+  const weights = { cleanliness: 1.0, thoroughness: 0.9, timeliness: 0.8, supplies: 0.7, safety: 1.0 };
+  const categories = [
+    { key: "cleanliness" as const, label: t("audit.cleanliness"), weight: weights.cleanliness },
+    { key: "thoroughness" as const, label: t("audit.thoroughness"), weight: weights.thoroughness },
+    { key: "timeliness" as const, label: t("audit.timeliness"), weight: weights.timeliness },
+    { key: "supplies" as const, label: t("audit.supplies"), weight: weights.supplies },
+    { key: "safety" as const, label: t("audit.safety"), weight: weights.safety },
+  ];
+
+  const totalWeight = categories.reduce((s, c) => s + c.weight, 0);
+  const weightedScore = categories.reduce((s, c) => s + ratings[c.key] * c.weight, 0) / totalWeight;
+  const isAllRated = Object.values(ratings).every((v) => v > 0);
+  const auditFailed = isAllRated && weightedScore < 3.0;
 
   const handleSubmit = () => {
     setAuditSent(true);
+    if (auditFailed) {
+      setShowCAPA(true);
+    } else {
+      setTimeout(() => {
+        setAuditSent(false); setSelectedTask("");
+        setRatings({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
+        setAuditNotes("");
+      }, 2000);
+    }
+  };
+
+  const handleCreateCAPA = () => {
+    setCapaCreated(true);
+    toast({ title: t("supervisor.capaCreated"), description: capaTitle });
     setTimeout(() => {
-      setAuditSent(false); setSelectedTask("");
+      setCapaCreated(false); setShowCAPA(false); setAuditSent(false); setSelectedTask("");
       setRatings({ cleanliness: 0, thoroughness: 0, timeliness: 0, supplies: 0, safety: 0 });
-      setAuditNotes("");
+      setAuditNotes(""); setCapaTitle("");
     }, 2000);
   };
 
-  const StarRating = ({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) => (
+  const StarRating = ({ value, onChange, label, weight }: { value: number; onChange: (v: number) => void; label: string; weight: number }) => (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium">{label}</span>
+      <div>
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-[10px] text-muted-foreground mr-2">(×{weight})</span>
+      </div>
       <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button key={star} onClick={() => onChange(star)} className="transition-colors">
@@ -530,13 +478,13 @@ const AuditTab = () => {
       <div className="task-card">
         <div className="flex items-center gap-2 mb-4">
           <ClipboardCheck size={20} className="text-info" />
-          <h2 className="font-bold">בדיקת איכות</h2>
+          <h2 className="font-bold">{t("supervisor.qualityCheck")}</h2>
         </div>
         <label className="block mb-4">
-          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">בחר משימה שהושלמה</span>
+          <span className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("supervisor.selectCompleted")}</span>
           <select value={selectedTask} onChange={(e) => setSelectedTask(e.target.value)}
             className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-            <option value="">בחר משימה...</option>
+            <option value="">{t("supervisor.selectTask")}</option>
             {completedTasks.map((a) => (
               <option key={a.id} value={a.id}>{a.task.name} — {a.staff.name} ({a.completedAt})</option>
             ))}
@@ -545,26 +493,80 @@ const AuditTab = () => {
         {selectedTask && (
           <>
             <div className="border-t border-border pt-4 space-y-1">
-              <StarRating label="ניקיון" value={ratings.cleanliness} onChange={(v) => setRatings((r) => ({ ...r, cleanliness: v }))} />
-              <StarRating label="יסודיות" value={ratings.thoroughness} onChange={(v) => setRatings((r) => ({ ...r, thoroughness: v }))} />
-              <StarRating label="עמידה בזמנים" value={ratings.timeliness} onChange={(v) => setRatings((r) => ({ ...r, timeliness: v }))} />
-              <StarRating label="ציוד וחומרים" value={ratings.supplies} onChange={(v) => setRatings((r) => ({ ...r, supplies: v }))} />
-              <StarRating label="בטיחות" value={ratings.safety} onChange={(v) => setRatings((r) => ({ ...r, safety: v }))} />
+              {categories.map((cat) => (
+                <StarRating
+                  key={cat.key}
+                  label={cat.label}
+                  weight={cat.weight}
+                  value={ratings[cat.key]}
+                  onChange={(v) => setRatings((r) => ({ ...r, [cat.key]: v }))}
+                />
+              ))}
             </div>
+
+            {/* Weighted score display */}
+            {isAllRated && (
+              <div className={`my-4 p-3 rounded-xl border-2 ${auditFailed ? "border-destructive bg-destructive/5" : "border-success bg-success/5"}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">{t("supervisor.weightedScore")}</span>
+                  <span className={`text-2xl font-bold mono ${auditFailed ? "text-destructive" : "text-success"}`}>
+                    {weightedScore.toFixed(1)} / 5.0
+                  </span>
+                </div>
+                {auditFailed && (
+                  <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+                    <ShieldAlert size={12} />
+                    {t("supervisor.auditFailed")}
+                  </p>
+                )}
+              </div>
+            )}
+
             <label className="block my-4">
-              <span className="text-sm font-medium text-muted-foreground mb-1.5 block">הערות (אופציונלי)</span>
+              <span className="text-sm font-medium text-muted-foreground mb-1.5 block">{t("supervisor.notes")}</span>
               <textarea value={auditNotes} onChange={(e) => setAuditNotes(e.target.value)}
-                placeholder="הערות נוספות..." rows={2}
+                placeholder={t("supervisor.notes")} rows={2}
                 className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring" />
             </label>
-            {auditSent ? (
-              <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
-                <CheckCircle2 size={20} /> הביקורת נשלחה!
+
+            {/* CAPA dialog */}
+            {showCAPA && (
+              <div className="task-card border-2 border-destructive mb-4 animate-slide-up">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShieldAlert size={18} className="text-destructive" />
+                  <h3 className="font-bold text-sm">{t("supervisor.createCAPA")}</h3>
+                </div>
+                <input
+                  type="text"
+                  value={capaTitle}
+                  onChange={(e) => setCapaTitle(e.target.value)}
+                  placeholder={t("supervisor.createCAPA")}
+                  className="w-full bg-background border border-input rounded-lg px-3 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                {capaCreated ? (
+                  <div className="flex items-center justify-center gap-2 py-3 text-success font-semibold">
+                    <CheckCircle2 size={18} /> {t("supervisor.capaCreated")}
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleCreateCAPA}
+                    disabled={!capaTitle.trim()}
+                    className="btn-action-danger w-full flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    <ShieldAlert size={16} /> {t("supervisor.createCAPA")}
+                  </button>
+                )}
               </div>
-            ) : (
-              <button onClick={handleSubmit} disabled={Object.values(ratings).some((v) => v === 0)}
+            )}
+
+            {auditSent && !showCAPA ? (
+              <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
+                <CheckCircle2 size={20} /> {t("supervisor.auditSent")}
+              </div>
+            ) : !showCAPA && (
+              <button onClick={handleSubmit} disabled={!isAllRated}
                 className="btn-action-primary w-full flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                <Send size={18} /> שלח ביקורת
+                <Send size={18} /> {t("supervisor.submitAudit")}
               </button>
             )}
           </>
