@@ -65,11 +65,20 @@ const StaffTrackingGrid = ({ assignments, staff, onReassign }: StaffTrackingGrid
     // Skip if same worker
     if (assignment.staff.id === targetStaffId) return;
 
+    const previousStaffId = assignment.staff.id;
+    const previousStaffName = assignment.staff.name;
     const targetStaff = staff.find((s) => s.id === targetStaffId);
     onReassign(assignmentId, targetStaffId);
 
     toast.success(`משימה הועברה ל${targetStaff?.name}`, {
       description: assignment.task.zone.name,
+      action: {
+        label: "בטל",
+        onClick: () => {
+          onReassign(assignmentId, previousStaffId);
+          toast.info(`המשימה הוחזרה ל${previousStaffName}`);
+        },
+      },
     });
   }, [assignments, staff, onReassign]);
 
