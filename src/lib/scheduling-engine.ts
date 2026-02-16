@@ -23,6 +23,21 @@ const BASE_TIME: Record<string, number> = {
   server_room: 15,
 };
 
+/** Human-readable labels for space categories */
+export const BASE_TIME_LABELS: Record<string, string> = {
+  general: "כללי",
+  office: "משרד",
+  restroom: "שירותים",
+  lobby: "לובי",
+  laboratory: "מעבדה",
+  kitchen: "מטבח",
+  meeting_room: "חדר ישיבות",
+  server_room: "חדר שרתים",
+  open_office: "משרד פתוח",
+  dining: "חדר אוכל",
+  technical: "טכני",
+};
+
 /** Traffic level multiplier */
 const TRAFFIC_FACTOR: Record<string, number> = {
   low: 0.8,
