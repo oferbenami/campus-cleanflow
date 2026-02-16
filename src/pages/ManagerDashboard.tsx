@@ -8,6 +8,7 @@ import {
   BarChart3,
   FileText,
   ChevronLeft,
+  PackageOpen,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -211,6 +212,47 @@ const ManagerDashboard = () => {
           <SlaRiskPanel riskTasks={slaRiskTasks} />
           <VarianceWidget summary={varianceSummary} />
         </div>
+
+        {/* Supply Alerts */}
+        {(() => {
+          const alertMap: Record<string, string[]> = {};
+          assignments.forEach((a) => {
+            if (a.stockLow && a.stockLow.length > 0) {
+              a.stockLow.forEach((item) => {
+                if (!alertMap[item]) alertMap[item] = [];
+                const loc = `${a.task.zone.name} (${a.staff.name})`;
+                if (!alertMap[item].includes(loc)) alertMap[item].push(loc);
+              });
+            }
+          });
+          const alertItems = Object.entries(alertMap);
+          const totalAlerts = alertItems.reduce((s, [, locs]) => s + locs.length, 0);
+
+          if (totalAlerts === 0) return null;
+
+          return (
+            <div className="task-card border-warning/30 border-2">
+              <div className="flex items-center gap-2 mb-3">
+                <PackageOpen size={18} className="text-warning" />
+                <h3 className="font-bold text-sm">התרעות חוסרים</h3>
+                <span className="status-badge bg-warning/15 text-warning text-[10px] mr-auto">
+                  {totalAlerts} התרעות היום
+                </span>
+              </div>
+              <div className="space-y-2">
+                {alertItems.map(([item, locations]) => (
+                  <div key={item} className="flex items-start gap-3 p-2.5 rounded-lg bg-warning/5 border border-warning/20">
+                    <PackageOpen size={14} className="text-warning shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold">{item}</p>
+                      <p className="text-[10px] text-muted-foreground">{locations.join(" · ")}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Real-time tracking grid with drag-and-drop */}
         <StaffTrackingGrid
