@@ -123,8 +123,12 @@ const StaffView = () => {
     if (stockLowItems.length === 0 || !current) return;
     setStockReporting(true);
     try {
+      // Use a deterministic UUID for mock staff IDs
+      const staffUuid = current.staff.id.length < 36
+        ? `00000000-0000-0000-0000-00000000000${current.staff.id.replace(/\D/g, "") || "0"}`
+        : current.staff.id;
       const rows = stockLowItems.map((item) => ({
-        staff_id: current.staff.id,
+        staff_id: staffUuid,
         assignment_id: current.id,
         item,
         zone_name: current.task.zone.name,
