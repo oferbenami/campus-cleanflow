@@ -1,4 +1,4 @@
-import { MapPin, Clock, PackageOpen } from "lucide-react";
+import { MapPin, Clock, PackageOpen, Timer, AlertTriangle } from "lucide-react";
 import type { TaskAssignment } from "@/data/mockData";
 import { scheduledTimes } from "@/data/staffSchedule";
 import { useI18n } from "@/i18n/I18nContext";
@@ -51,18 +51,19 @@ interface TaskTileProps {
   isActive: boolean;
   isCurrent: boolean;
   onTap?: () => void;
+  onReportIssue?: () => void;
 }
 
-const TaskTile = ({ assignment, label, isActive, isCurrent, onTap }: TaskTileProps) => {
+const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue }: TaskTileProps) => {
   const { t } = useI18n();
   const risk = getSlaRisk(assignment, isActive);
   const style = slaStyles[risk];
   const sched = scheduledTimes[assignment.id];
   const hasStockNeeded = assignment.stockLow && assignment.stockLow.length > 0;
+  const isUrgent = assignment.priority === "urgent" || assignment.isBreakFix;
 
   return (
-    <button
-      onClick={onTap}
+    <div
       className={`w-full text-right task-card border-2 ${style.border} ${style.bg} transition-all ${
         isCurrent ? "ring-2 ring-accent shadow-md" : ""
       }`}
@@ -70,44 +71,71 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap }: TaskTilePro
       {/* SLA indicator bar */}
       <div className={`h-1 w-full rounded-t-xl -mt-5 -mx-5 mb-3 ${style.indicator}`} style={{ width: "calc(100% + 2.5rem)" }} />
 
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {hasStockNeeded && (
-            <PackageOpen size={14} className="text-warning" />
-          )}
-          {assignment.isBreakFix && (
-            <span className="status-badge bg-warning/15 text-warning text-[10px] py-0.5 px-1.5">⚡</span>
+      <button onClick={onTap} className="w-full text-right">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {/* Priority badge */}
+            {isUrgent ? (
+              <span className="status-badge bg-destructive/15 text-destructive text-[10px] py-0.5 px-1.5 font-bold">
+                {t("worker.priorityUrgent")}
+              </span>
+            ) : (
+              <span className="status-badge bg-muted text-muted-foreground text-[10px] py-0.5 px-1.5">
+                {t("worker.priorityNormal")}
+              </span>
+            )}
+            {hasStockNeeded && (
+              <PackageOpen size={14} className="text-warning" />
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 mb-1">
+          <MapPin size={14} className="text-muted-foreground shrink-0" />
+          <span className="font-bold text-sm truncate">{assignment.task.zone.name}</span>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className={`text-xs ${
+              assignment.task.type === "maintenance" ? "text-info" : "text-accent-foreground"
+            }`}>
+              {assignment.isBreakFix
+                ? t("worker.breakFix")
+                : assignment.task.type === "maintenance"
+                ? t("analysis.quick")
+                : t("analysis.deep")}
+            </span>
+            {/* Estimated duration */}
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Timer size={12} />
+              {assignment.task.estimatedMinutes} {t("common.minutes")}
+            </span>
+          </div>
+
+          {sched && (
+            <span className="flex items-center gap-1 text-xs mono text-muted-foreground">
+              <Clock size={12} />
+              {sched.plannedEnd}
+            </span>
           )}
         </div>
-      </div>
+      </button>
 
-      <div className="flex items-center gap-2 mb-1">
-        <MapPin size={14} className="text-muted-foreground shrink-0" />
-        <span className="font-bold text-sm truncate">{assignment.task.zone.name}</span>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <span className={`text-xs ${
-          assignment.task.type === "maintenance" ? "text-info" : "text-accent-foreground"
-        }`}>
-          {assignment.isBreakFix
-            ? t("worker.breakFix")
-            : assignment.task.type === "maintenance"
-            ? t("analysis.quick")
-            : t("analysis.deep")}
-        </span>
-
-        {sched && (
-          <span className="flex items-center gap-1 text-xs mono text-muted-foreground">
-            <Clock size={12} />
-            {sched.plannedEnd}
-          </span>
-        )}
-      </div>
-    </button>
+      {/* Report issue quick button - only on current active task */}
+      {isCurrent && onReportIssue && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onReportIssue(); }}
+          className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors"
+        >
+          <AlertTriangle size={14} />
+          {t("worker.reportIssue")}
+        </button>
+      )}
+    </div>
   );
 };
 

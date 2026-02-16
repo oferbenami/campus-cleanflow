@@ -42,6 +42,7 @@ export interface TaskAssignment {
   isBreakFix?: boolean;
   breakFixImageUrl?: string;
   breakFixDescription?: string;
+  priority?: 'normal' | 'urgent';
 }
 
 export interface AuditEntry {
@@ -94,11 +95,11 @@ export const mockTasks: TaskTemplate[] = [
 export const mockAssignments: TaskAssignment[] = [
   { id: 'a1', staff: mockStaff[0], task: mockTasks[0], date: '2026-02-15', status: 'completed', startedAt: '07:05', completedAt: '07:22', elapsedMinutes: 17, progress: 100 },
   { id: 'a2', staff: mockStaff[0], task: mockTasks[1], date: '2026-02-15', status: 'in_progress', startedAt: '07:30', elapsedMinutes: 12, progress: 65 },
-  { id: 'a3', staff: mockStaff[0], task: mockTasks[6], date: '2026-02-15', status: 'pending', progress: 0, isBreakFix: true, breakFixDescription: 'צינור דולף בשירותים קומה 2', breakFixImageUrl: '/placeholder.svg' },
-  { id: 'a4', staff: mockStaff[1], task: mockTasks[3], date: '2026-02-15', status: 'overdue', startedAt: '07:00', elapsedMinutes: 75, progress: 80, issues: ['Equipment malfunction'] },
+  { id: 'a3', staff: mockStaff[0], task: mockTasks[6], date: '2026-02-15', status: 'pending', progress: 0, isBreakFix: true, breakFixDescription: 'צינור דולף בשירותים קומה 2', breakFixImageUrl: '/placeholder.svg', priority: 'urgent' },
+  { id: 'a4', staff: mockStaff[1], task: mockTasks[3], date: '2026-02-15', status: 'overdue', startedAt: '07:00', elapsedMinutes: 75, progress: 80, issues: ['Equipment malfunction'], priority: 'urgent' },
   { id: 'a5', staff: mockStaff[1], task: mockTasks[5], date: '2026-02-15', status: 'pending', progress: 0 },
   { id: 'a6', staff: mockStaff[2], task: mockTasks[2], date: '2026-02-15', status: 'pending', progress: 0 },
-  { id: 'a7', staff: mockStaff[3], task: mockTasks[4], date: '2026-02-15', status: 'in_progress', startedAt: '07:15', elapsedMinutes: 35, progress: 70, stockLow: ['Soap', 'Paper Towels'] },
+  { id: 'a7', staff: mockStaff[3], task: mockTasks[4], date: '2026-02-15', status: 'in_progress', startedAt: '07:15', elapsedMinutes: 35, progress: 70, stockLow: ['Soap', 'Paper Towels'], priority: 'urgent' },
   { id: 'a8', staff: mockStaff[4], task: mockTasks[7], date: '2026-02-15', status: 'pending', progress: 0 },
   { id: 'a9', staff: mockStaff[0], task: mockTasks[2], date: '2026-02-15', status: 'completed', startedAt: '09:10', completedAt: '09:30', elapsedMinutes: 20, progress: 100, isBreakFix: true, breakFixDescription: 'שפיכת מים בלובי', breakFixImageUrl: '/placeholder.svg' },
   { id: 'a10', staff: mockStaff[3], task: mockTasks[6], date: '2026-02-15', status: 'in_progress', startedAt: '10:00', elapsedMinutes: 15, progress: 50, isBreakFix: true, breakFixDescription: 'צינור דולף בשירותים' },
