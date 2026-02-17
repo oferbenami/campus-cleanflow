@@ -25,7 +25,7 @@ const NextTaskPreview = ({ assignment }: NextTaskPreviewProps) => {
       </div>
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <p className="font-semibold text-sm">{assignment.task.zone.name}</p>
+          <p className="font-semibold text-base">{assignment.task.zone.name}</p>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
             <MapPin size={11} />
             <span>אגף {assignment.task.zone.wing} · קומה {assignment.task.zone.floor}</span>
