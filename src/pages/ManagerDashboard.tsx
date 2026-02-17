@@ -13,6 +13,7 @@ import {
   Gauge,
   CalendarClock,
   ClipboardList,
+  UserCog,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -22,6 +23,7 @@ import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
 import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
+import UserManagement from "@/components/manager/UserManagement";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -30,7 +32,7 @@ import {
 } from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
-type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay";
+type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users";
 
 const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
@@ -92,6 +94,7 @@ const ManagerDashboard = () => {
     { key: "workload", icon: CalendarClock, label: "עומסים" },
     { key: "tracking", icon: ClipboardList, label: "מעקב" },
     { key: "endOfDay", icon: BarChart3, label: "סוף יום" },
+    { key: "users", icon: UserCog, label: "משתמשים" },
   ];
 
   return (
@@ -323,6 +326,8 @@ const ManagerDashboard = () => {
             </button>
           </div>
         )}
+
+        {activeTab === "users" && <UserManagement />}
       </div>
 
       {/* Drill-down modal */}
