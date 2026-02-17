@@ -26,6 +26,7 @@ import { scheduledTimes } from "@/data/staffSchedule";
 import DaySchedule from "@/components/staff/DaySchedule";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import TaskTile from "@/components/staff/TaskTile";
+import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import { useI18n } from "@/i18n/I18nContext";
 import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
 import { supabase } from "@/integrations/supabase/client";
@@ -606,6 +607,9 @@ const StaffView = () => {
             isCurrent={false}
           />
         )}
+
+        {/* My Points Widget */}
+        <MyPointsWidget />
 
         {/* Spacer */}
         <div className="flex-1" />
