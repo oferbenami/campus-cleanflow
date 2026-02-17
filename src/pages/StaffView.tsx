@@ -276,19 +276,19 @@ const StaffView = () => {
       <div className="h-screen bg-background flex flex-col overflow-hidden">
         {/* Break-fix banner at top even during break */}
         {showBreakFix && (
-          <div className="mx-3 mt-3 bg-warning/15 border-2 border-warning rounded-xl px-3 py-2">
+          <div className="mx-3 mt-3 bg-destructive/15 border-2 border-destructive rounded-xl px-3 py-2">
             <div className="flex items-center gap-2">
-              <Zap size={20} className="text-warning shrink-0" />
+              <Zap size={20} className="text-destructive shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-warning">{t("worker.breakFixRequired")}</p>
-                <p className="text-[10px] text-warning/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+                <p className="text-sm font-black text-destructive">{t("worker.breakFixRequired")}</p>
+                <p className="text-[10px] text-destructive/80 truncate">{pendingBreakFix.breakFixDescription}</p>
               </div>
               {breakFixStatus === "idle" ? (
-                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-3 py-1.5 rounded-lg bg-warning text-warning-foreground font-bold text-xs shrink-0">
+                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs shrink-0">
                   <Play size={14} />
                 </button>
               ) : (
-                <span className="mono text-sm text-warning font-bold">
+                <span className="mono text-sm text-destructive font-bold">
                   {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
                 </span>
               )}
@@ -386,26 +386,26 @@ const StaffView = () => {
             const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
             if (!pendingBreakFix || breakFixStatus === "done") return null;
             return (
-              <div className="bg-warning/15 border-2 border-warning rounded-xl px-4 py-4 animate-pulse-slow">
+              <div className="bg-destructive/15 border-2 border-destructive rounded-xl px-4 py-4 animate-pulse-slow">
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-warning/25 flex items-center justify-center shrink-0">
-                    <Zap size={28} className="text-warning" />
+                  <div className="w-12 h-12 rounded-full bg-destructive/25 flex items-center justify-center shrink-0">
+                    <Zap size={28} className="text-destructive" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-warning">{t("worker.breakFixRequired")}</p>
-                    <p className="text-sm text-warning/80">{pendingBreakFix.breakFixDescription || t("worker.breakFix")}</p>
+                    <p className="text-xl font-black text-destructive">{t("worker.breakFixRequired")}</p>
+                    <p className="text-sm text-destructive/80">{pendingBreakFix.breakFixDescription || t("worker.breakFix")}</p>
                   </div>
                 </div>
                 {breakFixStatus === "idle" ? (
-                  <button onClick={() => setBreakFixStatus("in_progress")} className="w-full py-3 rounded-xl bg-warning text-warning-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors">
+                  <button onClick={() => setBreakFixStatus("in_progress")} className="w-full py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-destructive/90 transition-colors">
                     <Play size={20} />
                     {t("worker.startFix")}
                   </button>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-center gap-2 py-2">
-                      <Timer size={18} className="text-warning" />
-                      <span className="text-2xl font-black mono text-warning">
+                      <Timer size={18} className="text-destructive" />
+                      <span className="text-2xl font-black mono text-destructive">
                         {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
                       </span>
                     </div>
@@ -640,19 +640,19 @@ const StaffView = () => {
         const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
         if (!pendingBreakFix || breakFixStatus === "done") return null;
         return (
-          <div className="mx-4 mb-3 bg-warning/15 border-2 border-warning rounded-xl px-4 py-3 animate-pulse-slow">
+          <div className="mx-4 mb-3 bg-destructive/15 border-2 border-destructive rounded-xl px-4 py-3 animate-pulse-slow">
             <div className="flex items-center gap-3">
-              <Zap size={24} className="text-warning shrink-0" />
+              <Zap size={24} className="text-destructive shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-base font-black text-warning">{t("worker.breakFixRequired")}</p>
-                <p className="text-xs text-warning/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+                <p className="text-base font-black text-destructive">{t("worker.breakFixRequired")}</p>
+                <p className="text-xs text-destructive/80 truncate">{pendingBreakFix.breakFixDescription}</p>
               </div>
               {breakFixStatus === "idle" ? (
-                <button onClick={() => { setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-warning text-warning-foreground font-bold text-sm shrink-0">
+                <button onClick={() => { setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-sm shrink-0">
                   <Play size={16} />
                 </button>
               ) : (
-                <span className="mono text-warning font-bold">
+                <span className="mono text-destructive font-bold">
                   {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
                 </span>
               )}
