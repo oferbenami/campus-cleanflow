@@ -57,7 +57,11 @@
     "schedule": "Day Schedule",
     "performance": "Performance",
     "breakButton": "Break",
-    "backToWork": "Back to Work",
+    "backToWork": "End Break",
+    "onBreakTitle": "You're on a Break",
+    "onBreakSubtitle": "Take a moment to rest 😊",
+    "reportShortage": "Report Shortage",
+    "nextTaskAfterBreak": "Your Next Task",
     "stockCheck": "Stock Check",
     "targetTime": "Target",
     "sla": {

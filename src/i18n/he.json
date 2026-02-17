@@ -57,7 +57,11 @@
     "schedule": "סדר יום",
     "performance": "ביצועים",
     "breakButton": "הפסקה",
-    "backToWork": "חזרה לעבודה",
+    "backToWork": "סיום הפסקה",
+    "onBreakTitle": "אתה בהפסקה",
+    "onBreakSubtitle": "נצל את הזמן למנוחה 😊",
+    "reportShortage": "דיווח חוסרים",
+    "nextTaskAfterBreak": "המשימה הבאה שלך",
     "stockCheck": "בדיקת מלאי",
     "targetTime": "יעד",
     "sla": {
