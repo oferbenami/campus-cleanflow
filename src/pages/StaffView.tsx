@@ -543,10 +543,6 @@ const StaffView = () => {
                 {t("worker.complete")}
               </button>
             )}
-            <button onClick={() => setShowIssuePanel(!showIssuePanel)} className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-destructive text-destructive font-bold transition-colors hover:bg-destructive/10">
-              <AlertTriangle size={20} />
-              {t("worker.reportIssue")}
-            </button>
             <button onClick={() => {}} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-muted-foreground/30 text-muted-foreground font-medium transition-colors hover:bg-muted">
               <XCircle size={18} />
               {t("worker.cannotPerform")}
