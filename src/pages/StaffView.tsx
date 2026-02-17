@@ -26,10 +26,12 @@ import { scheduledTimes } from "@/data/staffSchedule";
 import DaySchedule from "@/components/staff/DaySchedule";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import TaskTile from "@/components/staff/TaskTile";
+import NextTaskPreview from "@/components/staff/NextTaskPreview";
 import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import { useI18n } from "@/i18n/I18nContext";
 import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
 import { supabase } from "@/integrations/supabase/client";
+import breakIllustration from "@/assets/break-illustration.png";
 
 const stockItems = [
   { key: "Soap", labelKey: "stock.soap" },
@@ -60,6 +62,8 @@ const StaffView = () => {
   const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
+  const [breakSeconds, setBreakSeconds] = useState(0);
+  const [showStockPanel, setShowStockPanel] = useState(false);
   const [taskSeconds, setTaskSeconds] = useState(
     (staffAssignments[initialIndex]?.elapsedMinutes || 0) * 60
   );
@@ -71,6 +75,15 @@ const StaffView = () => {
     }
     return () => clearInterval(interval);
   }, [breakFixStatus]);
+
+  // Break timer
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (onBreak) {
+      interval = setInterval(() => setBreakSeconds((s) => s + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [onBreak]);
 
   const current = staffAssignments[currentIndex];
   const nextTask = currentIndex < staffAssignments.length - 1 ? staffAssignments[currentIndex + 1] : null;
@@ -99,6 +112,15 @@ const StaffView = () => {
     return () => clearInterval(interval);
   }, [isRunning, onBreak]);
 
+  const handleStartBreak = () => {
+    setOnBreak(true);
+    setBreakSeconds(0);
+    if (isRunning) setIsRunning(false);
+  };
+  const handleEndBreak = () => {
+    setOnBreak(false);
+    setBreakSeconds(0);
+  };
   const handleStart = () => {
     setIsRunning(true);
     setTaskSeconds(0);
@@ -244,7 +266,73 @@ const StaffView = () => {
     return <EndOfDayAnalysis assignments={staffAssignments} onClose={() => setScreen("home")} />;
   }
 
-  // ═══ ALL DONE SCREEN ═══
+  // ═══ BREAK SCREEN ═══
+  if (onBreak) {
+    const breakTimeDisplay = `${String(Math.floor(breakSeconds / 60)).padStart(2, "0")}:${String(breakSeconds % 60).padStart(2, "0")}`;
+    const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
+    const showBreakFix = pendingBreakFix && breakFixStatus !== "done";
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Break-fix banner at top even during break */}
+        {showBreakFix && (
+          <div className="mx-4 mt-4 bg-warning/15 border-2 border-warning rounded-xl px-4 py-3 animate-pulse-slow">
+            <div className="flex items-center gap-3">
+              <Zap size={24} className="text-warning shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-base font-black text-warning">{t("worker.breakFixRequired")}</p>
+                <p className="text-xs text-warning/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+              </div>
+              {breakFixStatus === "idle" ? (
+                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-warning text-warning-foreground font-bold text-sm shrink-0">
+                  <Play size={16} />
+                </button>
+              ) : (
+                <span className="mono text-warning font-bold">
+                  {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Break content */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+          <img src={breakIllustration} alt="הפסקה" className="w-40 h-40 object-contain mb-6 rounded-2xl opacity-90" />
+          
+          <Coffee size={48} className="text-primary mb-4" />
+          <h1 className="text-3xl font-black text-foreground mb-2">{t("worker.onBreakTitle")}</h1>
+          <p className="text-muted-foreground mb-6">{t("worker.onBreakSubtitle")}</p>
+
+          {/* Break timer */}
+          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl px-8 py-5 mb-8">
+            <div className="flex items-center justify-center gap-3">
+              <Timer size={24} className="text-primary" />
+              <span className="mono text-5xl font-black text-foreground">{breakTimeDisplay}</span>
+            </div>
+          </div>
+
+          {/* Next task preview */}
+          {current && (
+            <div className="w-full max-w-sm mb-6">
+              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{t("worker.nextTaskAfterBreak")}</p>
+              <NextTaskPreview assignment={current} />
+            </div>
+          )}
+
+          {/* End break button */}
+          <button
+            onClick={handleEndBreak}
+            className="w-full max-w-sm flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors"
+          >
+            <Play size={22} />
+            {t("worker.backToWork")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (allDone || !current) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -620,9 +708,77 @@ const StaffView = () => {
         {/* My Points Widget */}
         <MyPointsWidget />
 
-        {/* Spacer */}
-        <div className="flex-1" />
+        {/* Spacer for bottom banner */}
+        <div className="h-20" />
       </div>
+
+      {/* Fixed bottom action banner */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
+        <button
+          onClick={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
+          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors"
+        >
+          <AlertTriangle size={20} className="text-destructive" />
+          <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
+        </button>
+        <button
+          onClick={() => setShowStockPanel(!showStockPanel)}
+          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
+        >
+          <PackageOpen size={20} className="text-warning" />
+          <span className="text-[10px] font-medium text-warning">{t("worker.reportShortage")}</span>
+        </button>
+        <button
+          onClick={handleStartBreak}
+          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
+        >
+          <Coffee size={20} className="text-primary" />
+          <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
+        </button>
+      </div>
+
+      {/* Stock reporting modal */}
+      {showStockPanel && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowStockPanel(false)}>
+          <div className="w-full max-w-lg bg-background rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm font-bold mb-3 flex items-center gap-2">
+              <PackageOpen size={16} className="text-warning" />
+              {t("worker.reportShortage")}
+            </p>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {stockItems.map(({ key, labelKey }) => {
+                const alreadyReported = reportedItems.has(key);
+                return (
+                  <button
+                    key={key}
+                    onClick={() => !alreadyReported && toggleStock(key)}
+                    disabled={alreadyReported}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      alreadyReported
+                        ? "bg-success/15 border-success text-success cursor-default"
+                        : stockLowItems.includes(key)
+                        ? "bg-warning/15 border-warning text-warning-foreground"
+                        : "border-border text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
+                  </button>
+                );
+              })}
+            </div>
+            {stockLowItems.length > 0 && (
+              <button
+                onClick={() => { handleReportShortage(); setShowStockPanel(false); }}
+                disabled={stockReporting}
+                className="w-full py-3 rounded-xl bg-warning text-warning-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
+              >
+                <PackageOpen size={16} />
+                {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
