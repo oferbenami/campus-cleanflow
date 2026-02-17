@@ -32,15 +32,9 @@ import { useI18n } from "@/i18n/I18nContext";
 import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
 import { supabase } from "@/integrations/supabase/client";
 import breakIllustration from "@/assets/break-illustration.png";
+import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 
-const stockItems = [
-  { key: "Soap", labelKey: "stock.soap" },
-  { key: "Paper Towels", labelKey: "stock.paperTowels" },
-  { key: "Sanitizer", labelKey: "stock.sanitizer" },
-  { key: "Trash Bags", labelKey: "stock.trashBags" },
-];
-
-type StaffScreen = "welcome" | "home" | "taskDetail" | "schedule" | "analysis";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "schedule" | "analysis" | "shortage";
 
 const StaffView = () => {
   const { t } = useI18n();
@@ -55,15 +49,12 @@ const StaffView = () => {
     staffAssignments[initialIndex]?.status === "in_progress"
   );
   const [onBreak, setOnBreak] = useState(false);
-  const [stockLowItems, setStockLowItems] = useState<string[]>([]);
   const [showIssuePanel, setShowIssuePanel] = useState(false);
   const [stockReporting, setStockReporting] = useState(false);
-  const [reportedItems, setReportedItems] = useState<Set<string>>(new Set());
   const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
   const [breakSeconds, setBreakSeconds] = useState(0);
-  const [showStockPanel, setShowStockPanel] = useState(false);
   const [showCannotPerform, setShowCannotPerform] = useState(false);
   const [cannotPerformReason, setCannotPerformReason] = useState("");
   const [taskSeconds, setTaskSeconds] = useState(
@@ -131,7 +122,6 @@ const StaffView = () => {
   const handleFinish = () => {
     setIsRunning(false);
     setTaskSeconds(0);
-    setStockLowItems([]);
     if (currentIndex < staffAssignments.length - 1) {
       setCurrentIndex(currentIndex + 1);
       setScreen("home");
@@ -141,41 +131,29 @@ const StaffView = () => {
     }
   };
 
-  const toggleStock = (item: string) => {
-    setStockLowItems((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    );
-  };
-
-  const handleReportShortage = useCallback(async () => {
-    if (stockLowItems.length === 0 || !current) return;
+  const handleShortageSubmit = useCallback(async (items: { key: string; label: string; quantity: number }[], location: string) => {
+    if (items.length === 0 || !current) return;
     setStockReporting(true);
     try {
-      // Use a deterministic UUID for mock staff IDs
       const staffUuid = current.staff.id.length < 36
         ? `00000000-0000-0000-0000-00000000000${current.staff.id.replace(/\D/g, "") || "0"}`
         : current.staff.id;
-      const rows = stockLowItems.map((item) => ({
+      const rows = items.map((item) => ({
         staff_id: staffUuid,
         assignment_id: current.id,
-        item,
-        zone_name: current.task.zone.name,
+        item: `${item.label} (x${item.quantity})`,
+        zone_name: location,
       }));
       const { error } = await supabase.from("supply_alerts").insert(rows);
       if (error) throw error;
-      setReportedItems((prev) => {
-        const next = new Set(prev);
-        stockLowItems.forEach((i) => next.add(i));
-        return next;
-      });
-      setStockLowItems([]);
-      toast({ title: "✓ דיווח חוסר נשלח", description: `${rows.length} פריטים דווחו בהצלחה` });
+      toast({ title: "✓ דיווח חוסר נשלח", description: `${items.length} פריטים דווחו בהצלחה` });
+      setScreen("home");
     } catch {
       toast({ title: "שגיאה", description: "לא ניתן לשלוח דיווח כרגע", variant: "destructive" });
     } finally {
       setStockReporting(false);
     }
-  }, [stockLowItems, current]);
+  }, [current]);
 
   const overdueAlertSent = useRef(false);
   const taskElapsedMinutes = current ? Math.floor(taskSeconds / 60) : 0;
@@ -261,6 +239,9 @@ const StaffView = () => {
     );
   }
 
+  if (screen === "shortage") {
+    return <ShortageReportScreen onClose={() => setScreen("home")} onSubmit={handleShortageSubmit} submitting={stockReporting} />;
+  }
   if (screen === "schedule") {
     return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("home")} />;
   }
@@ -593,7 +574,7 @@ const StaffView = () => {
             <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
           </button>
           <button
-            onClick={() => setShowStockPanel(!showStockPanel)}
+            onClick={() => setScreen("shortage")}
             className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
           >
             <PackageOpen size={20} className="text-warning" />
@@ -608,48 +589,6 @@ const StaffView = () => {
           </button>
         </div>
 
-        {/* Stock reporting modal */}
-        {showStockPanel && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowStockPanel(false)}>
-            <div className="w-full max-w-lg bg-background rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
-              <p className="text-sm font-bold mb-3 flex items-center gap-2">
-                <PackageOpen size={16} className="text-warning" />
-                {t("worker.reportShortage")}
-              </p>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {stockItems.map(({ key, labelKey }) => {
-                  const alreadyReported = reportedItems.has(key);
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => !alreadyReported && toggleStock(key)}
-                      disabled={alreadyReported}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                        alreadyReported
-                          ? "bg-success/15 border-success text-success cursor-default"
-                          : stockLowItems.includes(key)
-                          ? "bg-warning/15 border-warning text-warning-foreground"
-                          : "border-border text-muted-foreground hover:bg-muted"
-                      }`}
-                    >
-                      {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
-                    </button>
-                  );
-                })}
-              </div>
-              {stockLowItems.length > 0 && (
-                <button
-                  onClick={() => { handleReportShortage(); setShowStockPanel(false); }}
-                  disabled={stockReporting}
-                  className="w-full py-3 rounded-xl bg-warning text-warning-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
-                >
-                  <PackageOpen size={16} />
-                  {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -806,7 +745,7 @@ const StaffView = () => {
           <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
         </button>
         <button
-          onClick={() => setShowStockPanel(!showStockPanel)}
+          onClick={() => setScreen("shortage")}
           className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
         >
           <PackageOpen size={20} className="text-warning" />
@@ -820,49 +759,6 @@ const StaffView = () => {
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
       </div>
-
-      {/* Stock reporting modal */}
-      {showStockPanel && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowStockPanel(false)}>
-          <div className="w-full max-w-lg bg-background rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm font-bold mb-3 flex items-center gap-2">
-              <PackageOpen size={16} className="text-warning" />
-              {t("worker.reportShortage")}
-            </p>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {stockItems.map(({ key, labelKey }) => {
-                const alreadyReported = reportedItems.has(key);
-                return (
-                  <button
-                    key={key}
-                    onClick={() => !alreadyReported && toggleStock(key)}
-                    disabled={alreadyReported}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      alreadyReported
-                        ? "bg-success/15 border-success text-success cursor-default"
-                        : stockLowItems.includes(key)
-                        ? "bg-warning/15 border-warning text-warning-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
-                  </button>
-                );
-              })}
-            </div>
-            {stockLowItems.length > 0 && (
-              <button
-                onClick={() => { handleReportShortage(); setShowStockPanel(false); }}
-                disabled={stockReporting}
-                className="w-full py-3 rounded-xl bg-warning text-warning-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
-              >
-                <PackageOpen size={16} />
-                {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
