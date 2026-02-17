@@ -273,22 +273,22 @@ const StaffView = () => {
     const showBreakFix = pendingBreakFix && breakFixStatus !== "done";
 
     return (
-      <div className="min-h-screen bg-background flex flex-col">
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
         {/* Break-fix banner at top even during break */}
         {showBreakFix && (
-          <div className="mx-4 mt-4 bg-warning/15 border-2 border-warning rounded-xl px-4 py-3 animate-pulse-slow">
-            <div className="flex items-center gap-3">
-              <Zap size={24} className="text-warning shrink-0" />
+          <div className="mx-3 mt-3 bg-warning/15 border-2 border-warning rounded-xl px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Zap size={20} className="text-warning shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-base font-black text-warning">{t("worker.breakFixRequired")}</p>
-                <p className="text-xs text-warning/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+                <p className="text-sm font-black text-warning">{t("worker.breakFixRequired")}</p>
+                <p className="text-[10px] text-warning/80 truncate">{pendingBreakFix.breakFixDescription}</p>
               </div>
               {breakFixStatus === "idle" ? (
-                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-warning text-warning-foreground font-bold text-sm shrink-0">
-                  <Play size={16} />
+                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-3 py-1.5 rounded-lg bg-warning text-warning-foreground font-bold text-xs shrink-0">
+                  <Play size={14} />
                 </button>
               ) : (
-                <span className="mono text-warning font-bold">
+                <span className="mono text-sm text-warning font-bold">
                   {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
                 </span>
               )}
@@ -296,34 +296,37 @@ const StaffView = () => {
           </div>
         )}
 
-        {/* Break content */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <img src={breakIllustration} alt="הפסקה" className="w-40 h-40 object-contain mb-6 rounded-2xl opacity-90" />
+        {/* Break content - compact to fit one screen */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
+          <img src={breakIllustration} alt="הפסקה" className="w-28 h-28 object-contain rounded-2xl opacity-90" />
           
-          <Coffee size={48} className="text-primary mb-4" />
-          <h1 className="text-3xl font-black text-foreground mb-2">{t("worker.onBreakTitle")}</h1>
-          <p className="text-muted-foreground mb-6">{t("worker.onBreakSubtitle")}</p>
+          <div>
+            <h1 className="text-2xl font-black text-foreground">{t("worker.onBreakTitle")}</h1>
+            <p className="text-sm text-muted-foreground">{t("worker.onBreakSubtitle")}</p>
+          </div>
 
           {/* Break timer */}
-          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl px-8 py-5 mb-8">
-            <div className="flex items-center justify-center gap-3">
-              <Timer size={24} className="text-primary" />
-              <span className="mono text-5xl font-black text-foreground">{breakTimeDisplay}</span>
+          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl px-6 py-3">
+            <div className="flex items-center justify-center gap-2">
+              <Timer size={20} className="text-primary" />
+              <span className="mono text-4xl font-black text-foreground">{breakTimeDisplay}</span>
             </div>
           </div>
 
           {/* Next task preview */}
           {current && (
-            <div className="w-full max-w-sm mb-6">
-              <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2">{t("worker.nextTaskAfterBreak")}</p>
+            <div className="w-full max-w-sm">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("worker.nextTaskAfterBreak")}</p>
               <NextTaskPreview assignment={current} />
             </div>
           )}
+        </div>
 
-          {/* End break button */}
+        {/* End break button pinned to bottom */}
+        <div className="px-6 pb-6 pt-2">
           <button
             onClick={handleEndBreak}
-            className="w-full max-w-sm flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors"
+            className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors"
           >
             <Play size={22} />
             {t("worker.backToWork")}
