@@ -1,9 +1,12 @@
-import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Zap, Trophy, Star, Shield } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
 import type { TaskAssignment } from "@/data/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface EndOfDayAnalysisProps {
   assignments: TaskAssignment[];
@@ -11,6 +14,31 @@ interface EndOfDayAnalysisProps {
 }
 
 const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
+  const { user } = useAuth();
+  const [todayScore, setTodayScore] = useState<number | null>(null);
+  const [monthAvg, setMonthAvg] = useState<number | null>(null);
+  const [scoreBreakdown, setScoreBreakdown] = useState<{ productivity: number; quality: number; discipline: number } | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const fetchScores = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      const monthStart = today.slice(0, 7) + "-01";
+      const [todayRes, monthRes] = await Promise.all([
+        supabase.from("daily_worker_scores").select("total_points,productivity_points,quality_points,discipline_points").eq("worker_id", user.id).eq("score_date", today).maybeSingle(),
+        supabase.from("daily_worker_scores").select("total_points").eq("worker_id", user.id).gte("score_date", monthStart).lte("score_date", today),
+      ]);
+      if (todayRes.data) {
+        setTodayScore(todayRes.data.total_points);
+        setScoreBreakdown({ productivity: todayRes.data.productivity_points, quality: todayRes.data.quality_points, discipline: todayRes.data.discipline_points });
+      }
+      if (monthRes.data && monthRes.data.length > 0) {
+        const avg = monthRes.data.reduce((s, r) => s + (r.total_points || 0), 0) / monthRes.data.length;
+        setMonthAvg(Math.round(avg * 10) / 10);
+      }
+    };
+    fetchScores();
+  }, [user?.id]);
   const completed = assignments.filter((a) => a.status === "completed");
   const overdue = assignments.filter(
     (a) => a.status === "completed" && a.elapsedMinutes !== undefined && a.elapsedMinutes > a.task.estimatedMinutes * 1.15
@@ -98,6 +126,35 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           </div>
         )}
 
+        {/* Daily & Monthly Score */}
+        <div className="kpi-card">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy size={16} className="text-accent" />
+            <h3 className="text-sm font-semibold">ניקוד תמריצים</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <p className={`text-3xl font-black mono ${todayScore !== null ? (todayScore >= 85 ? 'text-success' : todayScore >= 65 ? 'text-warning' : 'text-destructive') : 'text-muted-foreground'}`}>
+                {todayScore ?? "—"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">ניקוד היום</p>
+            </div>
+            <div className="text-center">
+              <p className={`text-3xl font-black mono ${monthAvg !== null ? (monthAvg >= 85 ? 'text-success' : monthAvg >= 65 ? 'text-warning' : 'text-destructive') : 'text-muted-foreground'}`}>
+                {monthAvg ?? "—"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">ממוצע חודשי</p>
+            </div>
+          </div>
+          {scoreBreakdown && (
+            <div className="mt-3 pt-3 border-t border-border space-y-2">
+              <ScoreRow icon={Zap} label="פרודוקטיביות" points={scoreBreakdown.productivity} max={50} color="bg-blue-500" />
+              <ScoreRow icon={Star} label="איכות" points={scoreBreakdown.quality} max={30} color="bg-amber-500" />
+              <ScoreRow icon={Shield} label="משמעת" points={scoreBreakdown.discipline} max={20} color="bg-emerald-500" />
+            </div>
+          )}
+        </div>
+
         {/* Bar chart */}
         <div className="task-card">
           <div className="flex items-center gap-2 mb-3">
@@ -172,6 +229,22 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           </table>
         </div>
       </div>
+    </div>
+  );
+};
+
+const ScoreRow = ({ icon: Icon, label, points, max, color }: {
+  icon: React.ElementType; label: string; points: number; max: number; color: string;
+}) => {
+  const pct = Math.round((points / max) * 100);
+  return (
+    <div className="flex items-center gap-2">
+      <Icon size={14} className="text-muted-foreground shrink-0" />
+      <span className="text-[11px] w-20 shrink-0">{label}</span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-[11px] font-bold mono w-10 text-left">{points}/{max}</span>
     </div>
   );
 };
