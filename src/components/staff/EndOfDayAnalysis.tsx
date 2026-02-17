@@ -85,19 +85,21 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
         {/* KPI row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="kpi-card text-center">
+            <Trophy size={20} className="mx-auto mb-1 text-accent" />
+            <p className={`text-2xl font-bold mono ${todayScore !== null ? (todayScore >= 85 ? 'text-success' : todayScore >= 65 ? 'text-warning' : 'text-destructive') : 'text-muted-foreground'}`}>
+              {todayScore ?? "—"}
+            </p>
+            <p className="text-xs text-muted-foreground">ציון יומי</p>
+          </div>
+          <div className="kpi-card text-center">
             <CheckCircle2 size={20} className="mx-auto mb-1 text-success" />
-            <p className="text-2xl font-bold mono">{completionRate}%</p>
-            <p className="text-xs text-muted-foreground">אחוז השלמה</p>
+            <p className="text-2xl font-bold mono">{completed.length}/{assignments.length}</p>
+            <p className="text-xs text-muted-foreground">משימות שבוצעו</p>
           </div>
           <div className="kpi-card text-center">
-            <TrendingUp size={20} className="mx-auto mb-1 text-info" />
-            <p className="text-2xl font-bold mono">{efficiency}%</p>
-            <p className="text-xs text-muted-foreground">יעילות</p>
-          </div>
-          <div className="kpi-card text-center">
-            <Clock size={20} className="mx-auto mb-1 text-accent" />
-            <p className="text-2xl font-bold mono">{totalActual}/{totalPlanned}</p>
-            <p className="text-xs text-muted-foreground">דק׳ בפועל/מתוכנן</p>
+            <Zap size={20} className="mx-auto mb-1 text-warning" />
+            <p className="text-2xl font-bold mono">{breakFixTasks.length}</p>
+            <p className="text-xs text-muted-foreground">תקלות מיידיות</p>
           </div>
           <div className="kpi-card text-center">
             <AlertTriangle size={20} className="mx-auto mb-1 text-destructive" />
