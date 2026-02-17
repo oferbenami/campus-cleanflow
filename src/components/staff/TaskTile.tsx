@@ -1,4 +1,4 @@
-import { MapPin, Clock, PackageOpen, Timer, AlertTriangle } from "lucide-react";
+import { MapPin, Clock, PackageOpen, Timer, AlertTriangle, Building } from "lucide-react";
 import type { TaskAssignment } from "@/data/mockData";
 import { scheduledTimes } from "@/data/staffSchedule";
 import { useI18n } from "@/i18n/I18nContext";
@@ -52,9 +52,11 @@ interface TaskTileProps {
   isCurrent: boolean;
   onTap?: () => void;
   onReportIssue?: () => void;
+  orderNumber?: number;
+  totalTasks?: number;
 }
 
-const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue }: TaskTileProps) => {
+const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue, orderNumber, totalTasks }: TaskTileProps) => {
   const { t } = useI18n();
   const risk = getSlaRisk(assignment, isActive);
   const style = slaStyles[risk];
@@ -73,9 +75,17 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
 
       <button onClick={onTap} className="w-full text-right">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
+          <div className="flex items-center gap-2">
+            {/* Route order number */}
+            {orderNumber !== undefined && (
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-[10px] font-bold flex items-center justify-center">
+                {orderNumber}
+              </span>
+            )}
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {label}
+            </span>
+          </div>
           <div className="flex items-center gap-1.5">
             {/* Priority badge */}
             {isUrgent ? (
@@ -98,6 +108,18 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
           <span className="font-bold text-sm truncate">{assignment.task.zone.name}</span>
         </div>
 
+        {/* Building/floor breadcrumb */}
+        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1.5">
+          <Building size={10} />
+          <span>אגף {assignment.task.zone.wing} · קומה {assignment.task.zone.floor}</span>
+          {assignment.task.zone.roomType && (
+            <>
+              <span>·</span>
+              <span>{assignment.task.zone.roomType}</span>
+            </>
+          )}
+        </div>
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className={`text-xs ${
@@ -109,17 +131,26 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
                 ? t("analysis.quick")
                 : t("analysis.deep")}
             </span>
-            {/* Estimated duration */}
+            {/* Estimated duration + time remaining */}
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Timer size={12} />
-              {assignment.task.estimatedMinutes} {t("common.minutes")}
+              {isActive && assignment.elapsedMinutes !== undefined ? (
+                <span className={`mono font-semibold ${
+                  assignment.elapsedMinutes > assignment.task.estimatedMinutes ? "text-destructive" :
+                  assignment.elapsedMinutes > assignment.task.estimatedMinutes * 0.8 ? "text-warning" : "text-success"
+                }`}>
+                  {Math.max(0, assignment.task.estimatedMinutes - assignment.elapsedMinutes)} דק׳ נותרו
+                </span>
+              ) : (
+                <span>{assignment.task.estimatedMinutes} {t("common.minutes")}</span>
+              )}
             </span>
           </div>
 
           {sched && (
             <span className="flex items-center gap-1 text-xs mono text-muted-foreground">
               <Clock size={12} />
-              {sched.plannedEnd}
+              {sched.plannedStart}–{sched.plannedEnd}
             </span>
           )}
         </div>

@@ -26,6 +26,7 @@ import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
 import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
+import DeviationAlertPanel from "@/components/manager/DeviationAlertPanel";
 import UserManagement from "@/components/manager/UserManagement";
 import IncentivesPanel from "@/components/manager/IncentivesPanel";
 import {
@@ -258,6 +259,7 @@ const ManagerDashboard = () => {
               <SlaRiskPanel riskTasks={slaRiskTasks} />
               <VarianceWidget summary={varianceSummary} />
             </div>
+            <DeviationAlertPanel assignments={assignments} />
             <TimeStandardsValidation assignments={assignments} />
           </div>
         )}
