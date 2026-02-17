@@ -280,8 +280,8 @@ const StaffView = () => {
             <div className="flex items-center gap-2">
               <Zap size={20} className="text-destructive shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-destructive">{t("worker.breakFixRequired")}</p>
-                <p className="text-[10px] text-destructive/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+                <p className="text-[10px] font-bold text-destructive">{t("worker.breakFixRequired")}</p>
+                <p className="text-sm font-black text-destructive truncate">{pendingBreakFix.breakFixDescription}</p>
               </div>
               {breakFixStatus === "idle" ? (
                 <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs shrink-0">
@@ -392,8 +392,8 @@ const StaffView = () => {
                     <Zap size={28} className="text-destructive" />
                   </div>
                   <div>
-                    <p className="text-xl font-black text-destructive">{t("worker.breakFixRequired")}</p>
-                    <p className="text-sm text-destructive/80">{pendingBreakFix.breakFixDescription || t("worker.breakFix")}</p>
+                    <p className="text-sm font-bold text-destructive">{t("worker.breakFixRequired")}</p>
+                    <p className="text-xl font-black text-destructive">{pendingBreakFix.breakFixDescription || t("worker.breakFix")}</p>
                   </div>
                 </div>
                 {breakFixStatus === "idle" ? (
@@ -644,8 +644,8 @@ const StaffView = () => {
             <div className="flex items-center gap-3">
               <Zap size={24} className="text-destructive shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-base font-black text-destructive">{t("worker.breakFixRequired")}</p>
-                <p className="text-xs text-destructive/80 truncate">{pendingBreakFix.breakFixDescription}</p>
+                <p className="text-xs font-bold text-destructive">{t("worker.breakFixRequired")}</p>
+                <p className="text-sm font-black text-destructive truncate">{pendingBreakFix.breakFixDescription}</p>
               </div>
               {breakFixStatus === "idle" ? (
                 <button onClick={() => { setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-sm shrink-0">
