@@ -198,16 +198,16 @@ const StaffView = () => {
 
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
-        <div className="w-full max-w-sm text-center animate-slide-up space-y-8">
+        <div className="w-full max-w-sm text-center space-y-8">
           {/* Greeting */}
-          <div>
-            <p className="text-6xl mb-4">{greetingEmoji}</p>
-            <h1 className="text-4xl font-black text-foreground mb-2">{greeting}{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}!</h1>
-            <p className="text-lg text-muted-foreground">שמחים שהגעת למשמרת</p>
+          <div className="animate-fade-in" style={{ animationDuration: '0.6s' }}>
+            <p className="text-6xl mb-4 animate-scale-in" style={{ animationDuration: '0.8s', animationDelay: '0.2s', animationFillMode: 'both' }}>{greetingEmoji}</p>
+            <h1 className="text-4xl font-black text-foreground mb-2 animate-fade-in" style={{ animationDuration: '0.6s', animationDelay: '0.4s', animationFillMode: 'both' }}>{greeting}{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}!</h1>
+            <p className="text-lg text-muted-foreground animate-fade-in" style={{ animationDuration: '0.6s', animationDelay: '0.6s', animationFillMode: 'both' }}>שמחים שהגעת למשמרת</p>
           </div>
 
           {/* Assignment info */}
-          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3">
+          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3 animate-scale-in" style={{ animationDuration: '0.5s', animationDelay: '0.8s', animationFillMode: 'both' }}>
             <div className="flex items-center justify-center gap-2 text-primary">
               <MapPin size={22} />
               <p className="text-lg font-bold">היום שובצת לעבוד ב{floorsText}</p>
@@ -218,14 +218,15 @@ const StaffView = () => {
           </div>
 
           {/* Good luck */}
-          <div>
+          <div className="animate-scale-in" style={{ animationDuration: '0.5s', animationDelay: '1.1s', animationFillMode: 'both' }}>
             <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
           </div>
 
           {/* Continue button */}
           <button
             onClick={() => setScreen("home")}
-            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
+            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4 animate-fade-in"
+            style={{ animationDuration: '0.5s', animationDelay: '1.4s', animationFillMode: 'both' }}
           >
             <Play size={22} />
             יאללה, מתחילים
