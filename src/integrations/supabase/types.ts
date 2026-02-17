@@ -233,6 +233,65 @@ export type Database = {
           },
         ]
       }
+      daily_worker_scores: {
+        Row: {
+          actual_minutes_total: number
+          audit_avg_score_used: number | null
+          created_at: string
+          discipline_flags: Json
+          discipline_points: number
+          explanation_text: string | null
+          id: string
+          planned_minutes_total: number
+          productivity_points: number
+          quality_points: number
+          score_date: string
+          total_points: number
+          variance_percent: number
+          worker_id: string
+        }
+        Insert: {
+          actual_minutes_total?: number
+          audit_avg_score_used?: number | null
+          created_at?: string
+          discipline_flags?: Json
+          discipline_points?: number
+          explanation_text?: string | null
+          id?: string
+          planned_minutes_total?: number
+          productivity_points?: number
+          quality_points?: number
+          score_date?: string
+          total_points?: number
+          variance_percent?: number
+          worker_id: string
+        }
+        Update: {
+          actual_minutes_total?: number
+          audit_avg_score_used?: number | null
+          created_at?: string
+          discipline_flags?: Json
+          discipline_points?: number
+          explanation_text?: string | null
+          id?: string
+          planned_minutes_total?: number
+          productivity_points?: number
+          quality_points?: number
+          score_date?: string
+          total_points?: number
+          variance_percent?: number
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_worker_scores_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_routing_rules: {
         Row: {
           auto_assign_role: string | null
@@ -386,6 +445,101 @@ export type Database = {
           },
         ]
       }
+      incentive_config: {
+        Row: {
+          base_bonus_amount: number
+          created_at: string
+          discipline_full: number
+          discipline_weight: number
+          id: string
+          is_active: boolean
+          late_threshold_minutes: number
+          no_audit_policy: string
+          points_on_standard: number
+          points_tier1: number
+          points_tier2: number
+          points_tier3: number
+          productivity_weight: number
+          quality_band_fail: number
+          quality_band_high: number
+          quality_band_low: number
+          quality_band_mid: number
+          quality_weight: number
+          site_id: string | null
+          tier_50_threshold: number
+          tier_80_threshold: number
+          tier_full_threshold: number
+          updated_at: string
+          variance_on_standard: number
+          variance_tier1: number
+          variance_tier2: number
+        }
+        Insert: {
+          base_bonus_amount?: number
+          created_at?: string
+          discipline_full?: number
+          discipline_weight?: number
+          id?: string
+          is_active?: boolean
+          late_threshold_minutes?: number
+          no_audit_policy?: string
+          points_on_standard?: number
+          points_tier1?: number
+          points_tier2?: number
+          points_tier3?: number
+          productivity_weight?: number
+          quality_band_fail?: number
+          quality_band_high?: number
+          quality_band_low?: number
+          quality_band_mid?: number
+          quality_weight?: number
+          site_id?: string | null
+          tier_50_threshold?: number
+          tier_80_threshold?: number
+          tier_full_threshold?: number
+          updated_at?: string
+          variance_on_standard?: number
+          variance_tier1?: number
+          variance_tier2?: number
+        }
+        Update: {
+          base_bonus_amount?: number
+          created_at?: string
+          discipline_full?: number
+          discipline_weight?: number
+          id?: string
+          is_active?: boolean
+          late_threshold_minutes?: number
+          no_audit_policy?: string
+          points_on_standard?: number
+          points_tier1?: number
+          points_tier2?: number
+          points_tier3?: number
+          productivity_weight?: number
+          quality_band_fail?: number
+          quality_band_high?: number
+          quality_band_low?: number
+          quality_band_mid?: number
+          quality_weight?: number
+          site_id?: string | null
+          tier_50_threshold?: number
+          tier_80_threshold?: number
+          tier_full_threshold?: number
+          updated_at?: string
+          variance_on_standard?: number
+          variance_tier1?: number
+          variance_tier2?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incentive_config_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           area_sqm: number | null
@@ -452,6 +606,69 @@ export type Database = {
             columns: ["zone_id"]
             isOneToOne: false
             referencedRelation: "zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      monthly_incentive_summaries: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          avg_daily_points: number
+          created_at: string
+          id: string
+          month: string
+          payout_amount: number
+          status: string
+          tier: string
+          total_points: number
+          updated_at: string
+          workdays_count: number
+          worker_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          avg_daily_points?: number
+          created_at?: string
+          id?: string
+          month: string
+          payout_amount?: number
+          status?: string
+          tier?: string
+          total_points?: number
+          updated_at?: string
+          workdays_count?: number
+          worker_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          avg_daily_points?: number
+          created_at?: string
+          id?: string
+          month?: string
+          payout_amount?: number
+          status?: string
+          tier?: string
+          total_points?: number
+          updated_at?: string
+          workdays_count?: number
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monthly_incentive_summaries_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "monthly_incentive_summaries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

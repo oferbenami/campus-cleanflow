@@ -16,6 +16,7 @@ import {
   ClipboardList,
   UserCog,
   LogOut,
+  Trophy,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -26,6 +27,7 @@ import TimeStandardsValidation from "@/components/manager/TimeStandardsValidatio
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
 import UserManagement from "@/components/manager/UserManagement";
+import IncentivesPanel from "@/components/manager/IncentivesPanel";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -34,7 +36,7 @@ import {
 } from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
-type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users";
+type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users" | "incentives";
 
 const ManagerDashboard = () => {
   const { signOut } = useAuth();
@@ -98,6 +100,7 @@ const ManagerDashboard = () => {
     { key: "tracking", icon: ClipboardList, label: "מעקב" },
     { key: "endOfDay", icon: BarChart3, label: "סוף יום" },
     { key: "users", icon: UserCog, label: "משתמשים" },
+    { key: "incentives", icon: Trophy, label: "תמריצים" },
   ];
 
   return (
@@ -334,6 +337,12 @@ const ManagerDashboard = () => {
         )}
 
         {activeTab === "users" && <UserManagement />}
+
+        {activeTab === "incentives" && (
+          <div className="animate-slide-up">
+            <IncentivesPanel />
+          </div>
+        )}
       </div>
 
       {/* Drill-down modal */}
