@@ -41,7 +41,7 @@ type StaffScreen = "welcome" | "home" | "taskDetail" | "schedule" | "analysis";
 
 const StaffView = () => {
   const { t } = useI18n();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
   const initialIndex = staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
     ? staffAssignments.findIndex((a) => a.status === "in_progress")
@@ -202,7 +202,7 @@ const StaffView = () => {
           {/* Greeting */}
           <div>
             <p className="text-6xl mb-4">{greetingEmoji}</p>
-            <h1 className="text-4xl font-black text-foreground mb-2">{greeting}!</h1>
+            <h1 className="text-4xl font-black text-foreground mb-2">{greeting}{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}!</h1>
             <p className="text-lg text-muted-foreground">שמחים שהגעת למשמרת</p>
           </div>
 
