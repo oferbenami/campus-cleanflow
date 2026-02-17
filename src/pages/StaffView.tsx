@@ -64,6 +64,8 @@ const StaffView = () => {
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [showStockPanel, setShowStockPanel] = useState(false);
+  const [showCannotPerform, setShowCannotPerform] = useState(false);
+  const [cannotPerformReason, setCannotPerformReason] = useState("");
   const [taskSeconds, setTaskSeconds] = useState(
     (staffAssignments[initialIndex]?.elapsedMinutes || 0) * 60
   );
@@ -359,6 +361,28 @@ const StaffView = () => {
   const progressPercent = Math.min((taskElapsedMinutes / current.task.estimatedMinutes) * 100, 100);
   const taskTimeDisplay = `${String(Math.floor(taskSeconds / 60)).padStart(2, "0")}:${String(taskSeconds % 60).padStart(2, "0")}`;
 
+  const handleCannotPerform = () => {
+    if (!cannotPerformReason.trim()) return;
+    toast({
+      title: "⚠️ דיווח 'לא ניתן לבצע' נשלח",
+      description: `${current.task.zone.name} — ${cannotPerformReason}`,
+      variant: "destructive",
+    });
+    setShowCannotPerform(false);
+    setCannotPerformReason("");
+    // Skip to next task
+    if (currentIndex < staffAssignments.length - 1) {
+      setIsRunning(false);
+      setTaskSeconds(0);
+      setCurrentIndex(currentIndex + 1);
+      setScreen("home");
+    } else {
+      setIsRunning(false);
+      setAllDone(true);
+      setScreen("home");
+    }
+  };
+
   // ═══ TASK DETAIL SCREEN (when running) ═══
   if (screen === "taskDetail") {
     return (
@@ -380,7 +404,7 @@ const StaffView = () => {
           </div>
         </header>
 
-        <div className="flex-1 px-4 py-4 flex flex-col gap-4 overflow-y-auto">
+        <div className="flex-1 px-4 py-4 flex flex-col gap-4 overflow-y-auto pb-28">
           {/* Break-fix banner */}
           {(() => {
             const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
@@ -467,7 +491,7 @@ const StaffView = () => {
             )}
 
             {/* Timer */}
-            <div className={`mb-6 ${isOverdue ? 'bg-destructive/10 border border-destructive/30 rounded-xl p-3 animate-pulse-slow' : ''}`}>
+            <div className={`mb-4 ${isOverdue ? 'bg-destructive/10 border border-destructive/30 rounded-xl p-3 animate-pulse-slow' : ''}`}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Timer size={16} className={isOverdue ? 'text-destructive' : isRunning ? 'text-success' : 'text-muted-foreground'} />
@@ -486,77 +510,64 @@ const StaffView = () => {
               <Progress value={progressPercent} className={`h-3 ${isOverdue ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} />
             </div>
 
-            {/* Break button */}
-            {isRunning && (
-              <button onClick={() => setOnBreak(!onBreak)} className={`w-full flex items-center justify-center gap-2 py-3 rounded-lg border text-sm font-medium transition-colors mb-4 ${
-                onBreak ? "bg-accent/15 border-accent text-accent-foreground" : "border-border text-muted-foreground hover:bg-muted"
-              }`}>
-                <Coffee size={16} />
-                {onBreak ? t("worker.backToWork") : t("worker.breakButton")}
-              </button>
-            )}
-
-            {/* Stock check */}
-            {isRunning && (
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <PackageOpen size={12} />
-                  {t("worker.stockCheck")}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {stockItems.map(({ key, labelKey }) => {
-                    const alreadyReported = reportedItems.has(key);
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => !alreadyReported && toggleStock(key)}
-                        disabled={alreadyReported}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                          alreadyReported
-                            ? "bg-success/15 border-success text-success cursor-default"
-                            : stockLowItems.includes(key)
-                            ? "bg-warning/15 border-warning text-warning-foreground"
-                            : "border-border text-muted-foreground hover:bg-muted"
-                        }`}
-                      >
-                        {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
-                      </button>
-                    );
-                  })}
-                </div>
-                {stockLowItems.length > 0 && (
-                  <button
-                    onClick={handleReportShortage}
-                    disabled={stockReporting}
-                    className="w-full py-2.5 rounded-lg bg-warning text-warning-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
-                  >
-                    <PackageOpen size={16} />
-                    {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div className="space-y-3">
+            {/* Start / Finish buttons inside the card */}
             {!isRunning && (
-              <button onClick={handleStart} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-success text-success-foreground font-bold text-base hover:bg-success/90 transition-colors">
+              <button onClick={handleStart} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-success text-success-foreground font-bold text-base hover:bg-success/90 transition-colors mb-3">
                 <Play size={24} />
                 {t("worker.start")}
               </button>
             )}
             {isRunning && (
-              <button onClick={handleFinish} className="btn-action-primary w-full flex items-center justify-center gap-3">
+              <button onClick={handleFinish} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-base hover:bg-primary/90 transition-colors mb-3">
                 <Square size={24} />
                 {t("worker.complete")}
               </button>
             )}
-            <button onClick={() => {}} className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-muted-foreground/30 text-muted-foreground font-medium transition-colors hover:bg-muted">
+
+            {/* Cannot perform button */}
+            <button
+              onClick={() => setShowCannotPerform(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-destructive/30 text-destructive font-medium transition-colors hover:bg-destructive/10"
+            >
               <XCircle size={18} />
               {t("worker.cannotPerform")}
             </button>
           </div>
+
+          {/* Cannot perform dialog */}
+          {showCannotPerform && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setShowCannotPerform(false)}>
+              <div className="w-full max-w-sm bg-background rounded-2xl p-5 animate-scale-in space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center gap-2 text-destructive">
+                  <XCircle size={22} />
+                  <h3 className="font-bold text-lg">{t("worker.cannotPerform")}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">הדיווח יישלח מיידית למנהל הנכס/אתר</p>
+                <textarea
+                  value={cannotPerformReason}
+                  onChange={(e) => setCannotPerformReason(e.target.value)}
+                  placeholder="תאר את הסיבה..."
+                  className="w-full h-24 px-3 py-2 rounded-xl border border-border bg-muted/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50"
+                  dir="rtl"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCannotPerform(false)}
+                    className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    onClick={handleCannotPerform}
+                    disabled={!cannotPerformReason.trim()}
+                    className="flex-1 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:bg-destructive/90 transition-colors disabled:opacity-50"
+                  >
+                    {t("common.send")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Issue panel */}
           {showIssuePanel && (
@@ -571,6 +582,74 @@ const StaffView = () => {
             </div>
           )}
         </div>
+
+        {/* Fixed bottom action banner — same as home */}
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
+          <button
+            onClick={() => setShowIssuePanel(true)}
+            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors"
+          >
+            <AlertTriangle size={20} className="text-destructive" />
+            <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
+          </button>
+          <button
+            onClick={() => setShowStockPanel(!showStockPanel)}
+            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
+          >
+            <PackageOpen size={20} className="text-warning" />
+            <span className="text-[10px] font-medium text-warning">{t("worker.reportShortage")}</span>
+          </button>
+          <button
+            onClick={handleStartBreak}
+            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
+          >
+            <Coffee size={20} className="text-primary" />
+            <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
+          </button>
+        </div>
+
+        {/* Stock reporting modal */}
+        {showStockPanel && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowStockPanel(false)}>
+            <div className="w-full max-w-lg bg-background rounded-t-2xl p-5 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+              <p className="text-sm font-bold mb-3 flex items-center gap-2">
+                <PackageOpen size={16} className="text-warning" />
+                {t("worker.reportShortage")}
+              </p>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {stockItems.map(({ key, labelKey }) => {
+                  const alreadyReported = reportedItems.has(key);
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => !alreadyReported && toggleStock(key)}
+                      disabled={alreadyReported}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                        alreadyReported
+                          ? "bg-success/15 border-success text-success cursor-default"
+                          : stockLowItems.includes(key)
+                          ? "bg-warning/15 border-warning text-warning-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {alreadyReported ? "✓ " : stockLowItems.includes(key) ? "⚠ " : ""}{t(labelKey)}
+                    </button>
+                  );
+                })}
+              </div>
+              {stockLowItems.length > 0 && (
+                <button
+                  onClick={() => { handleReportShortage(); setShowStockPanel(false); }}
+                  disabled={stockReporting}
+                  className="w-full py-3 rounded-xl bg-warning text-warning-foreground font-bold text-sm flex items-center justify-center gap-2 hover:bg-warning/90 transition-colors disabled:opacity-50"
+                >
+                  <PackageOpen size={16} />
+                  {stockReporting ? "שולח..." : `דווח חוסר (${stockLowItems.length})`}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
