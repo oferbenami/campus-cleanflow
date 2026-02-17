@@ -37,7 +37,7 @@ const stockItems = [
   { key: "Trash Bags", labelKey: "stock.trashBags" },
 ];
 
-type StaffScreen = "home" | "taskDetail" | "schedule" | "analysis";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "schedule" | "analysis";
 
 const StaffView = () => {
   const { t } = useI18n();
@@ -56,7 +56,7 @@ const StaffView = () => {
   const [showIssuePanel, setShowIssuePanel] = useState(false);
   const [stockReporting, setStockReporting] = useState(false);
   const [reportedItems, setReportedItems] = useState<Set<string>>(new Set());
-  const [screen, setScreen] = useState<StaffScreen>("home");
+  const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
   const [breakFixSeconds, setBreakFixSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(
@@ -183,6 +183,57 @@ const StaffView = () => {
     t("issues.safety"),
     t("issues.other"),
   ];
+
+  // ═══ WELCOME SCREEN ═══
+  if (screen === "welcome") {
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? "בוקר טוב" : hour < 17 ? "צהריים טובים" : "ערב טוב";
+    const greetingEmoji = hour < 12 ? "☀️" : hour < 17 ? "🌤️" : "🌙";
+
+    // Extract unique floors from assignments
+    const floors = [...new Set(staffAssignments.map((a) => a.task.zone.floor))];
+    const floorsText = floors.length === 1
+      ? `קומה ${floors[0]}`
+      : `קומות ${floors.join(", ")}`;
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm text-center animate-slide-up space-y-8">
+          {/* Greeting */}
+          <div>
+            <p className="text-6xl mb-4">{greetingEmoji}</p>
+            <h1 className="text-4xl font-black text-foreground mb-2">{greeting}!</h1>
+            <p className="text-lg text-muted-foreground">שמחים שהגעת למשמרת</p>
+          </div>
+
+          {/* Assignment info */}
+          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3">
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <MapPin size={22} />
+              <p className="text-lg font-bold">היום שובצת לעבוד ב{floorsText}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {staffAssignments.length} משימות מתוכננות
+            </p>
+          </div>
+
+          {/* Good luck */}
+          <div>
+            <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
+          </div>
+
+          {/* Continue button */}
+          <button
+            onClick={() => setScreen("home")}
+            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
+          >
+            <Play size={22} />
+            יאללה, מתחילים
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (screen === "schedule") {
     return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("home")} />;
