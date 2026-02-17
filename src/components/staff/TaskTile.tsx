@@ -189,16 +189,6 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
         </div>
       )}
 
-      {/* Report issue quick button - only on current active task */}
-      {isCurrent && onReportIssue && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onReportIssue(); }}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors"
-        >
-          <AlertTriangle size={14} />
-          {t("worker.reportIssue")}
-        </button>
-      )}
     </div>
   );
 };
