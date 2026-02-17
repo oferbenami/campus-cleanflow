@@ -540,6 +540,12 @@ const StaffView = () => {
 
           {/* Action buttons */}
           <div className="space-y-3">
+            {!isRunning && (
+              <button onClick={handleStart} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-success text-success-foreground font-bold text-base hover:bg-success/90 transition-colors">
+                <Play size={24} />
+                {t("worker.start")}
+              </button>
+            )}
             {isRunning && (
               <button onClick={handleFinish} className="btn-action-primary w-full flex items-center justify-center gap-3">
                 <Square size={24} />
