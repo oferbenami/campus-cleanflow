@@ -108,7 +108,7 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
 
         <div className="flex items-center gap-2 mb-1">
           <MapPin size={14} className="text-muted-foreground shrink-0" />
-          <span className="font-bold text-base truncate">{assignment.task.zone.name}</span>
+          <span className="font-bold text-lg truncate">{assignment.task.zone.name}</span>
         </div>
 
         {/* Building/floor breadcrumb */}
