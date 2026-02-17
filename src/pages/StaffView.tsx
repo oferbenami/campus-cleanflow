@@ -19,7 +19,6 @@ import {
   XCircle,
   Gauge,
   LogOut,
-  Trophy,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, type TaskAssignment } from "@/data/mockData";
@@ -61,24 +60,8 @@ const StaffView = () => {
   const [taskSeconds, setTaskSeconds] = useState(
     (staffAssignments[initialIndex]?.elapsedMinutes || 0) * 60
   );
-  const [dailyScore, setDailyScore] = useState<number | null>(null);
-  const [monthlyAvg, setMonthlyAvg] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    const today = new Date().toISOString().split("T")[0];
-    const monthStart = today.slice(0, 7) + "-01";
-    Promise.all([
-      supabase.from("daily_worker_scores").select("total_points").eq("worker_id", user.id).eq("score_date", today).maybeSingle(),
-      supabase.from("daily_worker_scores").select("total_points").eq("worker_id", user.id).gte("score_date", monthStart).lte("score_date", today),
-    ]).then(([todayRes, monthRes]) => {
-      if (todayRes.data) setDailyScore(todayRes.data.total_points);
-      if (monthRes.data && monthRes.data.length > 0) {
-        const avg = monthRes.data.reduce((s, r) => s + (r.total_points || 0), 0) / monthRes.data.length;
-        setMonthlyAvg(Math.round(avg * 10) / 10);
-      }
-    });
-  }, [user?.id]);
+
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -660,25 +643,7 @@ const StaffView = () => {
           <div className="flex items-center justify-between text-[10px] mb-1">
             <span className="text-muted-foreground">קיבולת משמרת</span>
             <span className="mono font-semibold">{remainingMinutes} דק׳ נותרו</span>
-      </div>
-
-      {/* Daily score indicator */}
-      <div className="mx-4 mb-3 flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/50">
-        <Trophy size={14} className={dailyScore !== null ? (dailyScore >= 85 ? "text-success" : dailyScore >= 65 ? "text-warning" : "text-destructive") : "text-muted-foreground"} />
-        <div className="flex-1 flex items-center justify-between">
-          <span className="text-[10px] text-muted-foreground">ניקוד יומי</span>
-          <span className={`mono text-sm font-bold ${dailyScore !== null ? (dailyScore >= 85 ? "text-success" : dailyScore >= 65 ? "text-warning" : "text-destructive") : "text-muted-foreground"}`}>
-            {dailyScore ?? "—"}
-          </span>
-        </div>
-        <div className="w-px h-4 bg-border" />
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] text-muted-foreground">חודשי</span>
-          <span className={`mono text-sm font-bold ${monthlyAvg !== null ? (monthlyAvg >= 85 ? "text-success" : monthlyAvg >= 65 ? "text-warning" : "text-destructive") : "text-muted-foreground"}`}>
-            {monthlyAvg ?? "—"}
-          </span>
-        </div>
-      </div>
+          </div>
           <Progress
             value={workload.utilizationPercent}
             className={`h-1.5 ${
