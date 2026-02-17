@@ -585,6 +585,8 @@ const StaffView = () => {
             isCurrent={true}
             onTap={() => setScreen("taskDetail")}
             onReportIssue={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
+            orderNumber={currentIndex + 1}
+            totalTasks={totalCount}
           />
         )}
 
@@ -595,6 +597,8 @@ const StaffView = () => {
             label={t("worker.nextTask")}
             isActive={false}
             isCurrent={false}
+            orderNumber={currentIndex + 2}
+            totalTasks={totalCount}
           />
         )}
 
@@ -605,6 +609,8 @@ const StaffView = () => {
             label={t("worker.thirdTask")}
             isActive={false}
             isCurrent={false}
+            orderNumber={currentIndex + 3}
+            totalTasks={totalCount}
           />
         )}
 

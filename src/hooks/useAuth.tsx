@@ -1,5 +1,6 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useCallback, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import type { User, Session } from "@supabase/supabase-js";
 
 type AppRole = "campus_manager" | "property_manager" | "supervisor" | "cleaning_staff";
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   const fetchRole = async (userId: string) => {
     const { data } = await supabase
@@ -40,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -48,6 +50,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setTimeout(() => fetchRole(session.user.id), 0);
         } else {
           setRole(null);
+        }
+        // Handle token expiration — force sign out on SIGNED_OUT or TOKEN_REFRESHED failure
+        if (event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+          if (!session) {
+            setUser(null);
+            setRole(null);
+            queryClient.clear();
+          }
         }
         setLoading(false);
       }
@@ -65,12 +75,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
+    // Clear all cached data to prevent session bleed
+    queryClient.clear();
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRole(null);
-  };
+  }, [queryClient]);
 
   return (
     <AuthContext.Provider value={{ user, session, role, loading, signOut }}>

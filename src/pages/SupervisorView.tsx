@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   AlertTriangle,
@@ -24,6 +24,9 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { mockZones, mockAssignments, mockStaff } from "@/data/mockData";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
+import DeviationAlertPanel from "@/components/manager/DeviationAlertPanel";
+import { SlaRiskPanel } from "@/components/manager/SchedulingWidgets";
+import { getSlaRiskTasks } from "@/lib/scheduling-engine";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/hooks/use-toast";
@@ -95,6 +98,7 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
     const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+  const slaRiskTasks = useMemo(() => getSlaRiskTasks(mockAssignments), []);
 
   const activeStaff = mockStaff.filter((s) => s.role === "staff");
   const totalTasks = mockAssignments.length;
@@ -272,6 +276,12 @@ const DashboardTab = ({ onDrillDown }: { onDrillDown: (type: "staff" | "complete
             );
           })}
         </div>
+      </div>
+
+      {/* SLA Risk + Deviation Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <SlaRiskPanel riskTasks={slaRiskTasks} />
+        <DeviationAlertPanel assignments={mockAssignments} />
       </div>
     </div>
   );
@@ -477,8 +487,52 @@ const AuditTab = () => {
     </div>
   );
 
+  // Mock 7-day trend data per worker
+  const workerTrends = mockStaff
+    .filter((s) => s.role === "staff")
+    .map((s) => {
+      // Generate mock trend data
+      const scores = Array.from({ length: 7 }, (_, i) => 2.5 + Math.random() * 2.5);
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      return { staff: s, scores, avg: Math.round(avg * 10) / 10 };
+    });
+
   return (
     <div className="animate-slide-up space-y-4">
+      {/* 7-Day Audit Trend per Worker */}
+      <div className="task-card">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp size={18} className="text-info" />
+          <h3 className="font-bold text-sm">{t("supervisor.qualityCheck")} — מגמת 7 ימים</h3>
+        </div>
+        <div className="space-y-2">
+          {workerTrends.map(({ staff, scores, avg }) => (
+            <div key={staff.id} className="flex items-center gap-3">
+              <span className="text-xs font-medium w-20 truncate text-right">{staff.name}</span>
+              <div className="flex gap-0.5 flex-1">
+                {scores.map((score, i) => (
+                  <div
+                    key={i}
+                    className={`h-4 flex-1 rounded-sm ${
+                      score >= 4 ? "bg-success/60" :
+                      score >= 3 ? "bg-warning/60" :
+                      "bg-destructive/60"
+                    }`}
+                    title={`יום ${7 - i}: ${score.toFixed(1)}`}
+                  />
+                ))}
+              </div>
+              <span className={`text-xs font-bold mono w-8 text-left ${
+                avg >= 4 ? "text-success" : avg >= 3 ? "text-warning" : "text-destructive"
+              }`}>
+                {avg}
+              </span>
+            </div>
+          ))}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-2">כל עמודה = יום (ירוק ≥4, כתום ≥3, אדום &lt;3)</p>
+      </div>
+
       <div className="task-card">
         <div className="flex items-center gap-2 mb-4">
           <ClipboardCheck size={20} className="text-info" />
