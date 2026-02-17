@@ -1,4 +1,4 @@
-import { MapPin, Clock, PackageOpen, Timer, AlertTriangle, Building } from "lucide-react";
+import { MapPin, Clock, PackageOpen, Timer, AlertTriangle, Building, Play, Square } from "lucide-react";
 import type { TaskAssignment } from "@/data/mockData";
 import { scheduledTimes } from "@/data/staffSchedule";
 import { useI18n } from "@/i18n/I18nContext";
@@ -52,11 +52,14 @@ interface TaskTileProps {
   isCurrent: boolean;
   onTap?: () => void;
   onReportIssue?: () => void;
+  onStart?: () => void;
+  onFinish?: () => void;
   orderNumber?: number;
   totalTasks?: number;
+  taskTimeDisplay?: string;
 }
 
-const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue, orderNumber, totalTasks }: TaskTileProps) => {
+const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue, onStart, onFinish, orderNumber, totalTasks, taskTimeDisplay }: TaskTileProps) => {
   const { t } = useI18n();
   const risk = getSlaRisk(assignment, isActive);
   const style = slaStyles[risk];
@@ -156,11 +159,41 @@ const TaskTile = ({ assignment, label, isActive, isCurrent, onTap, onReportIssue
         </div>
       </button>
 
+      {/* Start / Finish buttons inside the tile for current task */}
+      {isCurrent && !isActive && onStart && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onStart(); }}
+          className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-success text-success-foreground font-bold text-sm hover:bg-success/90 transition-colors"
+        >
+          <Play size={18} />
+          {t("worker.start")}
+        </button>
+      )}
+      {isCurrent && isActive && (
+        <div className="mt-3 space-y-2">
+          {taskTimeDisplay && (
+            <div className="flex items-center justify-center gap-2 py-1">
+              <Timer size={14} className="text-primary" />
+              <span className="mono text-lg font-bold text-foreground">{taskTimeDisplay}</span>
+            </div>
+          )}
+          {onFinish && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onFinish(); }}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors"
+            >
+              <Square size={18} />
+              {t("worker.complete")}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Report issue quick button - only on current active task */}
       {isCurrent && onReportIssue && (
         <button
           onClick={(e) => { e.stopPropagation(); onReportIssue(); }}
-          className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-destructive/30 text-destructive text-xs font-medium hover:bg-destructive/10 transition-colors"
         >
           <AlertTriangle size={14} />
           {t("worker.reportIssue")}

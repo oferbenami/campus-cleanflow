@@ -585,6 +585,9 @@ const StaffView = () => {
             isCurrent={true}
             onTap={() => setScreen("taskDetail")}
             onReportIssue={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
+            onStart={handleStart}
+            onFinish={handleFinish}
+            taskTimeDisplay={isRunning ? taskTimeDisplay : undefined}
             orderNumber={currentIndex + 1}
             totalTasks={totalCount}
           />
@@ -619,22 +622,6 @@ const StaffView = () => {
 
         {/* Spacer */}
         <div className="flex-1" />
-
-        {/* Primary action button */}
-        <div className="space-y-3">
-          {!isRunning ? (
-            <button onClick={handleStart} className="btn-action-success w-full flex items-center justify-center gap-3">
-              <Play size={24} />
-              {t("worker.start")}
-            </button>
-          ) : (
-            <button onClick={() => setScreen("taskDetail")} className="btn-action-primary w-full flex items-center justify-center gap-3">
-              <Timer size={24} />
-              <span className="mono text-xl">{taskTimeDisplay}</span>
-              <span className="text-sm opacity-75">— {t("worker.advancedDetails")}</span>
-            </button>
-          )}
-        </div>
       </div>
     </div>
   );
