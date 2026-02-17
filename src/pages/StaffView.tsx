@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import {
   Play,
@@ -17,6 +18,7 @@ import {
   MapPin,
   XCircle,
   Gauge,
+  LogOut,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, type TaskAssignment } from "@/data/mockData";
@@ -39,6 +41,7 @@ type StaffScreen = "home" | "taskDetail" | "schedule" | "analysis";
 
 const StaffView = () => {
   const { t } = useI18n();
+  const { signOut } = useAuth();
   const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
   const initialIndex = staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
     ? staffAssignments.findIndex((a) => a.status === "in_progress")
@@ -200,6 +203,10 @@ const StaffView = () => {
         <button onClick={() => setScreen("analysis")} className="btn-action-primary flex items-center justify-center gap-3 w-full max-w-xs">
           <BarChart3 size={20} />
           {t("worker.endOfDay")}
+        </button>
+        <button onClick={signOut} className="flex items-center justify-center gap-2 w-full max-w-xs mt-3 py-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+          <LogOut size={16} />
+          התנתק
         </button>
       </div>
     );
@@ -431,12 +438,15 @@ const StaffView = () => {
           <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
           <h1 className="text-lg font-bold">{t("worker.homeTitle")}</h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button onClick={() => setScreen("schedule")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title={t("worker.schedule")}>
             <CalendarDays size={18} />
           </button>
           <button onClick={() => setScreen("analysis")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title={t("worker.performance")}>
             <BarChart3 size={18} />
+          </button>
+          <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+            <LogOut size={18} />
           </button>
           <div className="text-left">
             <p className="text-xs opacity-75">{completedCount}/{totalCount}</p>

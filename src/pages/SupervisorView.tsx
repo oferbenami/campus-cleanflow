@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   AlertTriangle,
   Star,
@@ -18,6 +19,7 @@ import {
   Truck,
   Image,
   ShieldAlert,
+  LogOut,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockZones, mockAssignments, mockStaff } from "@/data/mockData";
@@ -28,15 +30,21 @@ import { toast } from "@/hooks/use-toast";
 
 const SupervisorView = () => {
   const { t } = useI18n();
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit" | "stock">("dashboard");
   const [drillDown, setDrillDown] = useState<"staff" | "completed" | "inProgress" | "overdue" | "sla" | null>(null);
 
   return (
     <div className="min-h-screen bg-background">
       <header className="bg-primary text-primary-foreground px-4 py-3">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">{t("supervisor.panel")}</h1>
+        <div className="max-w-3xl mx-auto flex items-center justify-between">
+          <div>
+            <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
+            <h1 className="text-lg font-bold">{t("supervisor.panel")}</h1>
+          </div>
+          <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+            <LogOut size={18} />
+          </button>
         </div>
       </header>
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Users,
   Phone,
@@ -16,6 +17,7 @@ import {
   Building,
   ArrowLeft,
   Database,
+  LogOut,
 } from "lucide-react";
 import { mockStaff, mockTasks, type StaffMember, type TaskTemplate } from "@/data/mockData";
 import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
@@ -25,6 +27,7 @@ type PMTab = "staff" | "planning" | "assign" | "masterdata";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
+  const { signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,9 +37,14 @@ const PropertyManagerView = () => {
             <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
             <h1 className="text-xl font-bold">מנהל נכס</h1>
           </div>
-          <div className="text-left">
-            <p className="text-xs opacity-75">תאריך</p>
-            <p className="text-sm font-semibold mono">15 בפבר׳ 2026</p>
+          <div className="flex items-center gap-4">
+            <div className="text-left">
+              <p className="text-xs opacity-75">תאריך</p>
+              <p className="text-sm font-semibold mono">15 בפבר׳ 2026</p>
+            </div>
+            <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
 import {
   Users,
@@ -14,6 +15,7 @@ import {
   CalendarClock,
   ClipboardList,
   UserCog,
+  LogOut,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -35,6 +37,7 @@ type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null
 type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users";
 
 const ManagerDashboard = () => {
+  const { signOut } = useAuth();
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
@@ -106,7 +109,7 @@ const ManagerDashboard = () => {
             <h1 className="text-xl font-bold">CleanFlow</h1>
             <p className="text-sm opacity-75">לוח בקרה תפעולי</p>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <div className="text-left">
               <p className="text-xs opacity-75">היום</p>
               <p className="text-sm font-semibold mono">15 בפבר׳ 2026</p>
@@ -119,6 +122,9 @@ const ManagerDashboard = () => {
                 ערב
               </button>
             </div>
+            <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </header>
