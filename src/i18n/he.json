@@ -23,7 +23,7 @@
     "staff": "עובד ניקיון",
     "supervisor": "מפקח",
     "campus_manager": "מנהל קמפוס",
-    "property_manager": "מנהל נכס"
+    "property_manager": "מנהל אתר"
   },
   "status": {
     "active": "פעיל",
@@ -151,7 +151,7 @@
     "weightedScore": "ציון משוקלל"
   },
   "propertyManager": {
-    "title": "מנהל נכס",
+    "title": "מנהל אתר",
     "staffList": "רשימת עובדים",
     "planning": "תכנון מחר",
     "taskAssignment": "שיבוץ משימות",
@@ -222,7 +222,7 @@
     "staffView": "תצוגת עובד",
     "managerDashboard": "לוח בקרה למנהל",
     "supervisorView": "מפקח",
-    "propertyManagerView": "מנהל נכס",
+    "propertyManagerView": "מנהל אתר",
     "realTimeTracking": "מעקב בזמן אמת",
     "realTimeDesc": "מעקב אחר כל משימה בזמן אמת. התראות SLA אוטומטיות כאשר משימה חורגת מ-15% מהזמן המוערך.",
     "autoSequence": "רצף אוטומטי",
