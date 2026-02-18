@@ -73,7 +73,7 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="grid grid-cols-2 gap-4 w-full max-w-sm">
           {/* Daily Score */}
-          <div className={`rounded-2xl p-5 text-center ${scoreBg(todayScore)} border border-border`}>
+          <div className={`rounded-2xl p-5 text-center ${scoreBg(todayScore)} border border-border animate-scale-in`} style={{ animationDelay: "0ms" }}>
             <Trophy size={28} className={`mx-auto mb-2 ${scoreColor(todayScore)}`} />
             <p className={`text-4xl font-black mono ${scoreColor(todayScore)}`}>
               {todayScore ?? "—"}
@@ -84,7 +84,8 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           {/* Tasks completed — clickable */}
           <button
             onClick={() => setDrillDown("tasks")}
-            className={`rounded-2xl p-5 text-center bg-success/10 border border-border hover:ring-2 hover:ring-success/30 transition-all text-right`}
+            className={`rounded-2xl p-5 text-center bg-success/10 border border-border hover:ring-2 hover:ring-success/30 transition-all text-right animate-scale-in`}
+            style={{ animationDelay: "80ms", animationFillMode: "backwards" }}
           >
             <CheckCircle2 size={28} className="mx-auto mb-2 text-success" />
             <p className="text-4xl font-black mono text-success">
@@ -96,7 +97,8 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           {/* Immediate faults — clickable */}
           <button
             onClick={() => setDrillDown("faults")}
-            className="rounded-2xl p-5 text-center bg-warning/10 border border-border hover:ring-2 hover:ring-warning/30 transition-all"
+            className="rounded-2xl p-5 text-center bg-warning/10 border border-border hover:ring-2 hover:ring-warning/30 transition-all animate-scale-in"
+            style={{ animationDelay: "160ms", animationFillMode: "backwards" }}
           >
             <Zap size={28} className="mx-auto mb-2 text-warning" />
             <p className="text-4xl font-black mono text-warning">
@@ -106,7 +108,7 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           </button>
 
           {/* SLA deviations */}
-          <div className={`rounded-2xl p-5 text-center ${overdue.length > 0 ? "bg-destructive/10" : "bg-success/10"} border border-border`}>
+          <div className={`rounded-2xl p-5 text-center ${overdue.length > 0 ? "bg-destructive/10" : "bg-success/10"} border border-border animate-scale-in`} style={{ animationDelay: "240ms", animationFillMode: "backwards" }}>
             <AlertTriangle size={28} className={`mx-auto mb-2 ${overdue.length > 0 ? "text-destructive" : "text-success"}`} />
             <p className={`text-4xl font-black mono ${overdue.length > 0 ? "text-destructive" : "text-success"}`}>
               {overdue.length}
@@ -149,7 +151,7 @@ const DrillDownView = ({ type, completed, notCompleted, breakFixTasks, onBack }:
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 animate-fade-in">
         {type === "tasks" ? (
           <>
             {completed.length > 0 && (
