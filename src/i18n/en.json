@@ -23,7 +23,7 @@
     "staff": "Cleaning Staff",
     "supervisor": "Supervisor",
     "campus_manager": "Campus Manager",
-    "property_manager": "Property Manager"
+    "property_manager": "Site Manager"
   },
   "status": {
     "active": "Active",
@@ -151,7 +151,7 @@
     "weightedScore": "Weighted Score"
   },
   "propertyManager": {
-    "title": "Property Manager",
+    "title": "Site Manager",
     "staffList": "Staff List",
     "planning": "Tomorrow Planning",
     "taskAssignment": "Task Assignment",
@@ -222,7 +222,7 @@
     "staffView": "Staff View",
     "managerDashboard": "Manager Dashboard",
     "supervisorView": "Supervisor",
-    "propertyManagerView": "Property Manager",
+    "propertyManagerView": "Site Manager",
     "realTimeTracking": "Real-time Tracking",
     "realTimeDesc": "Track every task in real-time. Automatic SLA alerts when a task exceeds 15% of estimated time.",
     "autoSequence": "Auto Sequence",
