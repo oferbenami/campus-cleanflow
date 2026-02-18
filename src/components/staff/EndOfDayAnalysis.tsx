@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { CheckCircle2, AlertTriangle, Zap, Trophy, ArrowRight, MapPin, Clock, X, XCircle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Zap, Trophy, ArrowRight, MapPin, Clock, X, XCircle, ChevronLeft } from "lucide-react";
 import type { TaskAssignment } from "@/data/mockData";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -65,7 +65,8 @@ const EndOfDayAnalysis = ({ assignments, onClose }: EndOfDayAnalysisProps) => {
           <p className="text-xs opacity-75 uppercase tracking-wider">סיכום יום</p>
           <h1 className="text-lg font-bold">{user?.user_metadata?.full_name || "עובד"}</h1>
         </div>
-        <button onClick={onClose} className="px-3 py-1.5 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium">
+        <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-foreground/20 text-primary-foreground text-sm font-medium hover:bg-primary-foreground/30 transition-colors">
+          <ChevronLeft size={16} />
           חזרה
         </button>
       </header>
@@ -146,7 +147,8 @@ const DrillDownView = ({ type, completed, notCompleted, breakFixTasks, onBack }:
     <div className="min-h-screen bg-background flex flex-col">
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold">{title}</h1>
-        <button onClick={onBack} className="px-3 py-1.5 rounded-lg bg-primary-foreground/10 text-primary-foreground text-sm font-medium">
+        <button onClick={onBack} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-foreground/20 text-primary-foreground text-sm font-medium hover:bg-primary-foreground/30 transition-colors">
+          <ChevronLeft size={16} />
           חזרה
         </button>
       </header>
