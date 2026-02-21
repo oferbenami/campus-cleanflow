@@ -14,525 +14,200 @@ export type Database = {
   }
   public: {
     Tables: {
-      activity_logs: {
+      assigned_tasks: {
         Row: {
-          action_type: string
-          actor_id: string
-          actor_name: string
-          assignment_id: string | null
+          actual_minutes: number | null
+          assignment_id: string
+          checklist_json: Json | null
           created_at: string
-          details: string | null
+          finish_tag_uid: string | null
+          finished_at: string | null
           id: string
-          metadata: Json | null
-          target_staff_id: string | null
-          target_staff_name: string | null
+          location_id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          sequence_order: number
+          standard_minutes: number
+          start_tag_uid: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          variance_percent: number | null
+          window_end: string | null
+          window_start: string | null
         }
         Insert: {
-          action_type: string
-          actor_id: string
-          actor_name: string
-          assignment_id?: string | null
+          actual_minutes?: number | null
+          assignment_id: string
+          checklist_json?: Json | null
           created_at?: string
-          details?: string | null
+          finish_tag_uid?: string | null
+          finished_at?: string | null
           id?: string
-          metadata?: Json | null
-          target_staff_id?: string | null
-          target_staff_name?: string | null
+          location_id: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          sequence_order?: number
+          standard_minutes?: number
+          start_tag_uid?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name: string
+          variance_percent?: number | null
+          window_end?: string | null
+          window_start?: string | null
         }
         Update: {
-          action_type?: string
-          actor_id?: string
-          actor_name?: string
-          assignment_id?: string | null
+          actual_minutes?: number | null
+          assignment_id?: string
+          checklist_json?: Json | null
           created_at?: string
-          details?: string | null
+          finish_tag_uid?: string | null
+          finished_at?: string | null
           id?: string
-          metadata?: Json | null
-          target_staff_id?: string | null
-          target_staff_name?: string | null
-        }
-        Relationships: []
-      }
-      audit_checklist_categories: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          name: string
-          name_he: string
-          sort_order: number
-          weight: number
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name: string
-          name_he: string
-          sort_order?: number
-          weight?: number
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          name?: string
-          name_he?: string
-          sort_order?: number
-          weight?: number
-        }
-        Relationships: []
-      }
-      buildings: {
-        Row: {
-          address: string | null
-          created_at: string
-          id: string
-          name: string
-          site_id: string
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          id?: string
-          name: string
-          site_id: string
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          id?: string
-          name?: string
-          site_id?: string
+          location_id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          sequence_order?: number
+          standard_minutes?: number
+          start_tag_uid?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          task_name?: string
+          variance_percent?: number | null
+          window_end?: string | null
+          window_start?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "buildings_site_id_fkey"
-            columns: ["site_id"]
+            foreignKeyName: "assigned_tasks_assignment_id_fkey"
+            columns: ["assignment_id"]
             isOneToOne: false
-            referencedRelation: "sites"
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assigned_tasks_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "campus_locations"
             referencedColumns: ["id"]
           },
         ]
       }
-      cleaning_protocols: {
+      assignments: {
         Row: {
-          checklist: Json
-          created_at: string
-          frequency_per_day: number
-          id: string
-          is_active: boolean
-          name: string
-          name_he: string
-          notes: string | null
-          required_equipment: Json
-          required_materials: Json
-          sla_minutes: number
-          sla_warning_minutes: number
-          space_category: string
-          updated_at: string
-        }
-        Insert: {
-          checklist?: Json
-          created_at?: string
-          frequency_per_day?: number
-          id?: string
-          is_active?: boolean
-          name: string
-          name_he: string
-          notes?: string | null
-          required_equipment?: Json
-          required_materials?: Json
-          sla_minutes?: number
-          sla_warning_minutes?: number
-          space_category: string
-          updated_at?: string
-        }
-        Update: {
-          checklist?: Json
-          created_at?: string
-          frequency_per_day?: number
-          id?: string
-          is_active?: boolean
-          name?: string
-          name_he?: string
-          notes?: string | null
-          required_equipment?: Json
-          required_materials?: Json
-          sla_minutes?: number
-          sla_warning_minutes?: number
-          space_category?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      corrective_actions: {
-        Row: {
-          assigned_to: string | null
-          audit_id: string
-          completed_at: string | null
           created_at: string
           created_by: string | null
-          description: string | null
-          due_date: string | null
+          date: string
           id: string
-          priority: string
-          status: string
-          title: string
+          shift_type: Database["public"]["Enums"]["shift_type"]
+          site_id: string
+          staff_user_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          template_id: string
           updated_at: string
         }
         Insert: {
-          assigned_to?: string | null
-          audit_id: string
-          completed_at?: string | null
           created_at?: string
           created_by?: string | null
-          description?: string | null
-          due_date?: string | null
+          date?: string
           id?: string
-          priority?: string
-          status?: string
-          title: string
+          shift_type?: Database["public"]["Enums"]["shift_type"]
+          site_id: string
+          staff_user_id: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          template_id: string
           updated_at?: string
         }
         Update: {
-          assigned_to?: string | null
-          audit_id?: string
-          completed_at?: string | null
           created_at?: string
           created_by?: string | null
-          description?: string | null
-          due_date?: string | null
+          date?: string
           id?: string
-          priority?: string
-          status?: string
-          title?: string
+          shift_type?: Database["public"]["Enums"]["shift_type"]
+          site_id?: string
+          staff_user_id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          template_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "corrective_actions_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "corrective_actions_audit_id_fkey"
-            columns: ["audit_id"]
-            isOneToOne: false
-            referencedRelation: "quality_audits"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "corrective_actions_created_by_fkey"
+            foreignKeyName: "assignments_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      daily_worker_scores: {
-        Row: {
-          actual_minutes_total: number
-          audit_avg_score_used: number | null
-          created_at: string
-          discipline_flags: Json
-          discipline_points: number
-          explanation_text: string | null
-          id: string
-          planned_minutes_total: number
-          productivity_points: number
-          quality_points: number
-          score_date: string
-          total_points: number
-          variance_percent: number
-          worker_id: string
-        }
-        Insert: {
-          actual_minutes_total?: number
-          audit_avg_score_used?: number | null
-          created_at?: string
-          discipline_flags?: Json
-          discipline_points?: number
-          explanation_text?: string | null
-          id?: string
-          planned_minutes_total?: number
-          productivity_points?: number
-          quality_points?: number
-          score_date?: string
-          total_points?: number
-          variance_percent?: number
-          worker_id: string
-        }
-        Update: {
-          actual_minutes_total?: number
-          audit_avg_score_used?: number | null
-          created_at?: string
-          discipline_flags?: Json
-          discipline_points?: number
-          explanation_text?: string | null
-          id?: string
-          planned_minutes_total?: number
-          productivity_points?: number
-          quality_points?: number
-          score_date?: string
-          total_points?: number
-          variance_percent?: number
-          worker_id?: string
-        }
-        Relationships: [
           {
-            foreignKeyName: "daily_worker_scores_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "assignments_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_staff_user_id_fkey"
+            columns: ["staff_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      event_routing_rules: {
-        Row: {
-          auto_assign_role: string | null
-          created_at: string
-          event_type: string
-          id: string
-          is_active: boolean
-          priority: number
-          source: string
-          zone_id: string | null
-        }
-        Insert: {
-          auto_assign_role?: string | null
-          created_at?: string
-          event_type: string
-          id?: string
-          is_active?: boolean
-          priority?: number
-          source?: string
-          zone_id?: string | null
-        }
-        Update: {
-          auto_assign_role?: string | null
-          created_at?: string
-          event_type?: string
-          id?: string
-          is_active?: boolean
-          priority?: number
-          source?: string
-          zone_id?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "event_routing_rules_zone_id_fkey"
-            columns: ["zone_id"]
+            foreignKeyName: "assignments_template_id_fkey"
+            columns: ["template_id"]
             isOneToOne: false
-            referencedRelation: "zones"
+            referencedRelation: "task_templates"
             referencedColumns: ["id"]
           },
         ]
       }
-      event_triggers: {
+      audit_inspections: {
         Row: {
-          assigned_task_id: string | null
+          assigned_task_id: string
           created_at: string
-          description: string | null
-          event_type: string
           id: string
-          location_id: string | null
-          metadata: Json | null
-          reported_by: string | null
-          resolved_at: string | null
-          severity: string
-          source: string
-          status: string
-          title: string
-          zone_id: string | null
+          inspector_user_id: string
+          notes: string | null
+          scores_json: Json
+          site_id: string
+          total_score: number
         }
         Insert: {
-          assigned_task_id?: string | null
+          assigned_task_id: string
           created_at?: string
-          description?: string | null
-          event_type?: string
           id?: string
-          location_id?: string | null
-          metadata?: Json | null
-          reported_by?: string | null
-          resolved_at?: string | null
-          severity?: string
-          source?: string
-          status?: string
-          title: string
-          zone_id?: string | null
+          inspector_user_id: string
+          notes?: string | null
+          scores_json?: Json
+          site_id: string
+          total_score?: number
         }
         Update: {
-          assigned_task_id?: string | null
+          assigned_task_id?: string
           created_at?: string
-          description?: string | null
-          event_type?: string
           id?: string
-          location_id?: string | null
-          metadata?: Json | null
-          reported_by?: string | null
-          resolved_at?: string | null
-          severity?: string
-          source?: string
-          status?: string
-          title?: string
-          zone_id?: string | null
+          inspector_user_id?: string
+          notes?: string | null
+          scores_json?: Json
+          site_id?: string
+          total_score?: number
         }
         Relationships: [
           {
-            foreignKeyName: "event_triggers_assigned_task_id_fkey"
+            foreignKeyName: "audit_inspections_assigned_task_id_fkey"
             columns: ["assigned_task_id"]
             isOneToOne: false
-            referencedRelation: "task_assignments"
+            referencedRelation: "assigned_tasks"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "event_triggers_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "event_triggers_reported_by_fkey"
-            columns: ["reported_by"]
+            foreignKeyName: "audit_inspections_inspector_user_id_fkey"
+            columns: ["inspector_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "event_triggers_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      floors: {
-        Row: {
-          building_id: string
-          created_at: string
-          floor_number: number
-          id: string
-          name: string
-        }
-        Insert: {
-          building_id: string
-          created_at?: string
-          floor_number?: number
-          id?: string
-          name: string
-        }
-        Update: {
-          building_id?: string
-          created_at?: string
-          floor_number?: number
-          id?: string
-          name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "floors_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      incentive_config: {
-        Row: {
-          base_bonus_amount: number
-          created_at: string
-          discipline_full: number
-          discipline_weight: number
-          id: string
-          is_active: boolean
-          late_threshold_minutes: number
-          no_audit_policy: string
-          points_on_standard: number
-          points_tier1: number
-          points_tier2: number
-          points_tier3: number
-          productivity_weight: number
-          quality_band_fail: number
-          quality_band_high: number
-          quality_band_low: number
-          quality_band_mid: number
-          quality_weight: number
-          site_id: string | null
-          tier_50_threshold: number
-          tier_80_threshold: number
-          tier_full_threshold: number
-          updated_at: string
-          variance_on_standard: number
-          variance_tier1: number
-          variance_tier2: number
-        }
-        Insert: {
-          base_bonus_amount?: number
-          created_at?: string
-          discipline_full?: number
-          discipline_weight?: number
-          id?: string
-          is_active?: boolean
-          late_threshold_minutes?: number
-          no_audit_policy?: string
-          points_on_standard?: number
-          points_tier1?: number
-          points_tier2?: number
-          points_tier3?: number
-          productivity_weight?: number
-          quality_band_fail?: number
-          quality_band_high?: number
-          quality_band_low?: number
-          quality_band_mid?: number
-          quality_weight?: number
-          site_id?: string | null
-          tier_50_threshold?: number
-          tier_80_threshold?: number
-          tier_full_threshold?: number
-          updated_at?: string
-          variance_on_standard?: number
-          variance_tier1?: number
-          variance_tier2?: number
-        }
-        Update: {
-          base_bonus_amount?: number
-          created_at?: string
-          discipline_full?: number
-          discipline_weight?: number
-          id?: string
-          is_active?: boolean
-          late_threshold_minutes?: number
-          no_audit_policy?: string
-          points_on_standard?: number
-          points_tier1?: number
-          points_tier2?: number
-          points_tier3?: number
-          productivity_weight?: number
-          quality_band_fail?: number
-          quality_band_high?: number
-          quality_band_low?: number
-          quality_band_mid?: number
-          quality_weight?: number
-          site_id?: string | null
-          tier_50_threshold?: number
-          tier_80_threshold?: number
-          tier_full_threshold?: number
-          updated_at?: string
-          variance_on_standard?: number
-          variance_tier1?: number
-          variance_tier2?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "incentive_config_site_id_fkey"
+            foreignKeyName: "audit_inspections_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
             referencedRelation: "sites"
@@ -540,133 +215,184 @@ export type Database = {
           },
         ]
       }
-      locations: {
+      break_fix_tickets: {
         Row: {
-          area_sqm: number | null
+          assigned_to_user_id: string | null
           created_at: string
-          floor_id: string | null
-          floor_type: string
-          has_active_kitchen: boolean
-          has_glass: boolean
+          created_by: string
+          description: string
           id: string
-          name: string
-          protocol_id: string | null
-          room_type: string | null
-          space_category: string
-          traffic_level: string
-          zone_id: string
+          location_id: string
+          photo_url: string | null
+          priority: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at: string | null
+          site_id: string
+          status: Database["public"]["Enums"]["ticket_status"]
         }
         Insert: {
-          area_sqm?: number | null
+          assigned_to_user_id?: string | null
           created_at?: string
-          floor_id?: string | null
-          floor_type?: string
-          has_active_kitchen?: boolean
-          has_glass?: boolean
+          created_by: string
+          description: string
           id?: string
-          name: string
-          protocol_id?: string | null
-          room_type?: string | null
-          space_category?: string
-          traffic_level?: string
-          zone_id: string
+          location_id: string
+          photo_url?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          site_id: string
+          status?: Database["public"]["Enums"]["ticket_status"]
         }
         Update: {
-          area_sqm?: number | null
+          assigned_to_user_id?: string | null
           created_at?: string
-          floor_id?: string | null
-          floor_type?: string
-          has_active_kitchen?: boolean
-          has_glass?: boolean
+          created_by?: string
+          description?: string
           id?: string
-          name?: string
-          protocol_id?: string | null
-          room_type?: string | null
-          space_category?: string
-          traffic_level?: string
-          zone_id?: string
+          location_id?: string
+          photo_url?: string | null
+          priority?: Database["public"]["Enums"]["ticket_priority"]
+          resolved_at?: string | null
+          site_id?: string
+          status?: Database["public"]["Enums"]["ticket_status"]
         }
         Relationships: [
           {
-            foreignKeyName: "locations_floor_id_fkey"
-            columns: ["floor_id"]
-            isOneToOne: false
-            referencedRelation: "floors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "locations_protocol_id_fkey"
-            columns: ["protocol_id"]
-            isOneToOne: false
-            referencedRelation: "cleaning_protocols"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "locations_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "zones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      monthly_incentive_summaries: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          avg_daily_points: number
-          created_at: string
-          id: string
-          month: string
-          payout_amount: number
-          status: string
-          tier: string
-          total_points: number
-          updated_at: string
-          workdays_count: number
-          worker_id: string
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          avg_daily_points?: number
-          created_at?: string
-          id?: string
-          month: string
-          payout_amount?: number
-          status?: string
-          tier?: string
-          total_points?: number
-          updated_at?: string
-          workdays_count?: number
-          worker_id: string
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          avg_daily_points?: number
-          created_at?: string
-          id?: string
-          month?: string
-          payout_amount?: number
-          status?: string
-          tier?: string
-          total_points?: number
-          updated_at?: string
-          workdays_count?: number
-          worker_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "monthly_incentive_summaries_approved_by_fkey"
-            columns: ["approved_by"]
+            foreignKeyName: "break_fix_tickets_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "monthly_incentive_summaries_worker_id_fkey"
-            columns: ["worker_id"]
+            foreignKeyName: "break_fix_tickets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_fix_tickets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "break_fix_tickets_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campus_locations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          level_type: Database["public"]["Enums"]["location_level"]
+          name: string
+          nfc_tag_uid: string | null
+          parent_location_id: string | null
+          site_id: string
+          space_type: Database["public"]["Enums"]["space_type"] | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level_type: Database["public"]["Enums"]["location_level"]
+          name: string
+          nfc_tag_uid?: string | null
+          parent_location_id?: string | null
+          site_id: string
+          space_type?: Database["public"]["Enums"]["space_type"] | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          level_type?: Database["public"]["Enums"]["location_level"]
+          name?: string
+          nfc_tag_uid?: string | null
+          parent_location_id?: string | null
+          site_id?: string
+          space_type?: Database["public"]["Enums"]["space_type"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campus_locations_parent_location_id_fkey"
+            columns: ["parent_location_id"]
+            isOneToOne: false
+            referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campus_locations_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events_log: {
+        Row: {
+          assigned_task_id: string | null
+          assignment_id: string | null
+          created_at: string
+          event_payload: Json | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          id: string
+          site_id: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_task_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          event_payload?: Json | null
+          event_type: Database["public"]["Enums"]["event_type"]
+          id?: string
+          site_id?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_task_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          event_payload?: Json | null
+          event_type?: Database["public"]["Enums"]["event_type"]
+          id?: string
+          site_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_log_assigned_task_id_fkey"
+            columns: ["assigned_task_id"]
+            isOneToOne: false
+            referencedRelation: "assigned_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_log_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_log_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_log_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -677,316 +403,167 @@ export type Database = {
         Row: {
           avatar_initials: string | null
           created_at: string
+          default_break_minutes: number | null
+          default_shift_end: string | null
+          default_shift_start: string | null
+          default_work_days: Json | null
+          email: string | null
           full_name: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          site_id: string | null
           updated_at: string
         }
         Insert: {
           avatar_initials?: string | null
           created_at?: string
+          default_break_minutes?: number | null
+          default_shift_end?: string | null
+          default_shift_start?: string | null
+          default_work_days?: Json | null
+          email?: string | null
           full_name?: string
           id: string
           role?: Database["public"]["Enums"]["app_role"]
+          site_id?: string | null
           updated_at?: string
         }
         Update: {
           avatar_initials?: string | null
           created_at?: string
+          default_break_minutes?: number | null
+          default_shift_end?: string | null
+          default_shift_start?: string | null
+          default_work_days?: Json | null
+          email?: string | null
           full_name?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          site_id?: string | null
           updated_at?: string
-        }
-        Relationships: []
-      }
-      quality_audits: {
-        Row: {
-          auditor_id: string
-          created_at: string
-          id: string
-          notes: string | null
-          rating_cleanliness: number
-          rating_safety: number
-          rating_supplies: number
-          rating_thoroughness: number
-          rating_timeliness: number
-          task_assignment_id: string
-        }
-        Insert: {
-          auditor_id: string
-          created_at?: string
-          id?: string
-          notes?: string | null
-          rating_cleanliness: number
-          rating_safety: number
-          rating_supplies: number
-          rating_thoroughness: number
-          rating_timeliness: number
-          task_assignment_id: string
-        }
-        Update: {
-          auditor_id?: string
-          created_at?: string
-          id?: string
-          notes?: string | null
-          rating_cleanliness?: number
-          rating_safety?: number
-          rating_supplies?: number
-          rating_thoroughness?: number
-          rating_timeliness?: number
-          task_assignment_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "quality_audits_auditor_id_fkey"
-            columns: ["auditor_id"]
+            foreignKeyName: "profiles_site_id_fkey"
+            columns: ["site_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quality_audits_task_assignment_id_fkey"
-            columns: ["task_assignment_id"]
-            isOneToOne: false
-            referencedRelation: "task_assignments"
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]
       }
       sites: {
         Row: {
+          active: boolean
           created_at: string
           id: string
           name: string
+          timezone: string
         }
         Insert: {
+          active?: boolean
           created_at?: string
           id?: string
           name: string
+          timezone?: string
         }
         Update: {
+          active?: boolean
           created_at?: string
           id?: string
           name?: string
-        }
-        Relationships: []
-      }
-      supply_alerts: {
-        Row: {
-          assignment_id: string
-          created_at: string
-          id: string
-          item: string
-          staff_id: string
-          zone_name: string
-        }
-        Insert: {
-          assignment_id: string
-          created_at?: string
-          id?: string
-          item: string
-          staff_id: string
-          zone_name: string
-        }
-        Update: {
-          assignment_id?: string
-          created_at?: string
-          id?: string
-          item?: string
-          staff_id?: string
-          zone_name?: string
-        }
-        Relationships: []
-      }
-      task_assignments: {
-        Row: {
-          assignment_date: string
-          completed_at: string | null
-          created_at: string
-          created_by: string | null
-          elapsed_minutes: number | null
-          id: string
-          is_break_fix: boolean | null
-          issues: Json | null
-          sequence_order: number
-          staff_id: string
-          started_at: string | null
-          status: string
-          stock_low: Json | null
-          task_template_id: string
-          updated_at: string
-        }
-        Insert: {
-          assignment_date?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          elapsed_minutes?: number | null
-          id?: string
-          is_break_fix?: boolean | null
-          issues?: Json | null
-          sequence_order?: number
-          staff_id: string
-          started_at?: string | null
-          status?: string
-          stock_low?: Json | null
-          task_template_id: string
-          updated_at?: string
-        }
-        Update: {
-          assignment_date?: string
-          completed_at?: string | null
-          created_at?: string
-          created_by?: string | null
-          elapsed_minutes?: number | null
-          id?: string
-          is_break_fix?: boolean | null
-          issues?: Json | null
-          sequence_order?: number
-          staff_id?: string
-          started_at?: string | null
-          status?: string
-          stock_low?: Json | null
-          task_template_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_assignments_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignments_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_assignments_task_template_id_fkey"
-            columns: ["task_template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_set_items: {
-        Row: {
-          created_at: string
-          id: string
-          planned_end: string
-          planned_start: string
-          sequence_order: number
-          set_template_id: string
-          task_template_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          planned_end?: string
-          planned_start?: string
-          sequence_order?: number
-          set_template_id: string
-          task_template_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          planned_end?: string
-          planned_start?: string
-          sequence_order?: number
-          set_template_id?: string
-          task_template_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "task_set_items_set_template_id_fkey"
-            columns: ["set_template_id"]
-            isOneToOne: false
-            referencedRelation: "task_set_templates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "task_set_items_task_template_id_fkey"
-            columns: ["task_template_id"]
-            isOneToOne: false
-            referencedRelation: "task_templates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      task_set_templates: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          id: string
-          name: string
-          shift: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name: string
-          shift?: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          name?: string
-          shift?: string
-          updated_at?: string
+          timezone?: string
         }
         Relationships: []
       }
       task_templates: {
         Row: {
+          active: boolean
           created_at: string
-          estimated_minutes: number
           id: string
-          location_id: string | null
           name: string
-          shift: string
-          sla_minutes: number | null
-          sla_warning_minutes: number | null
-          task_type: string
+          shift_type: Database["public"]["Enums"]["shift_type"] | null
+          site_id: string | null
+          sop_text: string | null
+          standard_source: string | null
         }
         Insert: {
+          active?: boolean
           created_at?: string
-          estimated_minutes?: number
           id?: string
-          location_id?: string | null
           name: string
-          shift?: string
-          sla_minutes?: number | null
-          sla_warning_minutes?: number | null
-          task_type?: string
+          shift_type?: Database["public"]["Enums"]["shift_type"] | null
+          site_id?: string | null
+          sop_text?: string | null
+          standard_source?: string | null
         }
         Update: {
+          active?: boolean
           created_at?: string
-          estimated_minutes?: number
           id?: string
-          location_id?: string | null
           name?: string
-          shift?: string
-          sla_minutes?: number | null
-          sla_warning_minutes?: number | null
-          task_type?: string
+          shift_type?: Database["public"]["Enums"]["shift_type"] | null
+          site_id?: string | null
+          sop_text?: string | null
+          standard_source?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "task_templates_location_id_fkey"
+            foreignKeyName: "task_templates_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      template_tasks: {
+        Row: {
+          checklist_json: Json | null
+          created_at: string
+          id: string
+          location_id: string
+          priority: Database["public"]["Enums"]["task_priority"]
+          recurrence_rule: Json | null
+          standard_minutes: number
+          task_name: string
+          template_id: string
+        }
+        Insert: {
+          checklist_json?: Json | null
+          created_at?: string
+          id?: string
+          location_id: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          recurrence_rule?: Json | null
+          standard_minutes?: number
+          task_name: string
+          template_id: string
+        }
+        Update: {
+          checklist_json?: Json | null
+          created_at?: string
+          id?: string
+          location_id?: string
+          priority?: Database["public"]["Enums"]["task_priority"]
+          recurrence_rule?: Json | null
+          standard_minutes?: number
+          task_name?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_tasks_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
-            referencedRelation: "locations"
+            referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "template_tasks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1009,67 +586,6 @@ export type Database = {
         }
         Relationships: []
       }
-      zones: {
-        Row: {
-          area_sqm: number | null
-          building_id: string | null
-          created_at: string
-          floor: string | null
-          floor_id: string | null
-          id: string
-          name: string
-          site_id: string
-          traffic_level: string
-          wing: string | null
-        }
-        Insert: {
-          area_sqm?: number | null
-          building_id?: string | null
-          created_at?: string
-          floor?: string | null
-          floor_id?: string | null
-          id?: string
-          name: string
-          site_id: string
-          traffic_level?: string
-          wing?: string | null
-        }
-        Update: {
-          area_sqm?: number | null
-          building_id?: string | null
-          created_at?: string
-          floor?: string | null
-          floor_id?: string | null
-          id?: string
-          name?: string
-          site_id?: string
-          traffic_level?: string
-          wing?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "zones_building_id_fkey"
-            columns: ["building_id"]
-            isOneToOne: false
-            referencedRelation: "buildings"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "zones_floor_id_fkey"
-            columns: ["floor_id"]
-            isOneToOne: false
-            referencedRelation: "floors"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "zones_site_id_fkey"
-            columns: ["site_id"]
-            isOneToOne: false
-            referencedRelation: "sites"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
     }
     Views: {
       [_ in never]: never
@@ -1091,6 +607,35 @@ export type Database = {
         | "property_manager"
         | "supervisor"
         | "cleaning_staff"
+      assignment_status: "planned" | "active" | "completed" | "cancelled"
+      event_type:
+        | "nfc_scan"
+        | "task_start"
+        | "task_finish"
+        | "photo_upload"
+        | "inventory_shortage"
+        | "break_fix_created"
+        | "break_fix_assigned"
+        | "sla_alert"
+      location_level: "building" | "wing" | "floor" | "zone" | "room"
+      shift_type: "morning" | "evening"
+      space_type:
+        | "office"
+        | "meeting_room"
+        | "restroom"
+        | "kitchenette"
+        | "lobby"
+        | "other"
+      task_priority: "normal" | "high"
+      task_status:
+        | "queued"
+        | "ready"
+        | "in_progress"
+        | "blocked"
+        | "completed"
+        | "failed"
+      ticket_priority: "urgent" | "high" | "normal"
+      ticket_status: "open" | "assigned" | "in_progress" | "resolved" | "closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1224,6 +769,38 @@ export const Constants = {
         "supervisor",
         "cleaning_staff",
       ],
+      assignment_status: ["planned", "active", "completed", "cancelled"],
+      event_type: [
+        "nfc_scan",
+        "task_start",
+        "task_finish",
+        "photo_upload",
+        "inventory_shortage",
+        "break_fix_created",
+        "break_fix_assigned",
+        "sla_alert",
+      ],
+      location_level: ["building", "wing", "floor", "zone", "room"],
+      shift_type: ["morning", "evening"],
+      space_type: [
+        "office",
+        "meeting_room",
+        "restroom",
+        "kitchenette",
+        "lobby",
+        "other",
+      ],
+      task_priority: ["normal", "high"],
+      task_status: [
+        "queued",
+        "ready",
+        "in_progress",
+        "blocked",
+        "completed",
+        "failed",
+      ],
+      ticket_priority: ["urgent", "high", "normal"],
+      ticket_status: ["open", "assigned", "in_progress", "resolved", "closed"],
     },
   },
 } as const
