@@ -1,75 +1,70 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import {
   Play,
-  Square,
   AlertTriangle,
   Coffee,
-  ChevronLeft,
   PackageOpen,
   CheckCircle2,
   Timer,
   CalendarDays,
   BarChart3,
-  Zap,
-  Image,
   Home,
   MapPin,
   XCircle,
-  Gauge,
   LogOut,
+  Loader2,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { mockAssignments, type TaskAssignment } from "@/data/mockData";
-import { scheduledTimes } from "@/data/staffSchedule";
-import DaySchedule from "@/components/staff/DaySchedule";
-import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
-import TaskTile from "@/components/staff/TaskTile";
-import NextTaskPreview from "@/components/staff/NextTaskPreview";
-import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import { useI18n } from "@/i18n/I18nContext";
-import { calculateWorkerWorkload, getHeatLevel, type ShiftConfig } from "@/lib/scheduling-engine";
-import { supabase } from "@/integrations/supabase/client";
+import { useStaffAssignment } from "@/hooks/useStaffAssignment";
+import LiveTaskTile from "@/components/staff/LiveTaskTile";
+import NfcScanSimulator from "@/components/staff/NfcScanSimulator";
+import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
+import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import breakIllustration from "@/assets/break-illustration.png";
-import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 
-type StaffScreen = "welcome" | "home" | "taskDetail" | "schedule" | "analysis" | "shortage";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis";
+type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | null; locationName: string } | null;
 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const staffAssignments = mockAssignments.filter((a) => a.staff.id === "s1");
-  const initialIndex = staffAssignments.findIndex((a) => a.status === "in_progress") >= 0
-    ? staffAssignments.findIndex((a) => a.status === "in_progress")
-    : staffAssignments.findIndex((a) => a.status === "pending");
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
-  const [allDone, setAllDone] = useState(initialIndex === -1);
-  const [isRunning, setIsRunning] = useState(
-    staffAssignments[initialIndex]?.status === "in_progress"
-  );
-  const [onBreak, setOnBreak] = useState(false);
-  const [showIssuePanel, setShowIssuePanel] = useState(false);
-  const [stockReporting, setStockReporting] = useState(false);
+  const { assignment, tasks, loading, error, startTask, finishTask, skipTask } = useStaffAssignment();
+
   const [screen, setScreen] = useState<StaffScreen>("welcome");
-  const [breakFixStatus, setBreakFixStatus] = useState<"idle" | "in_progress" | "done">("idle");
-  const [breakFixSeconds, setBreakFixSeconds] = useState(0);
+  const [scanMode, setScanMode] = useState<ScanMode>(null);
+  const [onBreak, setOnBreak] = useState(false);
   const [breakSeconds, setBreakSeconds] = useState(0);
+  const [taskSeconds, setTaskSeconds] = useState(0);
   const [showCannotPerform, setShowCannotPerform] = useState(false);
   const [cannotPerformReason, setCannotPerformReason] = useState("");
-  const [taskSeconds, setTaskSeconds] = useState(
-    (staffAssignments[initialIndex]?.elapsedMinutes || 0) * 60
-  );
 
+  // Find current task (first non-completed, non-failed)
+  const currentTask = tasks.find((t) => t.status === "in_progress") || tasks.find((t) => t.status === "queued" || t.status === "ready");
+  const isActive = currentTask?.status === "in_progress";
+  const completedCount = tasks.filter((t) => t.status === "completed").length;
+  const allDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "failed");
 
+  // Next tasks for preview
+  const currentIdx = currentTask ? tasks.indexOf(currentTask) : -1;
+  const nextTask = currentIdx >= 0 && currentIdx < tasks.length - 1 ? tasks[currentIdx + 1] : null;
+  const thirdTask = currentIdx >= 0 && currentIdx < tasks.length - 2 ? tasks[currentIdx + 2] : null;
 
+  // Task timer
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (breakFixStatus === "in_progress") {
-      interval = setInterval(() => setBreakFixSeconds((s) => s + 1), 1000);
+    if (isActive && !onBreak && currentTask?.started_at) {
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - new Date(currentTask.started_at!).getTime()) / 1000);
+        setTaskSeconds(elapsed);
+      };
+      updateTimer();
+      interval = setInterval(updateTimer, 1000);
     }
     return () => clearInterval(interval);
-  }, [breakFixStatus]);
+  }, [isActive, onBreak, currentTask?.started_at]);
 
   // Break timer
   useEffect(() => {
@@ -80,158 +75,160 @@ const StaffView = () => {
     return () => clearInterval(interval);
   }, [onBreak]);
 
-  const current = staffAssignments[currentIndex];
-  const nextTask = currentIndex < staffAssignments.length - 1 ? staffAssignments[currentIndex + 1] : null;
-  const thirdTask = currentIndex < staffAssignments.length - 2 ? staffAssignments[currentIndex + 2] : null;
-  const completedCount = staffAssignments.filter((a) => a.status === "completed").length;
-  const totalCount = staffAssignments.length;
-
-  // Shift capacity
-  const defaultShift: ShiftConfig = { startTime: "07:00", endTime: "15:00", breakMinutes: 30 };
-  const workload = useMemo(() => {
-    const durations = staffAssignments.map((a) => a.task.estimatedMinutes);
-    return calculateWorkerWorkload("s1", "", durations, defaultShift);
-  }, [staffAssignments]);
-  const heat = getHeatLevel(workload.utilizationPercent);
-  const remainingMinutes = Math.max(0, workload.availableMinutes - staffAssignments
-    .filter((a) => a.status === "completed")
-    .reduce((s, a) => s + (a.elapsedMinutes || a.task.estimatedMinutes), 0) - (isRunning ? Math.floor(taskSeconds / 60) : 0));
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>;
-    if (isRunning && !onBreak) {
-      interval = setInterval(() => {
-        setTaskSeconds((s) => s + 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isRunning, onBreak]);
-
-  const handleStartBreak = () => {
-    setOnBreak(true);
-    setBreakSeconds(0);
-    if (isRunning) setIsRunning(false);
-  };
-  const handleEndBreak = () => {
-    setOnBreak(false);
-    setBreakSeconds(0);
-  };
-  const handleStart = () => {
-    setIsRunning(true);
-    setTaskSeconds(0);
-    setScreen("taskDetail");
-  };
-  const handleFinish = () => {
-    setIsRunning(false);
-    setTaskSeconds(0);
-    if (currentIndex < staffAssignments.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setScreen("home");
-    } else {
-      setAllDone(true);
-      setScreen("home");
-    }
-  };
-
-  const handleShortageSubmit = useCallback(async (items: { key: string; label: string; quantity: number }[], location: string) => {
-    if (items.length === 0 || !current) return;
-    setStockReporting(true);
-    try {
-      const staffUuid = current.staff.id.length < 36
-        ? `00000000-0000-0000-0000-00000000000${current.staff.id.replace(/\D/g, "") || "0"}`
-        : current.staff.id;
-      const rows = items.map((item) => ({
-        staff_id: staffUuid,
-        assignment_id: current.id,
-        item: `${item.label} (x${item.quantity})`,
-        zone_name: location,
-      }));
-      const { error } = await supabase.from("supply_alerts").insert(rows);
-      if (error) throw error;
-      toast({ title: "✓ דיווח חוסר נשלח", description: `${items.length} פריטים דווחו בהצלחה` });
-      setScreen("home");
-    } catch {
-      toast({ title: "שגיאה", description: "לא ניתן לשלוח דיווח כרגע", variant: "destructive" });
-    } finally {
-      setStockReporting(false);
-    }
-  }, [current]);
-
+  // SLA overdue alert
   const overdueAlertSent = useRef(false);
-  const taskElapsedMinutes = current ? Math.floor(taskSeconds / 60) : 0;
-  const overdueThreshold = current ? Math.max(Math.round(current.task.estimatedMinutes * 0.15), 2) : 2;
-  const isOverdue = current ? taskElapsedMinutes > current.task.estimatedMinutes + overdueThreshold : false;
-
   useEffect(() => {
-    if (isOverdue && isRunning && !overdueAlertSent.current && current) {
+    if (!currentTask || !isActive) return;
+    const elapsedMin = Math.floor(taskSeconds / 60);
+    const threshold = currentTask.standard_minutes * 1.15;
+    if (elapsedMin > threshold && !overdueAlertSent.current) {
       overdueAlertSent.current = true;
       toast({
         title: `⚠️ ${t("worker.overdueAlert")}`,
-        description: t("worker.overdueDetail", {
-          zone: current.task.zone.name,
-          minutes: String(taskElapsedMinutes - current.task.estimatedMinutes),
-        }),
+        description: `${currentTask.location_name} — חריגה מעל הזמן המתוכנן`,
         variant: "destructive",
       });
     }
-  }, [isOverdue, isRunning]);
+  }, [taskSeconds, currentTask, isActive]);
 
   useEffect(() => {
     overdueAlertSent.current = false;
-  }, [currentIndex]);
+  }, [currentTask?.id]);
 
-  // Issue types
-  const issueTypes = [
-    t("issues.spill"),
-    t("issues.plumbing"),
-    t("issues.equipment"),
-    t("issues.safety"),
-    t("issues.other"),
-  ];
+  // ── Handlers ──
 
-  // ═══ WELCOME SCREEN ═══
+  const handleScanToStart = (task: typeof currentTask) => {
+    if (!task) return;
+    setScanMode({
+      type: "entry",
+      taskId: task.id,
+      expectedUid: task.location_nfc_tag_uid,
+      locationName: task.location_name,
+    });
+  };
+
+  const handleScanToFinish = (task: typeof currentTask) => {
+    if (!task) return;
+    setScanMode({
+      type: "exit",
+      taskId: task.id,
+      expectedUid: task.location_nfc_tag_uid,
+      locationName: task.location_name,
+    });
+  };
+
+  const handleScanResult = useCallback(async (tagUid: string, isMatch: boolean) => {
+    if (!scanMode) return;
+
+    if (!isMatch) {
+      if (tagUid !== "") {
+        toast({
+          title: "מיקום לא תואם!",
+          description: "התג שנסרק לא מתאים למיקום המשימה",
+          variant: "destructive",
+        });
+      }
+      setScanMode(null);
+      return;
+    }
+
+    try {
+      if (scanMode.type === "entry") {
+        await startTask(scanMode.taskId, tagUid);
+        setTaskSeconds(0);
+        toast({ title: "✓ משימה התחילה!" });
+      } else {
+        await finishTask(scanMode.taskId, tagUid);
+        setTaskSeconds(0);
+        toast({ title: "✓ משימה הושלמה!" });
+      }
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+
+    setScanMode(null);
+  }, [scanMode, startTask, finishTask]);
+
+  const handleCannotPerform = async () => {
+    if (!cannotPerformReason.trim() || !currentTask) return;
+    try {
+      await skipTask(currentTask.id, cannotPerformReason);
+      toast({ title: "⚠️ דיווח 'לא ניתן לבצע' נשלח", variant: "destructive" });
+    } catch {}
+    setShowCannotPerform(false);
+    setCannotPerformReason("");
+  };
+
+  // ── Loading ──
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 size={40} className="mx-auto animate-spin text-primary" />
+          <p className="text-muted-foreground">טוען נתוני משמרת...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !assignment) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <CalendarDays size={48} className="mx-auto text-muted-foreground" />
+          <h1 className="text-xl font-bold">אין משמרת פעילה היום</h1>
+          <p className="text-muted-foreground text-sm">{error || "לא נמצא שיבוץ עבור היום"}</p>
+          <button onClick={signOut} className="flex items-center justify-center gap-2 mx-auto py-3 px-6 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
+            <LogOut size={16} />
+            התנתק
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── NFC Scan Modal ──
+  const scanModal = scanMode && (
+    <NfcScanSimulator
+      expectedTagUid={scanMode.expectedUid}
+      onScanResult={handleScanResult}
+      mode={scanMode.type}
+      locationName={scanMode.locationName}
+    />
+  );
+
+  // ── Welcome Screen ──
   if (screen === "welcome") {
     const hour = new Date().getHours();
     const greeting = hour < 12 ? "בוקר טוב" : hour < 17 ? "צהריים טובים" : "ערב טוב";
     const greetingEmoji = hour < 12 ? "☀️" : hour < 17 ? "🌤️" : "🌙";
 
-    // Extract unique floors from assignments
-    const floors = [...new Set(staffAssignments.map((a) => a.task.zone.floor))];
-    const floorsText = floors.length === 1
-      ? `קומה ${floors[0]}`
-      : `קומות ${floors.join(", ")}`;
-
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-8">
-          {/* Greeting */}
-          <div className="animate-fade-in" style={{ animationDuration: '0.6s' }}>
-            <p className="text-6xl mb-4 animate-scale-in" style={{ animationDuration: '0.8s', animationDelay: '0.2s', animationFillMode: 'both' }}>{greetingEmoji}</p>
-            <h1 className="text-4xl font-black text-foreground mb-2 animate-fade-in" style={{ animationDuration: '0.6s', animationDelay: '0.4s', animationFillMode: 'both' }}>{greeting}{user?.user_metadata?.full_name ? `, ${user.user_metadata.full_name}` : ""}!</h1>
-            <p className="text-lg text-muted-foreground animate-fade-in" style={{ animationDuration: '0.6s', animationDelay: '0.6s', animationFillMode: 'both' }}>שמחים שהגעת למשמרת</p>
+          <div className="animate-fade-in">
+            <p className="text-6xl mb-4">{greetingEmoji}</p>
+            <h1 className="text-4xl font-black text-foreground mb-2">
+              {greeting}{assignment.staff_name ? `, ${assignment.staff_name}` : ""}!
+            </h1>
+            <p className="text-lg text-muted-foreground">שמחים שהגעת למשמרת</p>
           </div>
 
-          {/* Assignment info */}
-          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3 animate-scale-in" style={{ animationDuration: '0.5s', animationDelay: '0.8s', animationFillMode: 'both' }}>
+          <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3">
             <div className="flex items-center justify-center gap-2 text-primary">
               <MapPin size={22} />
-              <p className="text-lg font-bold">היום שובצת לעבוד ב{floorsText}</p>
+              <p className="text-lg font-bold">{tasks.length} משימות מתוכננות</p>
             </div>
             <p className="text-sm text-muted-foreground">
-              {staffAssignments.length} משימות מתוכננות
+              משמרת {assignment.shift_type === "morning" ? "בוקר" : "ערב"}
             </p>
           </div>
 
-          {/* Good luck */}
-          <div className="animate-scale-in" style={{ animationDuration: '0.5s', animationDelay: '1.1s', animationFillMode: 'both' }}>
-            <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
-          </div>
+          <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
 
-          {/* Continue button */}
           <button
             onClick={() => setScreen("home")}
-            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4 animate-fade-in"
-            style={{ animationDuration: '0.5s', animationDelay: '1.4s', animationFillMode: 'both' }}
+            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
           >
             <Play size={22} />
             יאללה, מתחילים
@@ -241,76 +238,30 @@ const StaffView = () => {
     );
   }
 
-  if (screen === "shortage") {
-    return <ShortageReportScreen onClose={() => setScreen("home")} onSubmit={handleShortageSubmit} submitting={stockReporting} />;
-  }
-  if (screen === "schedule") {
-    return <DaySchedule assignments={staffAssignments} currentIndex={currentIndex} onClose={() => setScreen("home")} />;
-  }
+  // ── Analysis Screen ──
   if (screen === "analysis") {
-    return <EndOfDayAnalysis assignments={staffAssignments} onClose={() => setScreen("home")} />;
+    return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
   }
 
-  // ═══ BREAK SCREEN ═══
+  // ── Break Screen ──
   if (onBreak) {
     const breakTimeDisplay = `${String(Math.floor(breakSeconds / 60)).padStart(2, "0")}:${String(breakSeconds % 60).padStart(2, "0")}`;
-    const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
-    const showBreakFix = pendingBreakFix && breakFixStatus !== "done";
-
     return (
       <div className="h-screen bg-background flex flex-col overflow-hidden">
-        {/* Break-fix banner at top even during break */}
-        {showBreakFix && (
-          <div className="mx-3 mt-3 bg-destructive/15 border-2 border-destructive rounded-xl px-3 py-2">
-            <div className="flex items-center gap-2">
-              <Zap size={20} className="text-destructive shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-destructive">{t("worker.breakFixRequired")}</p>
-                <p className="text-sm font-black text-destructive truncate">{pendingBreakFix.breakFixDescription}</p>
-              </div>
-              {breakFixStatus === "idle" ? (
-                <button onClick={() => { handleEndBreak(); setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs shrink-0">
-                  <Play size={14} />
-                </button>
-              ) : (
-                <span className="mono text-sm text-destructive font-bold">
-                  {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Break content - compact to fit one screen */}
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
           <img src={breakIllustration} alt="הפסקה" className="w-28 h-28 object-contain rounded-2xl opacity-90" />
-          
-          <div>
-            <h1 className="text-2xl font-black text-foreground">{t("worker.onBreakTitle")}</h1>
-            <p className="text-sm text-muted-foreground">{t("worker.onBreakSubtitle")}</p>
-          </div>
-
-          {/* Break timer */}
+          <h1 className="text-2xl font-black text-foreground">{t("worker.onBreakTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{t("worker.onBreakSubtitle")}</p>
           <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl px-6 py-3">
             <div className="flex items-center justify-center gap-2">
               <Timer size={20} className="text-primary" />
               <span className="mono text-4xl font-black text-foreground">{breakTimeDisplay}</span>
             </div>
           </div>
-
-          {/* Next task preview */}
-          {current && (
-            <div className="w-full max-w-sm">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{t("worker.nextTaskAfterBreak")}</p>
-              <NextTaskPreview assignment={current} />
-            </div>
-          )}
         </div>
-
-        {/* End break button pinned to bottom */}
         <div className="px-6 pb-6 pt-2">
           <button
-            onClick={handleEndBreak}
+            onClick={() => { setOnBreak(false); setBreakSeconds(0); }}
             className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors"
           >
             <Play size={22} />
@@ -321,7 +272,8 @@ const StaffView = () => {
     );
   }
 
-  if (allDone || !current) {
+  // ── All Done Screen ──
+  if (allDone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
         <div className="text-center animate-slide-up mb-6">
@@ -333,7 +285,7 @@ const StaffView = () => {
           <BarChart3 size={20} />
           {t("worker.endOfDay")}
         </button>
-        <button onClick={signOut} className="flex items-center justify-center gap-2 w-full max-w-xs mt-3 py-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+        <button onClick={signOut} className="flex items-center justify-center gap-2 w-full max-w-xs mt-3 py-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
           <LogOut size={16} />
           התנתק
         </button>
@@ -341,263 +293,13 @@ const StaffView = () => {
     );
   }
 
-  const progressPercent = Math.min((taskElapsedMinutes / current.task.estimatedMinutes) * 100, 100);
   const taskTimeDisplay = `${String(Math.floor(taskSeconds / 60)).padStart(2, "0")}:${String(taskSeconds % 60).padStart(2, "0")}`;
 
-  const handleCannotPerform = () => {
-    if (!cannotPerformReason.trim()) return;
-    toast({
-      title: "⚠️ דיווח 'לא ניתן לבצע' נשלח",
-      description: `${current.task.zone.name} — ${cannotPerformReason}`,
-      variant: "destructive",
-    });
-    setShowCannotPerform(false);
-    setCannotPerformReason("");
-    // Skip to next task
-    if (currentIndex < staffAssignments.length - 1) {
-      setIsRunning(false);
-      setTaskSeconds(0);
-      setCurrentIndex(currentIndex + 1);
-      setScreen("home");
-    } else {
-      setIsRunning(false);
-      setAllDone(true);
-      setScreen("home");
-    }
-  };
-
-  // ═══ TASK DETAIL SCREEN (when running) ═══
-  if (screen === "taskDetail") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setScreen("home")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
-              <Home size={18} />
-            </button>
-            <div>
-              <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-              <h1 className="text-lg font-bold">{t("worker.advancedDetails")}</h1>
-            </div>
-          </div>
-          <div className="text-left">
-            <p className="text-xs opacity-75">{t("manager.tasks")}</p>
-            <p className="text-lg font-bold mono">{completedCount}/{totalCount}</p>
-          </div>
-        </header>
-
-        <div className="flex-1 px-4 py-4 flex flex-col gap-4 overflow-y-auto pb-28">
-          {/* Break-fix banner */}
-          {(() => {
-            const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
-            if (!pendingBreakFix || breakFixStatus === "done") return null;
-            return (
-              <div className="bg-destructive/15 border-2 border-destructive rounded-xl px-4 py-4 animate-pulse-slow">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-12 h-12 rounded-full bg-destructive/25 flex items-center justify-center shrink-0">
-                    <Zap size={28} className="text-destructive" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-destructive">{t("worker.breakFixRequired")}</p>
-                    <p className="text-xl font-black text-destructive">{pendingBreakFix.breakFixDescription || t("worker.breakFix")}</p>
-                  </div>
-                </div>
-                {breakFixStatus === "idle" ? (
-                  <button onClick={() => setBreakFixStatus("in_progress")} className="w-full py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-destructive/90 transition-colors">
-                    <Play size={20} />
-                    {t("worker.startFix")}
-                  </button>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-center gap-2 py-2">
-                      <Timer size={18} className="text-destructive" />
-                      <span className="text-2xl font-black mono text-destructive">
-                        {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
-                      </span>
-                    </div>
-                    <button onClick={() => setBreakFixStatus("done")} className="w-full py-3 rounded-xl bg-success text-success-foreground font-bold text-base flex items-center justify-center gap-2 hover:bg-success/90 transition-colors">
-                      <CheckCircle2 size={20} />
-                      {t("worker.endFix")}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Current task detail card */}
-          <div className={`task-card flex-1 animate-slide-up ${isOverdue ? 'border-destructive border-2' : current.isBreakFix ? 'border-warning border-2' : ''}`}>
-            <div className="flex items-center justify-between mb-4">
-              {current.isBreakFix ? (
-                <span className="status-badge bg-warning/15 text-warning flex items-center gap-1">
-                  <Zap size={14} />
-                  {t("worker.breakFix")}
-                </span>
-              ) : (
-                <span className={`status-badge ${
-                  current.task.type === "maintenance" ? "bg-info/15 text-info" : "bg-accent/15 text-accent-foreground"
-                }`}>
-                  {current.task.type === "maintenance" ? t("analysis.quick") : t("analysis.deep")}
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                {t("worker.taskOf", { current: String(currentIndex + 1), total: String(totalCount) })}
-              </span>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                <MapPin size={14} />
-                <span className="text-sm">{t("schedule.planned")}: {current.task.zone.wing} · {current.task.zone.floor}</span>
-              </div>
-              <h2 className="text-2xl font-bold">{current.task.zone.name}</h2>
-              <p className="text-muted-foreground mt-1">
-                {current.isBreakFix && current.breakFixDescription ? current.breakFixDescription : current.task.name}
-              </p>
-              {scheduledTimes[current.id] && (
-                <p className="text-sm mono text-muted-foreground mt-1">
-                  {t("schedule.planned")}: {scheduledTimes[current.id].plannedStart} – {scheduledTimes[current.id].plannedEnd}
-                </p>
-              )}
-            </div>
-
-            {/* Break-fix image */}
-            {current.isBreakFix && current.breakFixImageUrl && (
-              <div className="mb-4">
-                <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
-                  <Image size={12} />
-                  {t("supervisor.attachImage")}
-                </p>
-                <img src={current.breakFixImageUrl} alt="" className="w-full h-48 object-cover rounded-lg border border-border" />
-              </div>
-            )}
-
-            {/* Timer */}
-            <div className={`mb-4 ${isOverdue ? 'bg-destructive/10 border border-destructive/30 rounded-xl p-3 animate-pulse-slow' : ''}`}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Timer size={16} className={isOverdue ? 'text-destructive' : isRunning ? 'text-success' : 'text-muted-foreground'} />
-                  <span className={`mono text-2xl font-bold ${isOverdue ? 'text-destructive' : isRunning ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    {taskTimeDisplay}
-                  </span>
-                  <span className="text-xs text-muted-foreground">/ {current.task.estimatedMinutes} {t("common.minutes")}</span>
-                </div>
-                {isOverdue && (
-                  <span className="status-badge status-overdue flex items-center gap-1">
-                    <AlertTriangle size={12} />
-                    {t("worker.sla.breached")}
-                  </span>
-                )}
-              </div>
-              <Progress value={progressPercent} className={`h-3 ${isOverdue ? '[&>div]:bg-destructive' : '[&>div]:bg-success'}`} />
-            </div>
-
-            {/* Start / Finish buttons inside the card */}
-            {!isRunning && (
-              <button onClick={handleStart} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-success text-success-foreground font-bold text-base hover:bg-success/90 transition-colors mb-3">
-                <Play size={24} />
-                {t("worker.start")}
-              </button>
-            )}
-            {isRunning && (
-              <button onClick={handleFinish} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-base hover:bg-primary/90 transition-colors mb-3">
-                <Square size={24} />
-                {t("worker.complete")}
-              </button>
-            )}
-
-            {/* Cannot perform button */}
-            <button
-              onClick={() => setShowCannotPerform(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-destructive/30 text-destructive font-medium transition-colors hover:bg-destructive/10"
-            >
-              <XCircle size={18} />
-              {t("worker.cannotPerform")}
-            </button>
-          </div>
-
-          {/* Cannot perform dialog */}
-          {showCannotPerform && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setShowCannotPerform(false)}>
-              <div className="w-full max-w-sm bg-background rounded-2xl p-5 animate-scale-in space-y-4" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center gap-2 text-destructive">
-                  <XCircle size={22} />
-                  <h3 className="font-bold text-lg">{t("worker.cannotPerform")}</h3>
-                </div>
-                <p className="text-sm text-muted-foreground">הדיווח יישלח מיידית למנהל הנכס/אתר</p>
-                <textarea
-                  value={cannotPerformReason}
-                  onChange={(e) => setCannotPerformReason(e.target.value)}
-                  placeholder="תאר את הסיבה..."
-                  className="w-full h-24 px-3 py-2 rounded-xl border border-border bg-muted/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50"
-                  dir="rtl"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowCannotPerform(false)}
-                    className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                  <button
-                    onClick={handleCannotPerform}
-                    disabled={!cannotPerformReason.trim()}
-                    className="flex-1 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:bg-destructive/90 transition-colors disabled:opacity-50"
-                  >
-                    {t("common.send")}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Issue panel */}
-          {showIssuePanel && (
-            <div className="task-card animate-slide-up space-y-2">
-              <p className="font-semibold text-sm mb-3">{t("issues.selectType")}</p>
-              {issueTypes.map((issue) => (
-                <button key={issue} onClick={() => setShowIssuePanel(false)} className="w-full text-right px-4 py-3 rounded-lg border border-border hover:bg-muted transition-colors flex items-center justify-between">
-                  <ChevronLeft size={16} className="text-muted-foreground" />
-                  <span className="text-sm font-medium">{issue}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Fixed bottom action banner — same as home */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
-          <button
-            onClick={() => setShowIssuePanel(true)}
-            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors"
-          >
-            <AlertTriangle size={20} className="text-destructive" />
-            <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
-          </button>
-          <button
-            onClick={() => setScreen("shortage")}
-            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
-          >
-            <PackageOpen size={20} className="text-warning" />
-            <span className="text-[10px] font-medium text-warning">{t("worker.reportShortage")}</span>
-          </button>
-          <button
-            onClick={handleStartBreak}
-            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
-          >
-            <Coffee size={20} className="text-primary" />
-            <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
-          </button>
-        </div>
-
-      </div>
-    );
-  }
-
-  // ═══ HOME SCREEN — 3 TASK TILES ═══
+  // ── HOME SCREEN ──
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {scanModal}
+
       {/* Header */}
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
         <div>
@@ -605,162 +307,119 @@ const StaffView = () => {
           <h1 className="text-lg font-bold">{t("worker.homeTitle")}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => setScreen("schedule")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title={t("worker.schedule")}>
-            <CalendarDays size={18} />
-          </button>
-          <button onClick={() => setScreen("analysis")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title={t("worker.performance")}>
+          <button onClick={() => setScreen("analysis")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
             <BarChart3 size={18} />
           </button>
-          <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+          <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
             <LogOut size={18} />
           </button>
           <div className="text-left">
-            <p className="text-xs opacity-75">{completedCount}/{totalCount}</p>
+            <p className="text-xs opacity-75">{completedCount}/{tasks.length}</p>
           </div>
         </div>
       </header>
 
       {/* Progress pips */}
       <div className="px-4 py-3 flex gap-1.5">
-        {staffAssignments.map((a, i) => (
-          <div key={a.id} className={`h-1.5 flex-1 rounded-full transition-colors ${
-            a.status === "completed" ? "bg-success" :
-            i === currentIndex ? (isRunning ? "bg-accent animate-pulse-slow" : "bg-accent") :
-            a.isBreakFix ? "bg-warning" : "bg-muted"
+        {tasks.map((t) => (
+          <div key={t.id} className={`h-1.5 flex-1 rounded-full transition-colors ${
+            t.status === "completed" ? "bg-success" :
+            t.status === "in_progress" ? "bg-accent animate-pulse-slow" :
+            t.status === "failed" ? "bg-destructive" :
+            "bg-muted"
           }`} />
         ))}
       </div>
 
-      {/* Shift capacity indicator */}
-      <div className="mx-4 mb-3 flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/50">
-        <Gauge size={14} className={
-          heat === "cool" ? "text-success" :
-          heat === "warm" ? "text-warning" :
-          heat === "hot" ? "text-accent" :
-          "text-destructive"
-        } />
-        <div className="flex-1">
-          <div className="flex items-center justify-between text-[10px] mb-1">
-            <span className="text-muted-foreground">קיבולת משמרת</span>
-            <span className="mono font-semibold">{remainingMinutes} דק׳ נותרו</span>
-          </div>
-          <Progress
-            value={workload.utilizationPercent}
-            className={`h-1.5 ${
-              heat === "cool" ? "[&>div]:bg-success" :
-              heat === "warm" ? "[&>div]:bg-warning" :
-              heat === "hot" ? "[&>div]:bg-accent" :
-              "[&>div]:bg-destructive"
-            }`}
-          />
-        </div>
-        {current && (
-          <span className="text-[10px] mono text-muted-foreground">
-            ~{current.task.estimatedMinutes} דק׳
-          </span>
-        )}
-      </div>
-
-      {/* Break-fix banner (compact on home) */}
-      {(() => {
-        const pendingBreakFix = staffAssignments.find((a) => a.isBreakFix && a.status !== "completed");
-        if (!pendingBreakFix || breakFixStatus === "done") return null;
-        return (
-          <div className="mx-4 mb-3 bg-destructive/15 border-2 border-destructive rounded-xl px-4 py-3 animate-pulse-slow">
-            <div className="flex items-center gap-3">
-              <Zap size={24} className="text-destructive shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-destructive">{t("worker.breakFixRequired")}</p>
-                <p className="text-sm font-black text-destructive truncate">{pendingBreakFix.breakFixDescription}</p>
-              </div>
-              {breakFixStatus === "idle" ? (
-                <button onClick={() => { setBreakFixStatus("in_progress"); setScreen("taskDetail"); }} className="px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-sm shrink-0">
-                  <Play size={16} />
-                </button>
-              ) : (
-                <span className="mono text-destructive font-bold">
-                  {String(Math.floor(breakFixSeconds / 60)).padStart(2, "0")}:{String(breakFixSeconds % 60).padStart(2, "0")}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* 3 Task Tiles */}
+      {/* Task Tiles */}
       <div className="flex-1 px-4 pb-4 flex flex-col gap-3">
-        {/* Current Task */}
-        {current && (
-          <TaskTile
-            assignment={current}
-            label={t("worker.currentTask")}
-            isActive={isRunning}
+        {currentTask && (
+          <LiveTaskTile
+            task={currentTask}
             isCurrent={true}
-            onTap={() => setScreen("taskDetail")}
-            onReportIssue={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
-            onStart={handleStart}
-            onFinish={handleFinish}
-            taskTimeDisplay={isRunning ? taskTimeDisplay : undefined}
-            orderNumber={currentIndex + 1}
-            totalTasks={totalCount}
+            isActive={isActive}
+            orderNumber={currentIdx + 1}
+            totalTasks={tasks.length}
+            elapsedSeconds={isActive ? taskSeconds : 0}
+            onScanToStart={() => handleScanToStart(currentTask)}
+            onScanToFinish={() => handleScanToFinish(currentTask)}
+            onTap={() => {}}
           />
         )}
 
-        {/* Next Task */}
         {nextTask && (
-          <TaskTile
-            assignment={nextTask}
-            label={t("worker.nextTask")}
-            isActive={false}
+          <LiveTaskTile
+            task={nextTask}
             isCurrent={false}
-            orderNumber={currentIndex + 2}
-            totalTasks={totalCount}
+            isActive={false}
+            orderNumber={currentIdx + 2}
+            totalTasks={tasks.length}
           />
         )}
 
-        {/* Third Task */}
         {thirdTask && (
-          <TaskTile
-            assignment={thirdTask}
-            label={t("worker.thirdTask")}
-            isActive={false}
+          <LiveTaskTile
+            task={thirdTask}
             isCurrent={false}
-            orderNumber={currentIndex + 3}
-            totalTasks={totalCount}
+            isActive={false}
+            orderNumber={currentIdx + 3}
+            totalTasks={tasks.length}
           />
         )}
 
-        {/* My Points Widget */}
         <MyPointsWidget />
-
-        {/* Spacer for bottom banner */}
         <div className="h-20" />
       </div>
 
       {/* Fixed bottom action banner */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
         <button
-          onClick={() => { setScreen("taskDetail"); setShowIssuePanel(true); }}
+          onClick={() => setShowCannotPerform(true)}
           className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors"
         >
-          <AlertTriangle size={20} className="text-destructive" />
-          <span className="text-[10px] font-medium text-destructive">{t("worker.reportIssue")}</span>
+          <XCircle size={20} className="text-destructive" />
+          <span className="text-[10px] font-medium text-destructive">{t("worker.cannotPerform")}</span>
         </button>
         <button
-          onClick={() => setScreen("shortage")}
-          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
-        >
-          <PackageOpen size={20} className="text-warning" />
-          <span className="text-[10px] font-medium text-warning">{t("worker.reportShortage")}</span>
-        </button>
-        <button
-          onClick={handleStartBreak}
+          onClick={() => setOnBreak(true)}
           className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
         >
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
       </div>
+
+      {/* Cannot perform dialog */}
+      {showCannotPerform && currentTask && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setShowCannotPerform(false)}>
+          <div className="w-full max-w-sm bg-background rounded-2xl p-5 animate-scale-in space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 text-destructive">
+              <XCircle size={22} />
+              <h3 className="font-bold text-lg">{t("worker.cannotPerform")}</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">הדיווח יישלח מיידית למנהל</p>
+            <textarea
+              value={cannotPerformReason}
+              onChange={(e) => setCannotPerformReason(e.target.value)}
+              placeholder="תאר את הסיבה..."
+              className="w-full h-24 px-3 py-2 rounded-xl border border-border bg-muted/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50"
+              dir="rtl"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setShowCannotPerform(false)} className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
+                {t("common.cancel")}
+              </button>
+              <button
+                onClick={handleCannotPerform}
+                disabled={!cannotPerformReason.trim()}
+                className="flex-1 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:bg-destructive/90 disabled:opacity-50"
+              >
+                {t("common.send")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
