@@ -29,6 +29,7 @@ import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel
 import DeviationAlertPanel from "@/components/manager/DeviationAlertPanel";
 import UserManagement from "@/components/manager/UserManagement";
 import IncentivesPanel from "@/components/manager/IncentivesPanel";
+import ReportsPanel from "@/components/manager/ReportsPanel";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -37,7 +38,7 @@ import {
 } from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
-type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users" | "incentives";
+type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users" | "incentives" | "reports";
 
 const ManagerDashboard = () => {
   const { signOut } = useAuth();
@@ -102,6 +103,7 @@ const ManagerDashboard = () => {
     { key: "endOfDay", icon: BarChart3, label: "סוף יום" },
     { key: "users", icon: UserCog, label: "משתמשים" },
     { key: "incentives", icon: Trophy, label: "תמריצים" },
+    { key: "reports", icon: FileText, label: "דוחות" },
   ];
 
   return (
@@ -343,6 +345,12 @@ const ManagerDashboard = () => {
         {activeTab === "incentives" && (
           <div className="animate-slide-up">
             <IncentivesPanel />
+          </div>
+        )}
+
+        {activeTab === "reports" && (
+          <div className="animate-slide-up">
+            <ReportsPanel />
           </div>
         )}
       </div>
