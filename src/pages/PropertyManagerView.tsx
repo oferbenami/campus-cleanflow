@@ -6,13 +6,15 @@ import {
   ClipboardList,
   Database,
   LogOut,
+  BarChart3,
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
 import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
+import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 
-type PMTab = "staff" | "planning" | "assign" | "masterdata";
+type PMTab = "staff" | "planning" | "assign" | "masterdata" | "eod";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
@@ -29,6 +31,7 @@ const PropertyManagerView = () => {
     { key: "planning", label: "תכנון מחר", icon: <CalendarPlus size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
     { key: "masterdata", label: "נכסים", icon: <Database size={16} /> },
+    { key: "eod", label: "סוף יום", icon: <BarChart3 size={16} /> },
   ];
 
   return (
@@ -71,6 +74,7 @@ const PropertyManagerView = () => {
         {activeTab === "planning" && <ShiftPlanningTab />}
         {activeTab === "assign" && <ZonePlanningTab />}
         {activeTab === "masterdata" && <MasterDataTab />}
+        {activeTab === "eod" && <EndOfDayTab />}
       </div>
     </div>
   );
