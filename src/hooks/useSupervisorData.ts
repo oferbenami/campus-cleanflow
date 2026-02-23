@@ -51,6 +51,23 @@ export interface AuditInspection {
   inspector_name: string;
 }
 
+export interface DeferredTaskEvent {
+  id: string;
+  task_id: string;
+  task_name: string;
+  location_name: string;
+  staff_name: string;
+  staff_user_id: string;
+  reason: string;
+  defer_action: string;
+  note: string | null;
+  created_at: string;
+  // SLA risk: is the task still not completed?
+  task_status: string | null;
+  standard_minutes: number | null;
+  window_end: string | null;
+}
+
 export interface LocationOption {
   id: string;
   name: string;
@@ -64,6 +81,7 @@ export function useSupervisorData() {
   const [tasks, setTasks] = useState<SupervisorTask[]>([]);
   const [tickets, setTickets] = useState<BreakFixTicket[]>([]);
   const [audits, setAudits] = useState<AuditInspection[]>([]);
+  const [deferredEvents, setDeferredEvents] = useState<DeferredTaskEvent[]>([]);
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +102,7 @@ export function useSupervisorData() {
       const siteId = profile?.site_id || "37027ccd-c7d7-4d77-988d-6da914e347b4";
 
       // Fetch all in parallel
-      const [assignmentsRes, ticketsRes, auditsRes, locationsRes, staffRes] = await Promise.all([
+      const [assignmentsRes, ticketsRes, auditsRes, locationsRes, staffRes, deferredRes] = await Promise.all([
         // Today's assignments with tasks
         supabase
           .from("assignments")
@@ -139,6 +157,21 @@ export function useSupervisorData() {
           .from("profiles")
           .select("id, full_name, avatar_initials, role")
           .eq("role", "cleaning_staff"),
+
+        // Deferred / cannot_perform events (today)
+        supabase
+          .from("events_log")
+          .select(`
+            id, event_type, event_payload, created_at, user_id, assigned_task_id,
+            profiles!events_log_user_id_fkey ( full_name ),
+            assigned_tasks!events_log_assigned_task_id_fkey ( task_name, status, standard_minutes, window_end, location_id,
+              campus_locations!assigned_tasks_location_id_fkey ( name )
+            )
+          `)
+          .eq("event_type", "sla_alert")
+          .eq("site_id", siteId)
+          .gte("created_at", `${today}T00:00:00`)
+          .order("created_at", { ascending: false }),
       ]);
 
       // Map staff
@@ -212,6 +245,33 @@ export function useSupervisorData() {
       }));
       setLocations(locationList);
 
+      // Map deferred events (cannot_perform actions from sla_alert events)
+      const deferredList: DeferredTaskEvent[] = (deferredRes.data || [])
+        .filter((e: any) => {
+          const payload = e.event_payload as any;
+          return payload?.action === "cannot_perform";
+        })
+        .map((e: any) => {
+          const payload = e.event_payload as any;
+          const task = e.assigned_tasks;
+          return {
+            id: e.id,
+            task_id: e.assigned_task_id || "",
+            task_name: task?.task_name || payload?.task_name || "",
+            location_name: task?.campus_locations?.name || payload?.location || "",
+            staff_name: e.profiles?.full_name || "",
+            staff_user_id: e.user_id,
+            reason: payload?.reason || "",
+            defer_action: payload?.defer_action || "",
+            note: payload?.note || null,
+            created_at: e.created_at,
+            task_status: task?.status || null,
+            standard_minutes: task?.standard_minutes || null,
+            window_end: task?.window_end || null,
+          };
+        });
+      setDeferredEvents(deferredList);
+
     } catch (err) {
       console.error("Supervisor data fetch error:", err);
     } finally {
@@ -281,6 +341,7 @@ export function useSupervisorData() {
     tasks,
     tickets,
     audits,
+    deferredEvents,
     locations,
     loading,
     createBreakFixTicket,
