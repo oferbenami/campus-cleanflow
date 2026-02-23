@@ -9,25 +9,27 @@ import {
   ChevronLeft,
   Save,
   X,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { useI18n } from "@/i18n/I18nContext";
+import { SITE_ID } from "@/hooks/usePropertyManagerData";
+import type { Database } from "@/integrations/supabase/types";
 
-/* ─── Types ─── */
+type LocationLevel = Database["public"]["Enums"]["location_level"];
+type SpaceType = Database["public"]["Enums"]["space_type"];
+
 interface LocationRow {
   id: string;
   name: string;
-  level_type: string;
-  space_type: string | null;
+  level_type: LocationLevel;
+  space_type: SpaceType | null;
   parent_location_id: string | null;
   nfc_tag_uid: string | null;
   is_active: boolean;
   site_id: string;
 }
-
-type Level = "site" | "building" | "floor" | "zone" | "room";
 
 const levelIcons: Record<string, React.ReactNode> = {
   building: <Building size={16} className="text-info" />,
@@ -45,16 +47,39 @@ const levelLabels: Record<string, string> = {
   room: "חדר",
 };
 
-/* ─── Main Component ─── */
+const childLevelOptions: Record<string, LocationLevel[]> = {
+  root: ["building"],
+  building: ["wing", "floor"],
+  wing: ["floor", "zone"],
+  floor: ["zone", "room"],
+  zone: ["room"],
+  room: [],
+};
+
+const spaceTypeLabels: Record<SpaceType, string> = {
+  office: "משרד",
+  meeting_room: "חדר ישיבות",
+  restroom: "שירותים",
+  kitchenette: "מטבחון",
+  lobby: "לובי",
+  other: "אחר",
+};
+
 const MasterDataTab = () => {
-  const { t } = useI18n();
   const qc = useQueryClient();
-  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
-  const [path, setPath] = useState<{ id: string | null; name: string }[]>([
-    { id: null, name: "מבנה הקמפוס" },
+  const [path, setPath] = useState<{ id: string | null; name: string; levelType: string }[]>([
+    { id: null, name: "מבנה הקמפוס", levelType: "root" },
   ]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newLevel, setNewLevel] = useState<LocationLevel>("building");
+  const [newSpaceType, setNewSpaceType] = useState<SpaceType>("other");
+  const [newNfc, setNewNfc] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const currentParentId = path[path.length - 1].id;
+  const currentLevelType = path[path.length - 1].levelType;
+  const allowedChildren = childLevelOptions[currentLevelType] || [];
 
   const { data: locations = [], isLoading } = useQuery({
     queryKey: ["campus-locations", currentParentId],
@@ -76,11 +101,13 @@ const MasterDataTab = () => {
   });
 
   const drillDown = (loc: LocationRow) => {
-    setPath((p) => [...p, { id: loc.id, name: loc.name }]);
+    setPath((p) => [...p, { id: loc.id, name: loc.name, levelType: loc.level_type }]);
+    setShowAdd(false);
   };
 
   const navigateTo = (idx: number) => {
     setPath((p) => p.slice(0, idx + 1));
+    setShowAdd(false);
   };
 
   const deleteItem = async (id: string) => {
@@ -90,6 +117,29 @@ const MasterDataTab = () => {
       return;
     }
     toast({ title: "נמחק בהצלחה" });
+    qc.invalidateQueries({ queryKey: ["campus-locations", currentParentId] });
+  };
+
+  const handleAdd = async () => {
+    if (!newName.trim()) return;
+    setSaving(true);
+    const { error } = await supabase.from("campus_locations").insert({
+      name: newName.trim(),
+      level_type: newLevel,
+      space_type: newSpaceType,
+      parent_location_id: currentParentId,
+      nfc_tag_uid: newNfc.trim() || null,
+      site_id: SITE_ID,
+    });
+    setSaving(false);
+    if (error) {
+      toast({ title: "שגיאה", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "נוצר בהצלחה" });
+    setNewName("");
+    setNewNfc("");
+    setShowAdd(false);
     qc.invalidateQueries({ queryKey: ["campus-locations", currentParentId] });
   };
 
@@ -114,14 +164,84 @@ const MasterDataTab = () => {
         ))}
       </div>
 
+      {/* Add button */}
+      {allowedChildren.length > 0 && !showAdd && (
+        <button
+          onClick={() => {
+            setNewLevel(allowedChildren[0]);
+            setShowAdd(true);
+          }}
+          className="btn-action-primary w-full flex items-center justify-center gap-2 text-sm"
+        >
+          <Plus size={16} /> הוסף {allowedChildren.map((l) => levelLabels[l]).join(" / ")}
+        </button>
+      )}
+
+      {/* Add form */}
+      {showAdd && (
+        <div className="task-card space-y-3 border-2 border-primary/30">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-sm">הוספת פריט חדש</h3>
+            <button onClick={() => setShowAdd(false)} className="p-1 rounded hover:bg-muted">
+              <X size={16} />
+            </button>
+          </div>
+          <input
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="שם הפריט"
+            className="w-full bg-background border border-input rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            autoFocus
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">סוג רמה</label>
+              <select
+                value={newLevel}
+                onChange={(e) => setNewLevel(e.target.value as LocationLevel)}
+                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-sm"
+              >
+                {allowedChildren.map((l) => (
+                  <option key={l} value={l}>{levelLabels[l]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1 block">סוג חלל</label>
+              <select
+                value={newSpaceType}
+                onChange={(e) => setNewSpaceType(e.target.value as SpaceType)}
+                className="w-full bg-background border border-input rounded-lg px-3 py-2 text-sm"
+              >
+                {(Object.entries(spaceTypeLabels) as [SpaceType, string][]).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <input
+            value={newNfc}
+            onChange={(e) => setNewNfc(e.target.value)}
+            placeholder="NFC Tag UID (אופציונלי)"
+            className="w-full bg-background border border-input rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!newName.trim() || saving}
+            className="btn-action-primary w-full flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? "שומר..." : "שמור"}
+          </button>
+        </div>
+      )}
+
       {/* Location list */}
       {isLoading ? (
         <div className="animate-pulse space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-muted rounded-xl" />
-          ))}
+          {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted rounded-xl" />)}
         </div>
-      ) : locations.length === 0 ? (
+      ) : locations.length === 0 && !showAdd ? (
         <div className="text-center py-12 text-muted-foreground">
           <MapPin size={32} className="mx-auto mb-3 opacity-50" />
           <p className="text-sm">אין פריטים ברמה זו</p>
@@ -144,7 +264,7 @@ const MasterDataTab = () => {
                   {loc.space_type && loc.space_type !== "other" && (
                     <>
                       <span>·</span>
-                      <span>{loc.space_type}</span>
+                      <span>{spaceTypeLabels[loc.space_type as SpaceType] || loc.space_type}</span>
                     </>
                   )}
                   {loc.nfc_tag_uid && (
