@@ -26,12 +26,13 @@ import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/i18n/I18nContext";
 import { toast } from "@/hooks/use-toast";
 import { useSupervisorData } from "@/hooks/useSupervisorData";
-import type { SupervisorTask, LocationOption } from "@/hooks/useSupervisorData";
+import type { SupervisorTask, LocationOption, DeferredTaskEvent } from "@/hooks/useSupervisorData";
+import DeferredTasksPanel from "@/components/supervisor/DeferredTasksPanel";
 
 const SupervisorView = () => {
   const { t } = useI18n();
   const { signOut } = useAuth();
-  const { staff, tasks, tickets, audits, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
+  const { staff, tasks, tickets, audits, deferredEvents, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit">("dashboard");
 
   if (loading) {
@@ -76,7 +77,7 @@ const SupervisorView = () => {
           ))}
         </div>
 
-        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} />}
+        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} />}
         {activeTab === "breakfix" && <BreakfixTab locations={locations} onSubmit={createBreakFixTicket} tickets={tickets} />}
         {activeTab === "audit" && <AuditTab tasks={tasks} audits={audits} onSubmit={submitAudit} />}
       </div>
@@ -85,10 +86,11 @@ const SupervisorView = () => {
 };
 
 /* ─── Dashboard Tab ─── */
-const DashboardTab = ({ staff, tasks, tickets }: {
+const DashboardTab = ({ staff, tasks, tickets, deferredEvents }: {
   staff: ReturnType<typeof useSupervisorData>["staff"];
   tasks: SupervisorTask[];
   tickets: ReturnType<typeof useSupervisorData>["tickets"];
+  deferredEvents: DeferredTaskEvent[];
 }) => {
   const { t } = useI18n();
 
@@ -201,6 +203,9 @@ const DashboardTab = ({ staff, tasks, tickets }: {
           </div>
         </div>
       )}
+
+      {/* Deferred Tasks */}
+      <DeferredTasksPanel events={deferredEvents} />
 
       {/* Staff Tracking */}
       <div className="task-card">
