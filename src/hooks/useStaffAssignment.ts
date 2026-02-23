@@ -109,13 +109,7 @@ export function useStaffAssignment() {
           started_at, finished_at, actual_minutes, variance_percent,
           start_tag_uid, finish_tag_uid,
           campus_locations!assigned_tasks_location_id_fkey (
-            name, nfc_tag_uid, level_type, space_type,
-            parent:campus_locations!campus_locations_parent_location_id_fkey (
-              name,
-              parent:campus_locations!campus_locations_parent_location_id_fkey (
-                name
-              )
-            )
+            name, nfc_tag_uid, level_type, space_type, parent_location_id
           )
         `)
         .eq("assignment_id", assignmentData.id)
@@ -123,8 +117,34 @@ export function useStaffAssignment() {
 
       if (tErr) throw tErr;
 
+      // Get parent location names in a second query
+      const locationIds = (tasksData || []).map((t: any) => t.campus_locations?.parent_location_id).filter(Boolean);
+      const uniqueParentIds = [...new Set(locationIds)] as string[];
+      
+      let parentMap: Record<string, { name: string; parent_location_id: string | null }> = {};
+      if (uniqueParentIds.length > 0) {
+        const { data: parents } = await supabase
+          .from("campus_locations")
+          .select("id, name, parent_location_id")
+          .in("id", uniqueParentIds);
+        if (parents) {
+          for (const p of parents) parentMap[p.id] = { name: p.name, parent_location_id: p.parent_location_id };
+        }
+        // Get grandparents
+        const gpIds = Object.values(parentMap).map(p => p.parent_location_id).filter(Boolean) as string[];
+        if (gpIds.length > 0) {
+          const { data: gps } = await supabase.from("campus_locations").select("id, name").in("id", [...new Set(gpIds)]);
+          if (gps) {
+            for (const gp of gps) parentMap[gp.id] = { ...parentMap[gp.id], name: gp.name, parent_location_id: null };
+          }
+        }
+      }
+
       const mapped: AssignedTaskRow[] = (tasksData || []).map((t: any) => {
         const loc = t.campus_locations;
+        const parentId = loc?.parent_location_id;
+        const parent = parentId ? parentMap[parentId] : null;
+        const grandparent = parent?.parent_location_id ? parentMap[parent.parent_location_id] : null;
         return {
           id: t.id,
           assignment_id: t.assignment_id,
@@ -147,8 +167,8 @@ export function useStaffAssignment() {
           location_nfc_tag_uid: loc?.nfc_tag_uid || null,
           location_level_type: loc?.level_type || "",
           location_space_type: loc?.space_type || null,
-          parent_name: loc?.parent?.name || null,
-          grandparent_name: loc?.parent?.parent?.name || null,
+          parent_name: parent?.name || null,
+          grandparent_name: grandparent?.name || null,
         };
       });
 
