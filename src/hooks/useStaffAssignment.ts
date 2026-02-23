@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import type { Json } from "@/integrations/supabase/types";
 
+const SITE_ID = "37027ccd-c7d7-4d77-988d-6da914e347b4";
+
 export interface ChecklistItem {
   item: string;
   done: boolean;
@@ -34,6 +36,9 @@ export interface AssignedTaskRow {
   // parent location breadcrumb
   parent_name: string | null;
   grandparent_name: string | null;
+  // defer metadata (client-side only)
+  defer_reason?: string;
+  deferred_at?: string;
 }
 
 export interface AssignmentInfo {
@@ -65,7 +70,6 @@ export function useStaffAssignment() {
     setError(null);
 
     try {
-      // Get today's active assignment
       const today = new Date().toISOString().split("T")[0];
       const { data: assignmentData, error: aErr } = await supabase
         .from("assignments")
@@ -85,7 +89,6 @@ export function useStaffAssignment() {
         return;
       }
 
-      // Get staff name
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -100,7 +103,6 @@ export function useStaffAssignment() {
         staff_name: profile?.full_name || "",
       });
 
-      // Get assigned tasks with location data
       const { data: tasksData, error: tErr } = await supabase
         .from("assigned_tasks")
         .select(`
@@ -117,7 +119,6 @@ export function useStaffAssignment() {
 
       if (tErr) throw tErr;
 
-      // Get parent location names in a second query
       const locationIds = (tasksData || []).map((t: any) => t.campus_locations?.parent_location_id).filter(Boolean);
       const uniqueParentIds = [...new Set(locationIds)] as string[];
       
@@ -130,7 +131,6 @@ export function useStaffAssignment() {
         if (parents) {
           for (const p of parents) parentMap[p.id] = { name: p.name, parent_location_id: p.parent_location_id };
         }
-        // Get grandparents
         const gpIds = Object.values(parentMap).map(p => p.parent_location_id).filter(Boolean) as string[];
         if (gpIds.length > 0) {
           const { data: gps } = await supabase.from("campus_locations").select("id, name").in("id", [...new Set(gpIds)]);
@@ -198,11 +198,10 @@ export function useStaffAssignment() {
 
     if (error) throw error;
 
-    // Log event
     if (user?.id && assignment) {
       await supabase.from("events_log").insert({
         user_id: user.id,
-        site_id: "37027ccd-c7d7-4d77-988d-6da914e347b4",
+        site_id: SITE_ID,
         assignment_id: assignment.id,
         assigned_task_id: taskId,
         event_type: "task_start" as any,
@@ -237,11 +236,10 @@ export function useStaffAssignment() {
 
     if (error) throw error;
 
-    // Log event
     if (user?.id && assignment) {
       await supabase.from("events_log").insert({
         user_id: user.id,
-        site_id: "37027ccd-c7d7-4d77-988d-6da914e347b4",
+        site_id: SITE_ID,
         assignment_id: assignment.id,
         assigned_task_id: taskId,
         event_type: "task_finish" as any,
@@ -249,8 +247,7 @@ export function useStaffAssignment() {
       });
     }
 
-    // Check if all tasks completed -> mark assignment complete
-    const remaining = tasks.filter((t) => t.id !== taskId && t.status !== "completed");
+    const remaining = tasks.filter((t) => t.id !== taskId && t.status !== "completed" && t.status !== "failed");
     if (remaining.length === 0 && assignment) {
       await supabase
         .from("assignments")
@@ -272,6 +269,7 @@ export function useStaffAssignment() {
     );
   }, []);
 
+  /** Skip task with "failed" status (legacy) */
   const skipTask = useCallback(async (taskId: string, reason: string) => {
     const { error } = await supabase
       .from("assigned_tasks")
@@ -283,7 +281,7 @@ export function useStaffAssignment() {
     if (user?.id && assignment) {
       await supabase.from("events_log").insert({
         user_id: user.id,
-        site_id: "37027ccd-c7d7-4d77-988d-6da914e347b4",
+        site_id: SITE_ID,
         assignment_id: assignment.id,
         assigned_task_id: taskId,
         event_type: "sla_alert" as any,
@@ -294,6 +292,101 @@ export function useStaffAssignment() {
     await fetchData();
   }, [user?.id, assignment, fetchData]);
 
+  /** Cannot Perform with structured reason codes */
+  const cannotPerformTask = useCallback(async (
+    taskId: string,
+    reason: string,
+    note: string,
+    action: "defer_swap" | "defer_end" | "block"
+  ) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    // Determine new status
+    const isDefer = action === "defer_swap" || action === "defer_end";
+    const newStatus = isDefer ? "blocked" : "blocked"; // Using "blocked" for deferred since DB only has these statuses
+
+    // Update task status
+    const { error: updateErr } = await supabase
+      .from("assigned_tasks")
+      .update({ status: newStatus as any })
+      .eq("id", taskId);
+    if (updateErr) throw updateErr;
+
+    // Log event
+    if (user?.id && assignment) {
+      await supabase.from("events_log").insert({
+        user_id: user.id,
+        site_id: SITE_ID,
+        assignment_id: assignment.id,
+        assigned_task_id: taskId,
+        event_type: "sla_alert" as any,
+        event_payload: {
+          action: "cannot_perform",
+          reason,
+          note: note || undefined,
+          defer_action: action,
+          task_name: task.task_name,
+          location: task.location_name,
+        },
+      });
+    }
+
+    if (action === "defer_swap") {
+      // Swap with next task: find next queued task and swap sequence_order
+      const currentIdx = tasks.findIndex((t) => t.id === taskId);
+      const nextQueued = tasks.find((t, i) => i > currentIdx && (t.status === "queued" || t.status === "ready"));
+      
+      if (nextQueued) {
+        // Swap sequence orders
+        await supabase
+          .from("assigned_tasks")
+          .update({ sequence_order: nextQueued.sequence_order } as any)
+          .eq("id", taskId);
+        await supabase
+          .from("assigned_tasks")
+          .update({ sequence_order: task.sequence_order } as any)
+          .eq("id", nextQueued.id);
+      }
+    } else if (action === "defer_end") {
+      // Move to end: set sequence_order to max + 1
+      const maxOrder = Math.max(...tasks.map((t) => t.sequence_order));
+      await supabase
+        .from("assigned_tasks")
+        .update({ sequence_order: maxOrder + 1 } as any)
+        .eq("id", taskId);
+      // Also reset status to queued so it appears later
+      await supabase
+        .from("assigned_tasks")
+        .update({ status: "queued" as any })
+        .eq("id", taskId);
+    }
+
+    await fetchData();
+  }, [user?.id, assignment, tasks, fetchData]);
+
+  /** Send SLA alert event to supervisor dashboard */
+  const sendSlaAlert = useCallback(async (taskId: string, elapsedMinutes: number) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !user?.id || !assignment) return;
+
+    await supabase.from("events_log").insert({
+      user_id: user.id,
+      site_id: SITE_ID,
+      assignment_id: assignment.id,
+      assigned_task_id: taskId,
+      event_type: "sla_alert" as any,
+      event_payload: {
+        action: "overrun_alert",
+        task_name: task.task_name,
+        location: task.location_name,
+        elapsed_minutes: elapsedMinutes,
+        standard_minutes: task.standard_minutes,
+        variance_percent: Math.round(((elapsedMinutes - task.standard_minutes) / task.standard_minutes) * 100),
+      },
+    });
+  }, [user?.id, assignment, tasks]);
+
   return {
     assignment,
     tasks,
@@ -303,6 +396,8 @@ export function useStaffAssignment() {
     finishTask,
     updateChecklist,
     skipTask,
+    cannotPerformTask,
+    sendSlaAlert,
     refetch: fetchData,
   };
 }
