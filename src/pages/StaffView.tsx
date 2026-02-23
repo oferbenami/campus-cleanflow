@@ -19,10 +19,12 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/i18n/I18nContext";
 import { useStaffAssignment } from "@/hooks/useStaffAssignment";
-import LiveTaskTile from "@/components/staff/LiveTaskTile";
+import LiveTaskTile, { getEscalationLevel } from "@/components/staff/LiveTaskTile";
 import NfcScanSimulator from "@/components/staff/NfcScanSimulator";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import MyPointsWidget from "@/components/staff/MyPointsWidget";
+import CannotPerformModal from "@/components/staff/CannotPerformModal";
+import type { CannotPerformResult } from "@/components/staff/CannotPerformModal";
 import breakIllustration from "@/assets/break-illustration.png";
 
 type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis";
@@ -31,7 +33,7 @@ type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const { assignment, tasks, loading, error, startTask, finishTask, skipTask } = useStaffAssignment();
+  const { assignment, tasks, loading, error, startTask, finishTask, cannotPerformTask, sendSlaAlert } = useStaffAssignment();
 
   const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [scanMode, setScanMode] = useState<ScanMode>(null);
@@ -39,10 +41,10 @@ const StaffView = () => {
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(0);
   const [showCannotPerform, setShowCannotPerform] = useState(false);
-  const [cannotPerformReason, setCannotPerformReason] = useState("");
 
-  // Find current task (first non-completed, non-failed)
-  const currentTask = tasks.find((t) => t.status === "in_progress") || tasks.find((t) => t.status === "queued" || t.status === "ready");
+  // Find current task (first non-completed, non-failed, non-blocked)
+  const currentTask = tasks.find((t) => t.status === "in_progress") 
+    || tasks.find((t) => t.status === "queued" || t.status === "ready");
   const isActive = currentTask?.status === "in_progress";
   const completedCount = tasks.filter((t) => t.status === "completed").length;
   const allDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "failed");
@@ -75,25 +77,60 @@ const StaffView = () => {
     return () => clearInterval(interval);
   }, [onBreak]);
 
-  // SLA overdue alert
-  const overdueAlertSent = useRef(false);
+  // ── SLA Escalation Logic ──
+  const slaAlertSent = useRef(false); // 115% alert
+  const audioPlayed = useRef(false);  // 125% audio
+
   useEffect(() => {
     if (!currentTask || !isActive) return;
-    const elapsedMin = Math.floor(taskSeconds / 60);
-    const threshold = currentTask.standard_minutes * 1.15;
-    if (elapsedMin > threshold && !overdueAlertSent.current) {
-      overdueAlertSent.current = true;
+    const elapsedMin = taskSeconds / 60;
+    const standard = currentTask.standard_minutes;
+
+    // 115% -> send SLA alert to supervisor
+    if (elapsedMin >= standard * 1.15 && !slaAlertSent.current) {
+      slaAlertSent.current = true;
+      sendSlaAlert(currentTask.id, Math.floor(elapsedMin));
       toast({
-        title: `⚠️ ${t("worker.overdueAlert")}`,
-        description: `${currentTask.location_name} — חריגה מעל הזמן המתוכנן`,
+        title: "⚠️ חריגה מעל 15%",
+        description: `${currentTask.location_name} — המפקח קיבל התראה`,
         variant: "destructive",
       });
     }
-  }, [taskSeconds, currentTask, isActive]);
 
+    // 125% -> audio alert + vibration
+    if (elapsedMin >= standard * 1.25 && !audioPlayed.current) {
+      audioPlayed.current = true;
+      playAlertSound();
+      if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+      }
+    }
+  }, [taskSeconds, currentTask, isActive, sendSlaAlert]);
+
+  // Reset escalation refs when task changes
   useEffect(() => {
-    overdueAlertSent.current = false;
+    slaAlertSent.current = false;
+    audioPlayed.current = false;
   }, [currentTask?.id]);
+
+  // ── Audio Alert ──
+  const playAlertSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 1.5);
+    } catch {
+      // Audio not available
+    }
+  };
 
   // ── Handlers ──
 
@@ -140,7 +177,7 @@ const StaffView = () => {
       } else {
         await finishTask(scanMode.taskId, tagUid);
         setTaskSeconds(0);
-        toast({ title: "✓ משימה הושלמה!" });
+        toast({ title: "✓ משימה הושלמה! המשימה הבאה נטענה." });
       }
     } catch (err: any) {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -149,14 +186,22 @@ const StaffView = () => {
     setScanMode(null);
   }, [scanMode, startTask, finishTask]);
 
-  const handleCannotPerform = async () => {
-    if (!cannotPerformReason.trim() || !currentTask) return;
+  const handleCannotPerform = async (result: CannotPerformResult) => {
+    if (!currentTask) return;
     try {
-      await skipTask(currentTask.id, cannotPerformReason);
-      toast({ title: "⚠️ דיווח 'לא ניתן לבצע' נשלח", variant: "destructive" });
-    } catch {}
+      await cannotPerformTask(currentTask.id, result.reasonCode, result.note, result.action);
+      
+      const actionMsg = result.action === "defer_swap" 
+        ? "המשימה הוחלפה עם המשימה הבאה" 
+        : result.action === "defer_end"
+        ? "המשימה הועברה לסוף התור"
+        : "דיווח נשלח למפקח";
+      
+      toast({ title: "⚠️ לא ניתן לבצע", description: actionMsg, variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
     setShowCannotPerform(false);
-    setCannotPerformReason("");
   };
 
   // ── Loading ──
@@ -293,12 +338,20 @@ const StaffView = () => {
     );
   }
 
-  const taskTimeDisplay = `${String(Math.floor(taskSeconds / 60)).padStart(2, "0")}:${String(taskSeconds % 60).padStart(2, "0")}`;
-
   // ── HOME SCREEN ──
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {scanModal}
+
+      {/* Cannot Perform Modal */}
+      {showCannotPerform && currentTask && (
+        <CannotPerformModal
+          task={currentTask}
+          nextTask={nextTask && (nextTask.status === "queued" || nextTask.status === "ready") ? nextTask : null}
+          onSubmit={handleCannotPerform}
+          onCancel={() => setShowCannotPerform(false)}
+        />
+      )}
 
       {/* Header */}
       <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
@@ -326,6 +379,7 @@ const StaffView = () => {
             t.status === "completed" ? "bg-success" :
             t.status === "in_progress" ? "bg-accent animate-pulse-slow" :
             t.status === "failed" ? "bg-destructive" :
+            t.status === "blocked" ? "bg-warning" :
             "bg-muted"
           }`} />
         ))}
@@ -343,6 +397,7 @@ const StaffView = () => {
             elapsedSeconds={isActive ? taskSeconds : 0}
             onScanToStart={() => handleScanToStart(currentTask)}
             onScanToFinish={() => handleScanToFinish(currentTask)}
+            onCannotPerform={() => setShowCannotPerform(true)}
             onTap={() => {}}
           />
         )}
@@ -374,13 +429,6 @@ const StaffView = () => {
       {/* Fixed bottom action banner */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
         <button
-          onClick={() => setShowCannotPerform(true)}
-          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors"
-        >
-          <XCircle size={20} className="text-destructive" />
-          <span className="text-[10px] font-medium text-destructive">{t("worker.cannotPerform")}</span>
-        </button>
-        <button
           onClick={() => setOnBreak(true)}
           className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
         >
@@ -388,38 +436,6 @@ const StaffView = () => {
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
       </div>
-
-      {/* Cannot perform dialog */}
-      {showCannotPerform && currentTask && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4" onClick={() => setShowCannotPerform(false)}>
-          <div className="w-full max-w-sm bg-background rounded-2xl p-5 animate-scale-in space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2 text-destructive">
-              <XCircle size={22} />
-              <h3 className="font-bold text-lg">{t("worker.cannotPerform")}</h3>
-            </div>
-            <p className="text-sm text-muted-foreground">הדיווח יישלח מיידית למנהל</p>
-            <textarea
-              value={cannotPerformReason}
-              onChange={(e) => setCannotPerformReason(e.target.value)}
-              placeholder="תאר את הסיבה..."
-              className="w-full h-24 px-3 py-2 rounded-xl border border-border bg-muted/30 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-destructive/50"
-              dir="rtl"
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setShowCannotPerform(false)} className="flex-1 py-3 rounded-xl border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
-                {t("common.cancel")}
-              </button>
-              <button
-                onClick={handleCannotPerform}
-                disabled={!cannotPerformReason.trim()}
-                className="flex-1 py-3 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:bg-destructive/90 disabled:opacity-50"
-              >
-                {t("common.send")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
