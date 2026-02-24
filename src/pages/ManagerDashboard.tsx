@@ -30,6 +30,8 @@ import DeviationAlertPanel from "@/components/manager/DeviationAlertPanel";
 import UserManagement from "@/components/manager/UserManagement";
 import IncentivesPanel from "@/components/manager/IncentivesPanel";
 import ReportsPanel from "@/components/manager/ReportsPanel";
+import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
+import { useShortageReports } from "@/hooks/useShortageReports";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -48,6 +50,7 @@ const ManagerDashboard = () => {
   const [showEndOfDay, setShowEndOfDay] = useState(false);
   const [now, setNow] = useState(new Date());
   const [assignments, setAssignments] = useState(mockAssignments);
+  const { reports, loading: shortageLoading, resolveReport } = useShortageReports();
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 15 * 60 * 1000);
@@ -306,6 +309,13 @@ const ManagerDashboard = () => {
                 </div>
               );
             })()}
+
+            <ShortageReportsPanel
+              reports={reports}
+              loading={shortageLoading}
+              canResolve
+              onResolve={resolveReport}
+            />
 
             <StaffTrackingGrid
               assignments={assignments}

@@ -476,6 +476,92 @@ export type Database = {
         }
         Relationships: []
       }
+      supply_shortage_reports: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          category: string
+          created_at: string
+          forwarded_at: string | null
+          id: string
+          item_key: string
+          item_label: string
+          location: string
+          notes: string | null
+          quantity: number
+          reported_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          site_id: string
+          status: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          category: string
+          created_at?: string
+          forwarded_at?: string | null
+          id?: string
+          item_key: string
+          item_label: string
+          location?: string
+          notes?: string | null
+          quantity?: number
+          reported_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          site_id: string
+          status?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          category?: string
+          created_at?: string
+          forwarded_at?: string | null
+          id?: string
+          item_key?: string
+          item_label?: string
+          location?: string
+          notes?: string | null
+          quantity?: number
+          reported_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          site_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supply_shortage_reports_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_shortage_reports_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_shortage_reports_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supply_shortage_reports_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_templates: {
         Row: {
           active: boolean
