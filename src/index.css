@@ -168,4 +168,14 @@
   .mono {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  .bg-stripes {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent,
+      transparent 4px,
+      hsl(var(--muted-foreground) / 0.1) 4px,
+      hsl(var(--muted-foreground) / 0.1) 6px
+    );
+  }
 }

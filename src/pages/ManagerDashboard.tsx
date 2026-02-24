@@ -18,6 +18,7 @@ import {
   UserCog,
   LogOut,
   Trophy,
+  LayoutGrid,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -31,6 +32,7 @@ import DeviationAlertPanel from "@/components/manager/DeviationAlertPanel";
 import UserManagement from "@/components/manager/UserManagement";
 import IncentivesPanel from "@/components/manager/IncentivesPanel";
 import ReportsPanel from "@/components/manager/ReportsPanel";
+import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
 import { useShortageReports } from "@/hooks/useShortageReports";
 import {
@@ -41,7 +43,7 @@ import {
 } from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
-type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users" | "incentives" | "reports";
+type ManagerTab = "overview" | "workload" | "tracking" | "controlBoard" | "endOfDay" | "users" | "incentives" | "reports";
 
 const ManagerDashboard = () => {
   const { signOut } = useAuth();
@@ -103,6 +105,7 @@ const ManagerDashboard = () => {
 
   const tabs: { key: ManagerTab; icon: React.ElementType; label: string }[] = [
     { key: "overview", icon: Gauge, label: "סקירה" },
+    { key: "controlBoard", icon: LayoutGrid, label: "לוח בקרה" },
     { key: "workload", icon: CalendarClock, label: "עומסים" },
     { key: "tracking", icon: ClipboardList, label: "מעקב" },
     { key: "endOfDay", icon: BarChart3, label: "סוף יום" },
@@ -328,6 +331,8 @@ const ManagerDashboard = () => {
             />
           </div>
         )}
+
+        {activeTab === "controlBoard" && <VisualControlBoard />}
 
         {activeTab === "endOfDay" && (
           <div className="animate-slide-up space-y-6">
