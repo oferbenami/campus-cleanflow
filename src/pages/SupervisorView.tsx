@@ -28,11 +28,14 @@ import { toast } from "@/hooks/use-toast";
 import { useSupervisorData } from "@/hooks/useSupervisorData";
 import type { SupervisorTask, LocationOption, DeferredTaskEvent } from "@/hooks/useSupervisorData";
 import DeferredTasksPanel from "@/components/supervisor/DeferredTasksPanel";
+import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
+import { useShortageReports, type ShortageReport } from "@/hooks/useShortageReports";
 
 const SupervisorView = () => {
   const { t } = useI18n();
   const { signOut } = useAuth();
   const { staff, tasks, tickets, audits, deferredEvents, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
+  const { reports, loading: shortageLoading, acknowledgeReport, forwardReport } = useShortageReports();
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit">("dashboard");
 
   if (loading) {
@@ -77,7 +80,7 @@ const SupervisorView = () => {
           ))}
         </div>
 
-        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} />}
+        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} shortageReports={reports} shortageLoading={shortageLoading} onAcknowledge={acknowledgeReport} onForward={forwardReport} />}
         {activeTab === "breakfix" && <BreakfixTab locations={locations} onSubmit={createBreakFixTicket} tickets={tickets} />}
         {activeTab === "audit" && <AuditTab tasks={tasks} audits={audits} onSubmit={submitAudit} />}
       </div>
@@ -86,11 +89,15 @@ const SupervisorView = () => {
 };
 
 /* ─── Dashboard Tab ─── */
-const DashboardTab = ({ staff, tasks, tickets, deferredEvents }: {
+const DashboardTab = ({ staff, tasks, tickets, deferredEvents, shortageReports, shortageLoading, onAcknowledge, onForward }: {
   staff: ReturnType<typeof useSupervisorData>["staff"];
   tasks: SupervisorTask[];
   tickets: ReturnType<typeof useSupervisorData>["tickets"];
   deferredEvents: DeferredTaskEvent[];
+  shortageReports: ShortageReport[];
+  shortageLoading: boolean;
+  onAcknowledge: (id: string) => Promise<void>;
+  onForward: (id: string) => Promise<void>;
 }) => {
   const { t } = useI18n();
 
@@ -206,6 +213,15 @@ const DashboardTab = ({ staff, tasks, tickets, deferredEvents }: {
 
       {/* Deferred Tasks */}
       <DeferredTasksPanel events={deferredEvents} />
+
+      {/* Shortage Reports */}
+      <ShortageReportsPanel
+        reports={shortageReports}
+        loading={shortageLoading}
+        canAcknowledge
+        onAcknowledge={onAcknowledge}
+        onForward={onForward}
+      />
 
       {/* Staff Tracking */}
       <div className="task-card">

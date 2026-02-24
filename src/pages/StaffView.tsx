@@ -24,16 +24,20 @@ import NfcScanSimulator from "@/components/staff/NfcScanSimulator";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import CannotPerformModal from "@/components/staff/CannotPerformModal";
+import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 import type { CannotPerformResult } from "@/components/staff/CannotPerformModal";
+import { useShortageReports } from "@/hooks/useShortageReports";
 import breakIllustration from "@/assets/break-illustration.png";
 
-type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage";
 type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | null; locationName: string } | null;
 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
   const { assignment, tasks, loading, error, startTask, finishTask, cannotPerformTask, sendSlaAlert } = useStaffAssignment();
+  const { submitShortageReport } = useShortageReports();
+  const [shortageSubmitting, setShortageSubmitting] = useState(false);
 
   const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [scanMode, setScanMode] = useState<ScanMode>(null);
@@ -283,6 +287,27 @@ const StaffView = () => {
     );
   }
 
+  // ── Shortage Screen ──
+  if (screen === "shortage") {
+    return (
+      <ShortageReportScreen
+        onClose={() => setScreen("home")}
+        submitting={shortageSubmitting}
+        onSubmit={async (items, location, category) => {
+          setShortageSubmitting(true);
+          try {
+            await submitShortageReport(items, location, category);
+            toast({ title: "✓ דיווח חוסרים נשלח!" });
+            setScreen("home");
+          } catch (err: any) {
+            toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+          }
+          setShortageSubmitting(false);
+        }}
+      />
+    );
+  }
+
   // ── Analysis Screen ──
   if (screen === "analysis") {
     return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
@@ -434,6 +459,13 @@ const StaffView = () => {
         >
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
+        </button>
+        <button
+          onClick={() => setScreen("shortage")}
+          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
+        >
+          <PackageOpen size={20} className="text-warning" />
+          <span className="text-[10px] font-medium text-warning">חוסרים</span>
         </button>
       </div>
     </div>

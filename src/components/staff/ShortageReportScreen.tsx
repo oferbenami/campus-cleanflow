@@ -71,7 +71,7 @@ interface SelectedItem {
 
 interface Props {
   onClose: () => void;
-  onSubmit: (items: SelectedItem[], location: string) => void;
+  onSubmit: (items: SelectedItem[], location: string, category: string) => void;
   submitting?: boolean;
 }
 
@@ -107,7 +107,10 @@ const ShortageReportScreen = ({ onClose, onSubmit, submitting }: Props) => {
 
   const handleSubmit = () => {
     if (selectedItems.size === 0) return;
-    onSubmit(Array.from(selectedItems.values()), location);
+    // Determine category from selected items
+    const firstKey = Array.from(selectedItems.keys())[0];
+    const cat = shortageCategories.find((c) => c.items.some((i) => i.key === firstKey));
+    onSubmit(Array.from(selectedItems.values()), location, cat?.title || "כללי");
   };
 
   const totalItems = selectedItems.size;
