@@ -7,14 +7,16 @@ import {
   Database,
   LogOut,
   BarChart3,
+  Layers,
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
 import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
+import TemplatesTab from "@/components/property-manager/TemplatesTab";
 
-type PMTab = "staff" | "planning" | "assign" | "masterdata" | "eod";
+type PMTab = "staff" | "templates" | "planning" | "assign" | "masterdata" | "eod";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
@@ -28,6 +30,7 @@ const PropertyManagerView = () => {
 
   const tabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
     { key: "staff", label: "עובדים", icon: <Users size={16} /> },
+    { key: "templates", label: "תבניות", icon: <Layers size={16} /> },
     { key: "planning", label: "תכנון מחר", icon: <CalendarPlus size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
     { key: "masterdata", label: "נכסים", icon: <Database size={16} /> },
@@ -55,12 +58,12 @@ const PropertyManagerView = () => {
       </header>
 
       <div className="max-w-7xl mx-auto p-6">
-        <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6">
+        <div className="flex gap-1 bg-muted rounded-xl p-1 mb-6 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap min-w-0 ${
                 activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
@@ -71,6 +74,7 @@ const PropertyManagerView = () => {
         </div>
 
         {activeTab === "staff" && <StaffListTab />}
+        {activeTab === "templates" && <TemplatesTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
         {activeTab === "assign" && <ZonePlanningTab />}
         {activeTab === "masterdata" && <MasterDataTab />}
