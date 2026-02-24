@@ -52,7 +52,33 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { worker_id, score_date } = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { worker_id, score_date } = body;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!worker_id || typeof worker_id !== "string" || !uuidRegex.test(worker_id)) {
+      return new Response(JSON.stringify({ error: "Invalid worker_id format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (score_date && (typeof score_date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(score_date))) {
+      return new Response(JSON.stringify({ error: "Invalid date format. Use YYYY-MM-DD" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const targetDate = score_date || new Date().toISOString().split("T")[0];
 
     // Get config
