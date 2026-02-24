@@ -34,6 +34,7 @@ import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
 import { useShortageReports, type ShortageReport } from "@/hooks/useShortageReports";
 import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 import VisualControlBoard from "@/components/control-board/VisualControlBoard";
+import IncidentDispatchBoard from "@/components/incidents/IncidentDispatchBoard";
 
 const SupervisorView = () => {
   const { t } = useI18n();
@@ -41,7 +42,7 @@ const SupervisorView = () => {
   const { signOut } = useAuth();
   const { staff, tasks, tickets, audits, deferredEvents, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
   const { reports, loading: shortageLoading, acknowledgeReport, forwardReport, submitShortageReport } = useShortageReports();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "controlBoard" | "breakfix" | "audit">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "controlBoard" | "incidents" | "breakfix" | "audit">("dashboard");
   const [showShortageReport, setShowShortageReport] = useState(false);
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
 
@@ -96,6 +97,7 @@ const SupervisorView = () => {
             {([
               { key: "dashboard" as const, icon: BarChart3, label: t("supervisor.dashboard") },
               { key: "controlBoard" as const, icon: LayoutGrid, label: "לוח בקרה" },
+              { key: "incidents" as const, icon: ShieldAlert, label: "אירועים" },
               { key: "breakfix" as const, icon: Zap, label: t("supervisor.breakFix") },
               { key: "audit" as const, icon: ClipboardCheck, label: t("supervisor.audit") },
             ]).map(({ key, icon: Icon, label }) => (
@@ -114,9 +116,10 @@ const SupervisorView = () => {
         </div>
       </div>
 
-      <div className={`${activeTab === "controlBoard" ? "max-w-7xl" : "max-w-3xl"} mx-auto px-4 pb-4`}>
+      <div className={`${activeTab === "controlBoard" || activeTab === "incidents" ? "max-w-7xl" : "max-w-3xl"} mx-auto px-4 pb-4`}>
         {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} shortageReports={reports} shortageLoading={shortageLoading} onAcknowledge={acknowledgeReport} onForward={forwardReport} onReportShortage={() => setShowShortageReport(true)} />}
         {activeTab === "controlBoard" && <VisualControlBoard />}
+        {activeTab === "incidents" && <IncidentDispatchBoard />}
         {activeTab === "breakfix" && <BreakfixTab locations={locations} onSubmit={createBreakFixTicket} tickets={tickets} />}
         {activeTab === "audit" && <AuditTab tasks={tasks} audits={audits} onSubmit={submitAudit} />}
       </div>

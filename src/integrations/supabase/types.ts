@@ -495,6 +495,162 @@ export type Database = {
           },
         ]
       }
+      incident_events_log: {
+        Row: {
+          created_at: string
+          event_payload: Json | null
+          event_type: Database["public"]["Enums"]["incident_event_type"]
+          id: string
+          incident_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_payload?: Json | null
+          event_type: Database["public"]["Enums"]["incident_event_type"]
+          id?: string
+          incident_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_payload?: Json | null
+          event_type?: Database["public"]["Enums"]["incident_event_type"]
+          id?: string
+          incident_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_events_log_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incident_events_log_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          assigned_at: string | null
+          assigned_to_user_id: string | null
+          category: Database["public"]["Enums"]["incident_category"]
+          close_reason: string | null
+          closed_at: string | null
+          created_at: string
+          created_by_user_id: string
+          description: string
+          escalated_at: string | null
+          escalation_level: number
+          id: string
+          location_id: string
+          photo_url: string | null
+          priority: Database["public"]["Enums"]["incident_priority"]
+          recurrence_flag: boolean
+          related_incident_id: string | null
+          resolution_sla_minutes: number
+          resolved_at: string | null
+          response_sla_minutes: number
+          site_id: string
+          source_role: Database["public"]["Enums"]["app_role"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["incident_status"]
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_to_user_id?: string | null
+          category?: Database["public"]["Enums"]["incident_category"]
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_user_id: string
+          description: string
+          escalated_at?: string | null
+          escalation_level?: number
+          id?: string
+          location_id: string
+          photo_url?: string | null
+          priority?: Database["public"]["Enums"]["incident_priority"]
+          recurrence_flag?: boolean
+          related_incident_id?: string | null
+          resolution_sla_minutes?: number
+          resolved_at?: string | null
+          response_sla_minutes?: number
+          site_id: string
+          source_role?: Database["public"]["Enums"]["app_role"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_to_user_id?: string | null
+          category?: Database["public"]["Enums"]["incident_category"]
+          close_reason?: string | null
+          closed_at?: string | null
+          created_at?: string
+          created_by_user_id?: string
+          description?: string
+          escalated_at?: string | null
+          escalation_level?: number
+          id?: string
+          location_id?: string
+          photo_url?: string | null
+          priority?: Database["public"]["Enums"]["incident_priority"]
+          recurrence_flag?: boolean
+          related_incident_id?: string | null
+          resolution_sla_minutes?: number
+          resolved_at?: string | null
+          response_sla_minutes?: number
+          site_id?: string
+          source_role?: Database["public"]["Enums"]["app_role"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["incident_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_assigned_to_user_id_fkey"
+            columns: ["assigned_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_related_incident_id_fkey"
+            columns: ["related_incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_initials: string | null
@@ -827,6 +983,33 @@ export type Database = {
         | "break_fix_created"
         | "break_fix_assigned"
         | "sla_alert"
+      incident_category:
+        | "spill"
+        | "restroom"
+        | "safety"
+        | "damage"
+        | "equipment"
+        | "other"
+      incident_event_type:
+        | "created"
+        | "assigned"
+        | "escalated"
+        | "reassigned"
+        | "started"
+        | "resolved"
+        | "closed"
+        | "deferred"
+        | "merged"
+        | "marked_duplicate"
+        | "comment"
+      incident_priority: "critical" | "urgent" | "high" | "normal" | "low"
+      incident_status:
+        | "pending_dispatch"
+        | "assigned"
+        | "in_progress"
+        | "resolved"
+        | "closed"
+        | "escalated"
       location_level: "building" | "wing" | "floor" | "zone" | "room"
       shift_type: "morning" | "evening"
       space_type:
@@ -990,6 +1173,36 @@ export const Constants = {
         "break_fix_created",
         "break_fix_assigned",
         "sla_alert",
+      ],
+      incident_category: [
+        "spill",
+        "restroom",
+        "safety",
+        "damage",
+        "equipment",
+        "other",
+      ],
+      incident_event_type: [
+        "created",
+        "assigned",
+        "escalated",
+        "reassigned",
+        "started",
+        "resolved",
+        "closed",
+        "deferred",
+        "merged",
+        "marked_duplicate",
+        "comment",
+      ],
+      incident_priority: ["critical", "urgent", "high", "normal", "low"],
+      incident_status: [
+        "pending_dispatch",
+        "assigned",
+        "in_progress",
+        "resolved",
+        "closed",
+        "escalated",
       ],
       location_level: ["building", "wing", "floor", "zone", "room"],
       shift_type: ["morning", "evening"],
