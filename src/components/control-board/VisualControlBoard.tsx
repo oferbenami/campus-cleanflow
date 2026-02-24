@@ -6,10 +6,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 
 // ── Constants ──
-const HOUR_START = 6;
-const HOUR_END = 22;
-const TOTAL_HOURS = HOUR_END - HOUR_START;
-const MORNING_END = 14;
+const SHIFTS = {
+  morning: { start: 6, end: 14, label: "בוקר 06:00–14:00" },
+  evening: { start: 14, end: 22, label: "ערב 14:00–22:00" },
+} as const;
+type ShiftKey = keyof typeof SHIFTS;
+
 const LEFT_PANEL_W = "w-[140px]";
 const ISSUE_COL_W = "w-[28px]";
 const ROW_H = "h-[48px]";
@@ -26,7 +28,6 @@ function getTileColor(task: CBTask, now: Date): TileColor {
     }
     return "yellow";
   }
-  // queued / ready / blocked
   return "neutral";
 }
 
@@ -45,21 +46,26 @@ function parseTimeToMinutes(ts: string | null): number | null {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-function minutesToLeftPercent(minutes: number): number {
-  return ((minutes - HOUR_START * 60) / (TOTAL_HOURS * 60)) * 100;
+function minutesToLeftPercent(minutes: number, hourStart: number, totalHours: number): number {
+  return ((minutes - hourStart * 60) / (totalHours * 60)) * 100;
 }
 
-function minutesToWidthPercent(minutes: number): number {
-  return (minutes / (TOTAL_HOURS * 60)) * 100;
+function minutesToWidthPercent(minutes: number, totalHours: number): number {
+  return (minutes / (totalHours * 60)) * 100;
 }
 
 // ── Main Component ──
 const VisualControlBoard = () => {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [shiftFilter, setShiftFilter] = useState<"all" | "morning" | "evening">("all");
+  const [activeShift, setActiveShift] = useState<ShiftKey>("morning");
   const [selectedTask, setSelectedTask] = useState<CBTask | null>(null);
   const [now, setNow] = useState(new Date());
   const { workers, tasks, tickets, loading } = useControlBoardData(selectedDate);
+
+  const shift = SHIFTS[activeShift];
+  const HOUR_START = shift.start;
+  const HOUR_END = shift.end;
+  const TOTAL_HOURS = HOUR_END - HOUR_START;
 
   // Update "now" every 30s
   useEffect(() => {
@@ -67,11 +73,10 @@ const VisualControlBoard = () => {
     return () => clearInterval(iv);
   }, []);
 
-  // Filter workers by shift
+  // Filter workers by active shift
   const filteredWorkers = useMemo(() => {
-    if (shiftFilter === "all") return workers;
-    return workers.filter((w) => w.shift_type === shiftFilter);
-  }, [workers, shiftFilter]);
+    return workers.filter((w) => w.shift_type === activeShift);
+  }, [workers, activeShift]);
 
   // Group tasks by worker
   const tasksByWorker = useMemo(() => {
@@ -96,7 +101,7 @@ const VisualControlBoard = () => {
 
   // Now line position
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const nowLeftPct = minutesToLeftPercent(nowMinutes);
+  const nowLeftPct = minutesToLeftPercent(nowMinutes, HOUR_START, TOTAL_HOURS);
   const showNowLine = selectedDate === new Date().toISOString().split("T")[0] && nowMinutes >= HOUR_START * 60 && nowMinutes <= HOUR_END * 60;
 
   // Date navigation
@@ -131,17 +136,17 @@ const VisualControlBoard = () => {
           <button onClick={() => changeDate(1)} className="p-1 hover:bg-muted rounded"><ChevronLeft size={14} /></button>
         </div>
 
-        {/* Shift filter */}
+        {/* Shift toggle */}
         <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-          {(["all", "morning", "evening"] as const).map((s) => (
+          {(["morning", "evening"] as const).map((s) => (
             <button
               key={s}
-              onClick={() => setShiftFilter(s)}
+              onClick={() => setActiveShift(s)}
               className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                shiftFilter === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                activeShift === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
               }`}
             >
-              {s === "all" ? "הכל" : s === "morning" ? "בוקר" : "ערב"}
+              {s === "morning" ? "☀️ בוקר" : "🌙 ערב"}
             </button>
           ))}
         </div>
@@ -162,7 +167,7 @@ const VisualControlBoard = () => {
         {/* Top header row */}
         <div className="flex border-b bg-muted/50">
           {/* Fixed left columns header */}
-          <div className={`shrink-0 flex border-l`}>
+          <div className="shrink-0 flex border-l">
             <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center py-2 border-l`}>
               <Zap size={10} className="text-destructive" />
             </div>
@@ -174,19 +179,14 @@ const VisualControlBoard = () => {
           {/* Timeline header */}
           <div className="flex-1 min-w-0">
             <div className="relative w-full">
-              {/* Shift labels */}
+              {/* Shift label */}
               <div className="flex h-6 text-[9px] font-bold">
                 <div
-                  className="bg-info/10 text-info flex items-center justify-center border-l border-info/20"
-                  style={{ width: `${((MORNING_END - HOUR_START) / TOTAL_HOURS) * 100}%` }}
+                  className={`w-full flex items-center justify-center border-l ${
+                    activeShift === "morning" ? "bg-info/10 text-info border-info/20" : "bg-accent/10 text-accent-foreground border-accent/20"
+                  }`}
                 >
-                  בוקר 06–14
-                </div>
-                <div
-                  className="bg-accent/10 text-accent-foreground flex items-center justify-center border-l border-accent/20"
-                  style={{ width: `${((HOUR_END - MORNING_END) / TOTAL_HOURS) * 100}%` }}
-                >
-                  ערב 14–22
+                  {shift.label}
                 </div>
               </div>
               {/* Hour ticks */}
@@ -217,10 +217,6 @@ const VisualControlBoard = () => {
               )}
               {filteredWorkers.map((worker) => {
                 const workerTickets = ticketsByWorker[worker.id] || [];
-                const workerTasks = tasksByWorker[worker.id] || [];
-                const totalPlanned = workerTasks.reduce((s, t) => s + t.standard_minutes, 0);
-                const shiftCapacity = 480;
-                const overCapacity = totalPlanned - shiftCapacity;
 
                 return (
                   <div key={worker.assignment_id} className={`flex border-b ${ROW_H}`}>
@@ -243,9 +239,6 @@ const VisualControlBoard = () => {
 
                     {/* Worker name only */}
                     <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-1.5 px-2`}>
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                        worker.shift_type === "morning" ? "bg-info" : "bg-accent"
-                      }`} />
                       <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
                     </div>
                   </div>
@@ -254,7 +247,7 @@ const VisualControlBoard = () => {
             </div>
           </div>
 
-          {/* Timeline - fits screen width */}
+          {/* Timeline */}
           <div className="flex-1 min-w-0 overflow-hidden">
             <div className="w-full">
               {filteredWorkers.map((worker) => {
@@ -266,9 +259,7 @@ const VisualControlBoard = () => {
                     {Array.from({ length: TOTAL_HOURS }, (_, i) => (
                       <div
                         key={i}
-                        className={`absolute top-0 bottom-0 border-l ${
-                          HOUR_START + i === MORNING_END ? "border-accent/40 border-l-2" : "border-border/30"
-                        }`}
+                        className="absolute top-0 bottom-0 border-l border-border/30"
                         style={{ left: `${(i / TOTAL_HOURS) * 100}%` }}
                       />
                     ))}
@@ -286,9 +277,9 @@ const VisualControlBoard = () => {
                       const startMin = parseTimeToMinutes(task.window_start) || parseTimeToMinutes(task.started_at);
                       if (startMin === null) {
                         const seqOffset = (task.sequence_order || 0) * task.standard_minutes;
-                        const baseStart = worker.shift_type === "morning" ? HOUR_START * 60 : MORNING_END * 60;
-                        const leftPct = minutesToLeftPercent(baseStart + seqOffset);
-                        const widthPct = minutesToWidthPercent(task.standard_minutes);
+                        const baseStart = HOUR_START * 60;
+                        const leftPct = minutesToLeftPercent(baseStart + seqOffset, HOUR_START, TOTAL_HOURS);
+                        const widthPct = minutesToWidthPercent(task.standard_minutes, TOTAL_HOURS);
                         const color = getTileColor(task, now);
                         return (
                           <TaskTileGantt
@@ -303,8 +294,8 @@ const VisualControlBoard = () => {
                       }
 
                       const endMin = parseTimeToMinutes(task.window_end) || (startMin + task.standard_minutes);
-                      const leftPct = minutesToLeftPercent(startMin);
-                      const widthPct = minutesToWidthPercent(endMin - startMin);
+                      const leftPct = minutesToLeftPercent(startMin, HOUR_START, TOTAL_HOURS);
+                      const widthPct = minutesToWidthPercent(endMin - startMin, TOTAL_HOURS);
                       const color = getTileColor(task, now);
 
                       return (
