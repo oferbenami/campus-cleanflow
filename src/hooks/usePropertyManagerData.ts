@@ -2,6 +2,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { generateAssignmentTasks } from "@/lib/task-generation";
 
 const SITE_ID = "37027ccd-c7d7-4d77-988d-6da914e347b4";
 
@@ -20,6 +21,8 @@ export interface TemplateWithTasks {
   id: string;
   name: string;
   shift_type: string | null;
+  template_type: string;
+  description: string | null;
   tasks: {
     id: string;
     task_name: string;
@@ -29,6 +32,10 @@ export interface TemplateWithTasks {
     location_name: string;
     recurrence_rule: any;
     checklist_json: any;
+    days_of_week: number[];
+    window_start: string | null;
+    window_end: string | null;
+    is_optional: boolean;
   }[];
 }
 
@@ -37,7 +44,6 @@ export function useStaffProfiles() {
   return useQuery({
     queryKey: ["pm-staff-profiles"],
     queryFn: async () => {
-      // Get all cleaning_staff user_ids
       const { data: roles } = await supabase
         .from("user_roles")
         .select("user_id, role")
@@ -59,32 +65,36 @@ export function useStaffProfiles() {
   });
 }
 
-/* ─── Task templates with their tasks ─── */
-export function useTaskTemplates() {
+/* ─── Task templates with their tasks (filtered by type) ─── */
+export function useTaskTemplates(templateType?: "base" | "addon") {
   return useQuery({
-    queryKey: ["pm-task-templates"],
+    queryKey: ["pm-task-templates", templateType],
     queryFn: async () => {
-      const { data: templates } = await supabase
+      let query = supabase
         .from("task_templates")
-        .select("id, name, shift_type, active")
+        .select("id, name, shift_type, active, template_type, description")
         .eq("site_id", SITE_ID)
         .eq("active", true)
         .order("name");
 
+      if (templateType) {
+        query = query.eq("template_type", templateType);
+      }
+
+      const { data: templates } = await query;
       if (!templates?.length) return [] as TemplateWithTasks[];
 
       const templateIds = templates.map((t) => t.id);
       const { data: tasks } = await supabase
         .from("template_tasks")
-        .select("id, task_name, standard_minutes, priority, location_id, recurrence_rule, checklist_json, template_id")
+        .select("id, task_name, standard_minutes, priority, location_id, recurrence_rule, checklist_json, template_id, days_of_week, window_start, window_end, is_optional")
         .in("template_id", templateIds);
 
-      // Get location names
       const locationIds = [...new Set((tasks || []).map((t) => t.location_id))];
       const { data: locations } = await supabase
         .from("campus_locations")
         .select("id, name")
-        .in("id", locationIds);
+        .in("id", locationIds.length ? locationIds : ["00000000-0000-0000-0000-000000000000"]);
 
       const locMap = Object.fromEntries((locations || []).map((l) => [l.id, l.name]));
 
@@ -92,11 +102,17 @@ export function useTaskTemplates() {
         id: tmpl.id,
         name: tmpl.name,
         shift_type: tmpl.shift_type,
+        template_type: tmpl.template_type || "base",
+        description: (tmpl as any).description || null,
         tasks: (tasks || [])
           .filter((t) => t.template_id === tmpl.id)
           .map((t) => ({
             ...t,
             location_name: locMap[t.location_id] || "—",
+            days_of_week: (t as any).days_of_week || [0, 1, 2, 3, 4],
+            window_start: (t as any).window_start || null,
+            window_end: (t as any).window_end || null,
+            is_optional: (t as any).is_optional || false,
           })),
       })) as TemplateWithTasks[];
     },
@@ -119,7 +135,33 @@ export function useTodayAssignments(date?: string) {
   });
 }
 
-/* ─── Create assignment + materialize tasks ─── */
+/* ─── Assignment add-ons for a given date ─── */
+export function useAssignmentAddons(date?: string) {
+  const d = date || new Date().toISOString().split("T")[0];
+  return useQuery({
+    queryKey: ["pm-assignment-addons", d],
+    queryFn: async () => {
+      // First get assignment IDs for this date
+      const { data: assignments } = await supabase
+        .from("assignments")
+        .select("id")
+        .eq("site_id", SITE_ID)
+        .eq("date", d);
+
+      if (!assignments?.length) return [];
+
+      const assignmentIds = assignments.map((a) => a.id);
+      const { data } = await supabase
+        .from("assignment_addons")
+        .select("id, assignment_id, addon_template_id, apply_mode, notes")
+        .in("assignment_id", assignmentIds);
+
+      return data || [];
+    },
+  });
+}
+
+/* ─── Create assignment with BASE + optional ADD-ONS ─── */
 export function useCreateAssignment() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -130,6 +172,7 @@ export function useCreateAssignment() {
       templateId: string;
       shiftType: "morning" | "evening";
       date: string;
+      addonTemplateIds?: string[];
     }) => {
       // Create assignment
       const { data: assignment, error: aErr } = await supabase
@@ -148,51 +191,168 @@ export function useCreateAssignment() {
 
       if (aErr) throw aErr;
 
-      // Fetch template tasks
-      const { data: tasks } = await supabase
-        .from("template_tasks")
-        .select("*")
-        .eq("template_id", params.templateId);
-
-      if (tasks?.length) {
-        // Materialize: create assigned_tasks
-        const shiftStart = params.shiftType === "morning" ? "07:00" : "16:00";
-        let cursor = shiftStart;
-
-        const assignedTasks = tasks.map((t, i) => {
-          const [h, m] = cursor.split(":").map(Number);
-          const startDate = new Date(`${params.date}T${cursor}:00`);
-          const endDate = new Date(startDate.getTime() + t.standard_minutes * 60000);
-          cursor = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
-
-          return {
-            assignment_id: assignment.id,
-            task_name: t.task_name,
-            location_id: t.location_id,
-            standard_minutes: t.standard_minutes,
-            priority: t.priority,
-            checklist_json: t.checklist_json,
-            sequence_order: i + 1,
-            window_start: startDate.toISOString(),
-            window_end: endDate.toISOString(),
-            status: "queued" as const,
-          };
-        });
-
-        const { error: tErr } = await supabase
-          .from("assigned_tasks")
-          .insert(assignedTasks);
-        if (tErr) throw tErr;
+      // Create assignment_addons records
+      if (params.addonTemplateIds?.length) {
+        const { error: aaErr } = await supabase
+          .from("assignment_addons")
+          .insert(
+            params.addonTemplateIds.map((addonId) => ({
+              assignment_id: assignment.id,
+              addon_template_id: addonId,
+              apply_mode: "merge",
+            }))
+          );
+        if (aaErr) throw aaErr;
       }
+
+      // Generate tasks (BASE + ADD-ONS merged)
+      await generateAssignmentTasks(
+        assignment.id,
+        params.templateId,
+        params.addonTemplateIds || [],
+        params.date,
+        params.shiftType
+      );
 
       return assignment;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pm-assignments"] });
+      qc.invalidateQueries({ queryKey: ["pm-assignment-addons"] });
       toast({ title: "שיבוץ נוצר בהצלחה" });
     },
     onError: (err: any) => {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+/* ─── Create/update template ─── */
+export function useCreateTemplate() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (params: {
+      name: string;
+      templateType: "base" | "addon";
+      shiftType: "morning" | "evening";
+      description?: string;
+    }) => {
+      const { data, error } = await supabase
+        .from("task_templates")
+        .insert({
+          name: params.name,
+          template_type: params.templateType,
+          shift_type: params.shiftType,
+          description: params.description || null,
+          site_id: SITE_ID,
+          created_by: user?.id || null,
+          active: true,
+        })
+        .select("id")
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pm-task-templates"] });
+      toast({ title: "תבנית נוצרה בהצלחה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useAddTemplateTask() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      templateId: string;
+      taskName: string;
+      locationId: string;
+      standardMinutes: number;
+      priority: "normal" | "high";
+      daysOfWeek: number[];
+      windowStart?: string;
+      windowEnd?: string;
+      checklistJson?: any;
+      isOptional?: boolean;
+    }) => {
+      const { error } = await supabase
+        .from("template_tasks")
+        .insert({
+          template_id: params.templateId,
+          task_name: params.taskName,
+          location_id: params.locationId,
+          standard_minutes: params.standardMinutes,
+          priority: params.priority,
+          days_of_week: params.daysOfWeek,
+          window_start: params.windowStart || null,
+          window_end: params.windowEnd || null,
+          checklist_json: params.checklistJson || [],
+          is_optional: params.isOptional || false,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pm-task-templates"] });
+      toast({ title: "משימה נוספה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+export function useDeleteTemplateTask() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("template_tasks").delete().eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pm-task-templates"] });
+    },
+  });
+}
+
+export function useDeleteTemplate() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (templateId: string) => {
+      const { error } = await supabase.from("task_templates").delete().eq("id", templateId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pm-task-templates"] });
+      toast({ title: "תבנית נמחקה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+/* ─── Locations for dropdowns ─── */
+export function useCampusLocations() {
+  return useQuery({
+    queryKey: ["pm-campus-locations"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("campus_locations")
+        .select("id, name, level_type, parent_location_id")
+        .eq("site_id", SITE_ID)
+        .eq("is_active", true)
+        .order("name");
+      return data || [];
     },
   });
 }

@@ -14,18 +14,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      addon_rules: {
+        Row: {
+          addon_template_id: string
+          created_at: string
+          id: string
+          trigger_payload: Json
+          trigger_type: string
+        }
+        Insert: {
+          addon_template_id: string
+          created_at?: string
+          id?: string
+          trigger_payload?: Json
+          trigger_type: string
+        }
+        Update: {
+          addon_template_id?: string
+          created_at?: string
+          id?: string
+          trigger_payload?: Json
+          trigger_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addon_rules_addon_template_id_fkey"
+            columns: ["addon_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assigned_tasks: {
         Row: {
           actual_minutes: number | null
           assignment_id: string
           checklist_json: Json | null
           created_at: string
+          defer_reason: string | null
           finish_tag_uid: string | null
           finished_at: string | null
           id: string
+          is_deferred: boolean
           location_id: string
           priority: Database["public"]["Enums"]["task_priority"]
+          queue_order: number | null
           sequence_order: number
+          source_template_id: string | null
+          source_type: string | null
           standard_minutes: number
           start_tag_uid: string | null
           started_at: string | null
@@ -40,12 +77,17 @@ export type Database = {
           assignment_id: string
           checklist_json?: Json | null
           created_at?: string
+          defer_reason?: string | null
           finish_tag_uid?: string | null
           finished_at?: string | null
           id?: string
+          is_deferred?: boolean
           location_id: string
           priority?: Database["public"]["Enums"]["task_priority"]
+          queue_order?: number | null
           sequence_order?: number
+          source_template_id?: string | null
+          source_type?: string | null
           standard_minutes?: number
           start_tag_uid?: string | null
           started_at?: string | null
@@ -60,12 +102,17 @@ export type Database = {
           assignment_id?: string
           checklist_json?: Json | null
           created_at?: string
+          defer_reason?: string | null
           finish_tag_uid?: string | null
           finished_at?: string | null
           id?: string
+          is_deferred?: boolean
           location_id?: string
           priority?: Database["public"]["Enums"]["task_priority"]
+          queue_order?: number | null
           sequence_order?: number
+          source_template_id?: string | null
+          source_type?: string | null
           standard_minutes?: number
           start_tag_uid?: string | null
           started_at?: string | null
@@ -88,6 +135,55 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "campus_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assigned_tasks_source_template_id_fkey"
+            columns: ["source_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_addons: {
+        Row: {
+          addon_template_id: string
+          apply_mode: string
+          assignment_id: string
+          created_at: string
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          addon_template_id: string
+          apply_mode?: string
+          assignment_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          addon_template_id?: string
+          apply_mode?: string
+          assignment_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_addons_addon_template_id_fkey"
+            columns: ["addon_template_id"]
+            isOneToOne: false
+            referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_addons_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
             referencedColumns: ["id"]
           },
         ]
@@ -566,34 +662,50 @@ export type Database = {
         Row: {
           active: boolean
           created_at: string
+          created_by: string | null
+          description: string | null
           id: string
           name: string
           shift_type: Database["public"]["Enums"]["shift_type"] | null
           site_id: string | null
           sop_text: string | null
           standard_source: string | null
+          template_type: Database["public"]["Enums"]["template_type"]
         }
         Insert: {
           active?: boolean
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           name: string
           shift_type?: Database["public"]["Enums"]["shift_type"] | null
           site_id?: string | null
           sop_text?: string | null
           standard_source?: string | null
+          template_type?: Database["public"]["Enums"]["template_type"]
         }
         Update: {
           active?: boolean
           created_at?: string
+          created_by?: string | null
+          description?: string | null
           id?: string
           name?: string
           shift_type?: Database["public"]["Enums"]["shift_type"] | null
           site_id?: string | null
           sop_text?: string | null
           standard_source?: string | null
+          template_type?: Database["public"]["Enums"]["template_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "task_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "task_templates_site_id_fkey"
             columns: ["site_id"]
@@ -607,35 +719,47 @@ export type Database = {
         Row: {
           checklist_json: Json | null
           created_at: string
+          days_of_week: number[]
           id: string
+          is_optional: boolean
           location_id: string
           priority: Database["public"]["Enums"]["task_priority"]
           recurrence_rule: Json | null
           standard_minutes: number
           task_name: string
           template_id: string
+          window_end: string | null
+          window_start: string | null
         }
         Insert: {
           checklist_json?: Json | null
           created_at?: string
+          days_of_week?: number[]
           id?: string
+          is_optional?: boolean
           location_id: string
           priority?: Database["public"]["Enums"]["task_priority"]
           recurrence_rule?: Json | null
           standard_minutes?: number
           task_name: string
           template_id: string
+          window_end?: string | null
+          window_start?: string | null
         }
         Update: {
           checklist_json?: Json | null
           created_at?: string
+          days_of_week?: number[]
           id?: string
+          is_optional?: boolean
           location_id?: string
           priority?: Database["public"]["Enums"]["task_priority"]
           recurrence_rule?: Json | null
           standard_minutes?: number
           task_name?: string
           template_id?: string
+          window_end?: string | null
+          window_start?: string | null
         }
         Relationships: [
           {
@@ -720,6 +844,7 @@ export type Database = {
         | "blocked"
         | "completed"
         | "failed"
+      template_type: "base" | "addon"
       ticket_priority: "urgent" | "high" | "normal"
       ticket_status: "open" | "assigned" | "in_progress" | "resolved" | "closed"
     }
@@ -885,6 +1010,7 @@ export const Constants = {
         "completed",
         "failed",
       ],
+      template_type: ["base", "addon"],
       ticket_priority: ["urgent", "high", "normal"],
       ticket_status: ["open", "assigned", "in_progress", "resolved", "closed"],
     },
