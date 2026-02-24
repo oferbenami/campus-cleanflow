@@ -10,6 +10,7 @@ import {
   BarChart3,
   Layers,
   LayoutGrid,
+  Package,
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
@@ -17,9 +18,10 @@ import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import TemplatesTab from "@/components/property-manager/TemplatesTab";
+import WorkPackagesTab from "@/components/property-manager/WorkPackagesTab";
 import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 
-type PMTab = "staff" | "templates" | "planning" | "assign" | "controlBoard" | "masterdata" | "eod";
+type PMTab = "staff" | "templates" | "workpackages" | "planning" | "assign" | "controlBoard" | "masterdata" | "eod";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
@@ -35,6 +37,7 @@ const PropertyManagerView = () => {
   const tabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
     { key: "staff", label: "עובדים", icon: <Users size={16} /> },
     { key: "templates", label: "תבניות", icon: <Layers size={16} /> },
+    { key: "workpackages", label: "חבילות", icon: <Package size={16} /> },
     { key: "planning", label: "תכנון מחר", icon: <CalendarPlus size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
     { key: "controlBoard", label: "לוח בקרה", icon: <LayoutGrid size={16} /> },
@@ -84,10 +87,12 @@ const PropertyManagerView = () => {
       <div className={`${activeTab === "controlBoard" ? "max-w-full" : "max-w-7xl"} mx-auto px-4 sm:px-6 pb-6`}>
         {activeTab === "staff" && <StaffListTab />}
         {activeTab === "templates" && <TemplatesTab />}
+        {activeTab === "workpackages" && <WorkPackagesTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
         {activeTab === "assign" && <ZonePlanningTab />}
         {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
+        {activeTab === "eod" && <EndOfDayTab />}
         {activeTab === "eod" && <EndOfDayTab />}
       </div>
     </div>

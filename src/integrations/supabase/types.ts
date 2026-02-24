@@ -952,6 +952,125 @@ export type Database = {
         }
         Relationships: []
       }
+      work_package_tasks: {
+        Row: {
+          area_minutes_coeff: number | null
+          area_sqm: number | null
+          cleaning_type: string | null
+          created_at: string
+          description: string | null
+          id: string
+          location_ref: string | null
+          notes: string | null
+          rounds_per_shift: number | null
+          space_type: string | null
+          standard_minutes: number
+          tools_minutes_coeff: number | null
+          tools_qty: number | null
+          updated_at: string
+          work_package_id: string
+        }
+        Insert: {
+          area_minutes_coeff?: number | null
+          area_sqm?: number | null
+          cleaning_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_ref?: string | null
+          notes?: string | null
+          rounds_per_shift?: number | null
+          space_type?: string | null
+          standard_minutes?: number
+          tools_minutes_coeff?: number | null
+          tools_qty?: number | null
+          updated_at?: string
+          work_package_id: string
+        }
+        Update: {
+          area_minutes_coeff?: number | null
+          area_sqm?: number | null
+          cleaning_type?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location_ref?: string | null
+          notes?: string | null
+          rounds_per_shift?: number | null
+          space_type?: string | null
+          standard_minutes?: number
+          tools_minutes_coeff?: number | null
+          tools_qty?: number | null
+          updated_at?: string
+          work_package_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_package_tasks_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_packages: {
+        Row: {
+          active: boolean
+          building: string | null
+          created_at: string
+          created_by: string | null
+          floor: string | null
+          id: string
+          name: string
+          package_code: string
+          shift_type: string
+          site_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          building?: string | null
+          created_at?: string
+          created_by?: string | null
+          floor?: string | null
+          id?: string
+          name?: string
+          package_code: string
+          shift_type?: string
+          site_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          building?: string | null
+          created_at?: string
+          created_by?: string | null
+          floor?: string | null
+          id?: string
+          name?: string
+          package_code?: string
+          shift_type?: string
+          site_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_packages_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_packages_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
