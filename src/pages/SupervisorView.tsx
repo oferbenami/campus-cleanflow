@@ -31,20 +31,46 @@ import type { SupervisorTask, LocationOption, DeferredTaskEvent } from "@/hooks/
 import DeferredTasksPanel from "@/components/supervisor/DeferredTasksPanel";
 import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
 import { useShortageReports, type ShortageReport } from "@/hooks/useShortageReports";
+import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 
 const SupervisorView = () => {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { staff, tasks, tickets, audits, deferredEvents, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
-  const { reports, loading: shortageLoading, acknowledgeReport, forwardReport } = useShortageReports();
+  const { reports, loading: shortageLoading, acknowledgeReport, forwardReport, submitShortageReport } = useShortageReports();
   const [activeTab, setActiveTab] = useState<"dashboard" | "breakfix" | "audit">("dashboard");
+  const [showShortageReport, setShowShortageReport] = useState(false);
+  const [shortageSubmitting, setShortageSubmitting] = useState(false);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 size={40} className="animate-spin text-primary" />
       </div>
+    );
+  }
+
+  const handleShortageSubmit = async (items: { key: string; label: string; quantity: number }[], location: string, category: string) => {
+    setShortageSubmitting(true);
+    try {
+      await submitShortageReport(items, location, category);
+      toast({ title: "✓ דיווח חוסרים נשלח בהצלחה" });
+      setShowShortageReport(false);
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    } finally {
+      setShortageSubmitting(false);
+    }
+  };
+
+  if (showShortageReport) {
+    return (
+      <ShortageReportScreen
+        onClose={() => setShowShortageReport(false)}
+        onSubmit={handleShortageSubmit}
+        submitting={shortageSubmitting}
+      />
     );
   }
 
@@ -86,7 +112,7 @@ const SupervisorView = () => {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 pb-4">
-        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} shortageReports={reports} shortageLoading={shortageLoading} onAcknowledge={acknowledgeReport} onForward={forwardReport} />}
+        {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} shortageReports={reports} shortageLoading={shortageLoading} onAcknowledge={acknowledgeReport} onForward={forwardReport} onReportShortage={() => setShowShortageReport(true)} />}
         {activeTab === "breakfix" && <BreakfixTab locations={locations} onSubmit={createBreakFixTicket} tickets={tickets} />}
         {activeTab === "audit" && <AuditTab tasks={tasks} audits={audits} onSubmit={submitAudit} />}
       </div>
@@ -95,7 +121,7 @@ const SupervisorView = () => {
 };
 
 /* ─── Dashboard Tab ─── */
-const DashboardTab = ({ staff, tasks, tickets, deferredEvents, shortageReports, shortageLoading, onAcknowledge, onForward }: {
+const DashboardTab = ({ staff, tasks, tickets, deferredEvents, shortageReports, shortageLoading, onAcknowledge, onForward, onReportShortage }: {
   staff: ReturnType<typeof useSupervisorData>["staff"];
   tasks: SupervisorTask[];
   tickets: ReturnType<typeof useSupervisorData>["tickets"];
@@ -104,6 +130,7 @@ const DashboardTab = ({ staff, tasks, tickets, deferredEvents, shortageReports, 
   shortageLoading: boolean;
   onAcknowledge: (id: string) => Promise<void>;
   onForward: (id: string) => Promise<void>;
+  onReportShortage: () => void;
 }) => {
   const { t } = useI18n();
 
@@ -227,6 +254,7 @@ const DashboardTab = ({ staff, tasks, tickets, deferredEvents, shortageReports, 
         canAcknowledge
         onAcknowledge={onAcknowledge}
         onForward={onForward}
+        onReport={onReportShortage}
       />
 
       {/* Staff Tracking */}
