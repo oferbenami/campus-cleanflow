@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
 import {
@@ -44,6 +45,7 @@ type ManagerTab = "overview" | "workload" | "tracking" | "endOfDay" | "users" | 
 
 const ManagerDashboard = () => {
   const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
@@ -112,26 +114,26 @@ const ManagerDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground px-6 py-4">
+      <header className="bg-primary text-primary-foreground px-4 sm:px-6 py-3 sm:py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold">CleanFlow</h1>
-            <p className="text-sm opacity-75">לוח בקרה תפעולי</p>
+            <h1 className="text-lg sm:text-xl font-bold">CleanFlow</h1>
+            <p className="text-xs opacity-75 hidden sm:block">לוח בקרה תפעולי</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-left">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="text-left hidden sm:block">
               <p className="text-xs opacity-75">היום</p>
               <p className="text-sm font-semibold mono">15 בפבר׳ 2026</p>
             </div>
             <div className="flex gap-1">
-              <button className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'morning' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
+              <button className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'morning' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
                 בוקר
               </button>
-              <button className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'evening' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
+              <button className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedShift === 'evening' ? 'bg-accent text-accent-foreground' : 'bg-primary-foreground/10 text-primary-foreground'}`}>
                 ערב
               </button>
             </div>
-            <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+            <button onClick={async () => { await signOut(); navigate("/auth", { replace: true }); }} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
               <LogOut size={18} />
             </button>
           </div>
@@ -139,24 +141,26 @@ const ManagerDashboard = () => {
       </header>
 
       {/* Tab Navigation */}
-      <div className="max-w-7xl mx-auto px-6 pt-4">
-        <div className="flex gap-1 bg-muted rounded-xl p-1">
-          {tabs.map(({ key, icon: Icon, label }) => (
-            <button
-              key={key}
-              onClick={() => setActiveTab(key)}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-colors ${
-                activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
+      <div className="sticky top-[52px] sm:top-[60px] z-40 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2">
+          <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto">
+            {tabs.map(({ key, icon: Icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`flex-1 min-w-[4.5rem] flex items-center justify-center gap-1 sm:gap-2 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors whitespace-nowrap ${
+                  activeTab === key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                }`}
+              >
+                <Icon size={14} />
+                <span className="hidden xs:inline sm:inline">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-6 space-y-6">
         {activeTab === "overview" && (
           <div className="animate-slide-up space-y-6">
             {/* KPI Cards */}
