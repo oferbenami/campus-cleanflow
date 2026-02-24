@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PackageOpen, CheckCircle2, Send, Clock, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { PackageOpen, CheckCircle2, Send, Clock, Loader2, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import type { ShortageReport } from "@/hooks/useShortageReports";
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   onAcknowledge?: (id: string) => Promise<void>;
   onForward?: (id: string) => Promise<void>;
   onResolve?: (id: string) => Promise<void>;
+  /** callback to open shortage report form */
+  onReport?: () => void;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
@@ -29,6 +31,7 @@ const ShortageReportsPanel = ({
   onAcknowledge,
   onForward,
   onResolve,
+  onReport,
 }: Props) => {
   const [expanded, setExpanded] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
@@ -77,7 +80,18 @@ const ShortageReportsPanel = ({
             </span>
           )}
         </div>
-        {expanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+        <div className="flex items-center gap-2">
+          {onReport && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onReport(); }}
+              className="px-2.5 py-1 rounded-lg bg-warning/15 text-warning text-xs font-bold hover:bg-warning/25 transition-colors flex items-center gap-1"
+            >
+              <Plus size={12} />
+              דווח
+            </button>
+          )}
+          {expanded ? <ChevronUp size={16} className="text-muted-foreground" /> : <ChevronDown size={16} className="text-muted-foreground" />}
+        </div>
       </button>
 
       {expanded && (
