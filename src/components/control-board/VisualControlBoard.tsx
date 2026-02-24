@@ -10,8 +10,8 @@ const HOUR_START = 6;
 const HOUR_END = 22;
 const TOTAL_HOURS = HOUR_END - HOUR_START;
 const MORNING_END = 14;
-const LEFT_PANEL_W = "w-[220px]";
-const ISSUE_COL_W = "w-[80px]";
+const LEFT_PANEL_W = "w-[140px]";
+const ISSUE_COL_W = "w-[28px]";
 const ROW_H = "h-[48px]";
 
 // ── Tile color logic ──
@@ -163,11 +163,11 @@ const VisualControlBoard = () => {
         <div className="flex border-b bg-muted/50">
           {/* Fixed left columns header */}
           <div className={`shrink-0 flex border-l`}>
-            <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center px-2 py-2 text-[10px] font-bold text-destructive border-l`}>
-              <Zap size={12} className="ml-1" /> תקלות
+            <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center py-2 border-l`}>
+              <Zap size={10} className="text-destructive" />
             </div>
-            <div className={`${LEFT_PANEL_W} shrink-0 flex items-center px-3 py-2 text-[10px] font-bold text-muted-foreground`}>
-              <User size={12} className="ml-1" /> עובד
+            <div className={`${LEFT_PANEL_W} shrink-0 flex items-center px-2 py-2 text-[10px] font-bold text-muted-foreground`}>
+              עובד
             </div>
           </div>
 
@@ -224,46 +224,29 @@ const VisualControlBoard = () => {
 
                 return (
                   <div key={worker.assignment_id} className={`flex border-b ${ROW_H}`}>
-                    {/* Issue column */}
-                    <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center border-l px-1`}>
+                    {/* Issue indicator */}
+                    <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center border-l`}>
                       {workerTickets.length > 0 ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1 px-1.5 py-1 rounded bg-destructive/15 border border-destructive/30 cursor-pointer">
-                              <Zap size={10} className="text-destructive shrink-0" />
-                              <span className="text-[9px] font-bold text-destructive truncate max-w-[50px]">
-                                {workerTickets[0].location_name}
-                              </span>
-                            </div>
+                            <div className="w-3.5 h-3.5 rounded-full bg-destructive cursor-pointer animate-pulse" />
                           </TooltipTrigger>
                           <TooltipContent side="left" className="max-w-[200px]">
                             <p className="text-xs font-bold">{workerTickets[0].description}</p>
-                            <p className="text-[10px] text-muted-foreground">{workerTickets[0].location_name} · {workerTickets[0].priority}</p>
+                            <p className="text-[10px] text-muted-foreground">{workerTickets[0].location_name}</p>
                           </TooltipContent>
                         </Tooltip>
                       ) : (
-                        <span className="text-muted-foreground/30 text-[9px]">—</span>
+                        <div className="w-3 h-3 rounded-full bg-success/40" />
                       )}
                     </div>
 
-                    {/* Worker info */}
-                    <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-2 px-2`}>
-                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold shrink-0">
-                        {worker.avatar_initials || worker.full_name.slice(0, 2)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
-                        <div className="flex items-center gap-1">
-                          <span className={`text-[8px] px-1 py-0.5 rounded-full font-medium ${
-                            worker.shift_type === "morning" ? "bg-info/10 text-info" : "bg-accent/10 text-accent-foreground"
-                          }`}>
-                            {worker.shift_type === "morning" ? "בוקר" : "ערב"}
-                          </span>
-                          {overCapacity > 0 && (
-                            <span className="text-[8px] text-destructive font-bold">+{overCapacity}ד׳</span>
-                          )}
-                        </div>
-                      </div>
+                    {/* Worker name only */}
+                    <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-1.5 px-2`}>
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                        worker.shift_type === "morning" ? "bg-info" : "bg-accent"
+                      }`} />
+                      <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
                     </div>
                   </div>
                 );
