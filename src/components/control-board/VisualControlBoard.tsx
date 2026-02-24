@@ -3,18 +3,16 @@ import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "
 import { Calendar, Filter, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Plus, ChevronLeft, ChevronRight, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
 
 // ── Constants ──
 const HOUR_START = 6;
 const HOUR_END = 22;
 const TOTAL_HOURS = HOUR_END - HOUR_START;
 const MORNING_END = 14;
-const PX_PER_HOUR = 120;
-const TIMELINE_WIDTH = TOTAL_HOURS * PX_PER_HOUR;
-const LEFT_PANEL_W = "w-[260px]";
-const ISSUE_COL_W = "w-[100px]";
-const ROW_H = "h-[56px]";
+const LEFT_PANEL_W = "w-[220px]";
+const ISSUE_COL_W = "w-[80px]";
+const ROW_H = "h-[48px]";
 
 // ── Tile color logic ──
 type TileColor = "neutral" | "yellow" | "red" | "green";
@@ -47,12 +45,12 @@ function parseTimeToMinutes(ts: string | null): number | null {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-function minutesToLeft(minutes: number): number {
-  return ((minutes - HOUR_START * 60) / 60) * PX_PER_HOUR;
+function minutesToLeftPercent(minutes: number): number {
+  return ((minutes - HOUR_START * 60) / (TOTAL_HOURS * 60)) * 100;
 }
 
-function minutesToWidth(minutes: number): number {
-  return (minutes / 60) * PX_PER_HOUR;
+function minutesToWidthPercent(minutes: number): number {
+  return (minutes / (TOTAL_HOURS * 60)) * 100;
 }
 
 // ── Main Component ──
@@ -98,7 +96,7 @@ const VisualControlBoard = () => {
 
   // Now line position
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const nowLeft = minutesToLeft(nowMinutes);
+  const nowLeftPct = minutesToLeftPercent(nowMinutes);
   const showNowLine = selectedDate === new Date().toISOString().split("T")[0] && nowMinutes >= HOUR_START * 60 && nowMinutes <= HOUR_END * 60;
 
   // Date navigation
@@ -174,21 +172,21 @@ const VisualControlBoard = () => {
           </div>
 
           {/* Timeline header */}
-          <div className="flex-1 overflow-hidden">
-            <div className="relative" style={{ width: TIMELINE_WIDTH, minWidth: TIMELINE_WIDTH }}>
+          <div className="flex-1 min-w-0">
+            <div className="relative w-full">
               {/* Shift labels */}
               <div className="flex h-6 text-[9px] font-bold">
                 <div
                   className="bg-info/10 text-info flex items-center justify-center border-l border-info/20"
-                  style={{ width: (MORNING_END - HOUR_START) * PX_PER_HOUR }}
+                  style={{ width: `${((MORNING_END - HOUR_START) / TOTAL_HOURS) * 100}%` }}
                 >
-                  משמרת בוקר 06:00–14:00
+                  בוקר 06–14
                 </div>
                 <div
                   className="bg-accent/10 text-accent-foreground flex items-center justify-center border-l border-accent/20"
-                  style={{ width: (HOUR_END - MORNING_END) * PX_PER_HOUR }}
+                  style={{ width: `${((HOUR_END - MORNING_END) / TOTAL_HOURS) * 100}%` }}
                 >
-                  משמרת ערב 14:00–22:00
+                  ערב 14–22
                 </div>
               </div>
               {/* Hour ticks */}
@@ -197,9 +195,9 @@ const VisualControlBoard = () => {
                   <div
                     key={i}
                     className="border-l border-border/50 text-[9px] text-muted-foreground mono flex items-center justify-center"
-                    style={{ width: PX_PER_HOUR }}
+                    style={{ width: `${100 / TOTAL_HOURS}%` }}
                   >
-                    {String(HOUR_START + i).padStart(2, "0")}:00
+                    {String(HOUR_START + i).padStart(2, "0")}
                   </div>
                 ))}
               </div>
@@ -208,9 +206,9 @@ const VisualControlBoard = () => {
         </div>
 
         {/* Body */}
-        <div className="flex" style={{ maxHeight: "calc(100vh - 280px)" }}>
+        <div className="flex">
           {/* Fixed left panel */}
-          <div className="shrink-0 flex overflow-y-auto border-l" style={{ maxHeight: "calc(100vh - 280px)" }}>
+          <div className="shrink-0 flex border-l">
             <div>
               {filteredWorkers.length === 0 && (
                 <div className="flex items-center justify-center px-4 py-10 text-sm text-muted-foreground">
@@ -221,7 +219,7 @@ const VisualControlBoard = () => {
                 const workerTickets = ticketsByWorker[worker.id] || [];
                 const workerTasks = tasksByWorker[worker.id] || [];
                 const totalPlanned = workerTasks.reduce((s, t) => s + t.standard_minutes, 0);
-                const shiftCapacity = worker.shift_type === "morning" ? 480 : 480; // 8 hours
+                const shiftCapacity = 480;
                 const overCapacity = totalPlanned - shiftCapacity;
 
                 return (
@@ -233,7 +231,7 @@ const VisualControlBoard = () => {
                           <TooltipTrigger asChild>
                             <div className="flex items-center gap-1 px-1.5 py-1 rounded bg-destructive/15 border border-destructive/30 cursor-pointer">
                               <Zap size={10} className="text-destructive shrink-0" />
-                              <span className="text-[9px] font-bold text-destructive truncate max-w-[60px]">
+                              <span className="text-[9px] font-bold text-destructive truncate max-w-[50px]">
                                 {workerTickets[0].location_name}
                               </span>
                             </div>
@@ -249,14 +247,14 @@ const VisualControlBoard = () => {
                     </div>
 
                     {/* Worker info */}
-                    <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-2 px-3`}>
-                      <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">
+                    <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-2 px-2`}>
+                      <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[9px] font-bold shrink-0">
                         {worker.avatar_initials || worker.full_name.slice(0, 2)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold truncate">{worker.full_name}</p>
+                        <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
                         <div className="flex items-center gap-1">
-                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                          <span className={`text-[8px] px-1 py-0.5 rounded-full font-medium ${
                             worker.shift_type === "morning" ? "bg-info/10 text-info" : "bg-accent/10 text-accent-foreground"
                           }`}>
                             {worker.shift_type === "morning" ? "בוקר" : "ערב"}
@@ -273,9 +271,9 @@ const VisualControlBoard = () => {
             </div>
           </div>
 
-          {/* Scrollable timeline */}
-          <ScrollArea className="flex-1" style={{ maxHeight: "calc(100vh - 280px)" }}>
-            <div style={{ width: TIMELINE_WIDTH, minWidth: TIMELINE_WIDTH }}>
+          {/* Timeline - fits screen width */}
+          <div className="flex-1 min-w-0 overflow-hidden">
+            <div className="w-full">
               {filteredWorkers.map((worker) => {
                 const workerTasks = tasksByWorker[worker.id] || [];
 
@@ -288,7 +286,7 @@ const VisualControlBoard = () => {
                         className={`absolute top-0 bottom-0 border-l ${
                           HOUR_START + i === MORNING_END ? "border-accent/40 border-l-2" : "border-border/30"
                         }`}
-                        style={{ left: i * PX_PER_HOUR }}
+                        style={{ left: `${(i / TOTAL_HOURS) * 100}%` }}
                       />
                     ))}
 
@@ -296,7 +294,7 @@ const VisualControlBoard = () => {
                     {showNowLine && (
                       <div
                         className="absolute top-0 bottom-0 w-0.5 bg-destructive z-10"
-                        style={{ left: nowLeft }}
+                        style={{ left: `${nowLeftPct}%` }}
                       />
                     )}
 
@@ -304,18 +302,17 @@ const VisualControlBoard = () => {
                     {workerTasks.map((task) => {
                       const startMin = parseTimeToMinutes(task.window_start) || parseTimeToMinutes(task.started_at);
                       if (startMin === null) {
-                        // Position based on sequence
                         const seqOffset = (task.sequence_order || 0) * task.standard_minutes;
                         const baseStart = worker.shift_type === "morning" ? HOUR_START * 60 : MORNING_END * 60;
-                        const left = minutesToLeft(baseStart + seqOffset);
-                        const width = minutesToWidth(task.standard_minutes);
+                        const leftPct = minutesToLeftPercent(baseStart + seqOffset);
+                        const widthPct = minutesToWidthPercent(task.standard_minutes);
                         const color = getTileColor(task, now);
                         return (
                           <TaskTileGantt
                             key={task.id}
                             task={task}
-                            left={left}
-                            width={Math.max(width, 20)}
+                            leftPct={leftPct}
+                            widthPct={Math.max(widthPct, 1)}
                             color={color}
                             onClick={() => setSelectedTask(task)}
                           />
@@ -323,16 +320,16 @@ const VisualControlBoard = () => {
                       }
 
                       const endMin = parseTimeToMinutes(task.window_end) || (startMin + task.standard_minutes);
-                      const left = minutesToLeft(startMin);
-                      const width = minutesToWidth(endMin - startMin);
+                      const leftPct = minutesToLeftPercent(startMin);
+                      const widthPct = minutesToWidthPercent(endMin - startMin);
                       const color = getTileColor(task, now);
 
                       return (
                         <TaskTileGantt
                           key={task.id}
                           task={task}
-                          left={left}
-                          width={Math.max(width, 20)}
+                          leftPct={leftPct}
+                          widthPct={Math.max(widthPct, 1)}
                           color={color}
                           onClick={() => setSelectedTask(task)}
                         />
@@ -342,8 +339,7 @@ const VisualControlBoard = () => {
                 );
               })}
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+          </div>
         </div>
       </div>
 
@@ -367,14 +363,14 @@ const VisualControlBoard = () => {
 // ── Task Tile on Gantt ──
 const TaskTileGantt = ({
   task,
-  left,
-  width,
+  leftPct,
+  widthPct,
   color,
   onClick,
 }: {
   task: CBTask;
-  left: number;
-  width: number;
+  leftPct: number;
+  widthPct: number;
   color: TileColor;
   onClick: () => void;
 }) => (
@@ -382,10 +378,10 @@ const TaskTileGantt = ({
     <TooltipTrigger asChild>
       <button
         onClick={onClick}
-        className={`absolute top-1 bottom-1 rounded border text-[9px] font-semibold truncate px-1 flex items-center gap-0.5 transition-all hover:ring-1 hover:ring-ring z-[5] ${tileStyles[color]} ${
+        className={`absolute top-1 bottom-1 rounded border text-[8px] font-semibold truncate px-0.5 flex items-center gap-0.5 transition-all hover:ring-1 hover:ring-ring z-[5] ${tileStyles[color]} ${
           task.is_deferred ? "bg-stripes" : ""
         }`}
-        style={{ left, width: Math.max(width, 24) }}
+        style={{ left: `${leftPct}%`, width: `${widthPct}%`, minWidth: 18 }}
       >
         {task.priority === "high" && <AlertTriangle size={8} className="shrink-0 text-destructive" />}
         <span className="truncate">{task.location_name || task.task_name}</span>
