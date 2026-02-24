@@ -1,0 +1,482 @@
+import { useState, useMemo, useEffect } from "react";
+import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "@/hooks/useControlBoardData";
+import { Calendar, Filter, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Plus, ChevronLeft, ChevronRight, User } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+
+// ── Constants ──
+const HOUR_START = 6;
+const HOUR_END = 22;
+const TOTAL_HOURS = HOUR_END - HOUR_START;
+const MORNING_END = 14;
+const PX_PER_HOUR = 120;
+const TIMELINE_WIDTH = TOTAL_HOURS * PX_PER_HOUR;
+const LEFT_PANEL_W = "w-[260px]";
+const ISSUE_COL_W = "w-[100px]";
+const ROW_H = "h-[56px]";
+
+// ── Tile color logic ──
+type TileColor = "neutral" | "yellow" | "red" | "green";
+
+function getTileColor(task: CBTask, now: Date): TileColor {
+  if (task.status === "completed") return "green";
+  if (task.status === "in_progress") {
+    if (task.started_at) {
+      const elapsed = (now.getTime() - new Date(task.started_at).getTime()) / 60000;
+      if (elapsed > task.standard_minutes * 1.15) return "red";
+    }
+    return "yellow";
+  }
+  // queued / ready / blocked
+  return "neutral";
+}
+
+const tileStyles: Record<TileColor, string> = {
+  neutral: "bg-muted/60 border-border text-muted-foreground",
+  yellow: "bg-warning/20 border-warning/50 text-warning-foreground",
+  red: "bg-destructive/20 border-destructive/50 text-destructive animate-pulse-slow",
+  green: "bg-success/20 border-success/50 text-foreground",
+};
+
+// ── Helpers ──
+function parseTimeToMinutes(ts: string | null): number | null {
+  if (!ts) return null;
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+function minutesToLeft(minutes: number): number {
+  return ((minutes - HOUR_START * 60) / 60) * PX_PER_HOUR;
+}
+
+function minutesToWidth(minutes: number): number {
+  return (minutes / 60) * PX_PER_HOUR;
+}
+
+// ── Main Component ──
+const VisualControlBoard = () => {
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [shiftFilter, setShiftFilter] = useState<"all" | "morning" | "evening">("all");
+  const [selectedTask, setSelectedTask] = useState<CBTask | null>(null);
+  const [now, setNow] = useState(new Date());
+  const { workers, tasks, tickets, loading } = useControlBoardData(selectedDate);
+
+  // Update "now" every 30s
+  useEffect(() => {
+    const iv = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // Filter workers by shift
+  const filteredWorkers = useMemo(() => {
+    if (shiftFilter === "all") return workers;
+    return workers.filter((w) => w.shift_type === shiftFilter);
+  }, [workers, shiftFilter]);
+
+  // Group tasks by worker
+  const tasksByWorker = useMemo(() => {
+    const map: Record<string, CBTask[]> = {};
+    tasks.forEach((t) => {
+      if (!map[t.staff_user_id]) map[t.staff_user_id] = [];
+      map[t.staff_user_id].push(t);
+    });
+    return map;
+  }, [tasks]);
+
+  // Group tickets by assigned worker
+  const ticketsByWorker = useMemo(() => {
+    const map: Record<string, CBTicket[]> = {};
+    tickets.forEach((t) => {
+      const key = t.assigned_to_user_id || "__unassigned__";
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+    });
+    return map;
+  }, [tickets]);
+
+  // Now line position
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowLeft = minutesToLeft(nowMinutes);
+  const showNowLine = selectedDate === new Date().toISOString().split("T")[0] && nowMinutes >= HOUR_START * 60 && nowMinutes <= HOUR_END * 60;
+
+  // Date navigation
+  const changeDate = (delta: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + delta);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 size={32} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="animate-slide-up space-y-3">
+      {/* ── Header controls ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Date */}
+        <div className="flex items-center gap-1 bg-card border rounded-lg px-2 py-1.5">
+          <button onClick={() => changeDate(-1)} className="p-1 hover:bg-muted rounded"><ChevronRight size={14} /></button>
+          <Calendar size={14} className="text-muted-foreground" />
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-transparent text-sm font-semibold mono border-none outline-none w-[120px]"
+          />
+          <button onClick={() => changeDate(1)} className="p-1 hover:bg-muted rounded"><ChevronLeft size={14} /></button>
+        </div>
+
+        {/* Shift filter */}
+        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+          {(["all", "morning", "evening"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setShiftFilter(s)}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
+                shiftFilter === s ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+              }`}
+            >
+              {s === "all" ? "הכל" : s === "morning" ? "בוקר" : "ערב"}
+            </button>
+          ))}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3 mr-auto text-[10px]">
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-muted border border-border" /> טרם הגיע</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/40 border border-warning/50" /> בביצוע</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive/40 border border-destructive/50" /> חריגה</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-success/40 border border-success/50" /> הושלם</span>
+        </div>
+
+        <span className="text-xs text-muted-foreground">{filteredWorkers.length} עובדים · {tasks.length} משימות</span>
+      </div>
+
+      {/* ── Board ── */}
+      <div className="border rounded-xl bg-card overflow-hidden">
+        {/* Top header row */}
+        <div className="flex border-b bg-muted/50">
+          {/* Fixed left columns header */}
+          <div className={`shrink-0 flex border-l`}>
+            <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center px-2 py-2 text-[10px] font-bold text-destructive border-l`}>
+              <Zap size={12} className="ml-1" /> תקלות
+            </div>
+            <div className={`${LEFT_PANEL_W} shrink-0 flex items-center px-3 py-2 text-[10px] font-bold text-muted-foreground`}>
+              <User size={12} className="ml-1" /> עובד
+            </div>
+          </div>
+
+          {/* Timeline header */}
+          <div className="flex-1 overflow-hidden">
+            <div className="relative" style={{ width: TIMELINE_WIDTH, minWidth: TIMELINE_WIDTH }}>
+              {/* Shift labels */}
+              <div className="flex h-6 text-[9px] font-bold">
+                <div
+                  className="bg-info/10 text-info flex items-center justify-center border-l border-info/20"
+                  style={{ width: (MORNING_END - HOUR_START) * PX_PER_HOUR }}
+                >
+                  משמרת בוקר 06:00–14:00
+                </div>
+                <div
+                  className="bg-accent/10 text-accent-foreground flex items-center justify-center border-l border-accent/20"
+                  style={{ width: (HOUR_END - MORNING_END) * PX_PER_HOUR }}
+                >
+                  משמרת ערב 14:00–22:00
+                </div>
+              </div>
+              {/* Hour ticks */}
+              <div className="flex h-5 border-t">
+                {Array.from({ length: TOTAL_HOURS }, (_, i) => (
+                  <div
+                    key={i}
+                    className="border-l border-border/50 text-[9px] text-muted-foreground mono flex items-center justify-center"
+                    style={{ width: PX_PER_HOUR }}
+                  >
+                    {String(HOUR_START + i).padStart(2, "0")}:00
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex" style={{ maxHeight: "calc(100vh - 280px)" }}>
+          {/* Fixed left panel */}
+          <div className="shrink-0 flex overflow-y-auto border-l" style={{ maxHeight: "calc(100vh - 280px)" }}>
+            <div>
+              {filteredWorkers.length === 0 && (
+                <div className="flex items-center justify-center px-4 py-10 text-sm text-muted-foreground">
+                  אין עובדים משובצים
+                </div>
+              )}
+              {filteredWorkers.map((worker) => {
+                const workerTickets = ticketsByWorker[worker.id] || [];
+                const workerTasks = tasksByWorker[worker.id] || [];
+                const totalPlanned = workerTasks.reduce((s, t) => s + t.standard_minutes, 0);
+                const shiftCapacity = worker.shift_type === "morning" ? 480 : 480; // 8 hours
+                const overCapacity = totalPlanned - shiftCapacity;
+
+                return (
+                  <div key={worker.assignment_id} className={`flex border-b ${ROW_H}`}>
+                    {/* Issue column */}
+                    <div className={`${ISSUE_COL_W} shrink-0 flex items-center justify-center border-l px-1`}>
+                      {workerTickets.length > 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 px-1.5 py-1 rounded bg-destructive/15 border border-destructive/30 cursor-pointer">
+                              <Zap size={10} className="text-destructive shrink-0" />
+                              <span className="text-[9px] font-bold text-destructive truncate max-w-[60px]">
+                                {workerTickets[0].location_name}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="left" className="max-w-[200px]">
+                            <p className="text-xs font-bold">{workerTickets[0].description}</p>
+                            <p className="text-[10px] text-muted-foreground">{workerTickets[0].location_name} · {workerTickets[0].priority}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-muted-foreground/30 text-[9px]">—</span>
+                      )}
+                    </div>
+
+                    {/* Worker info */}
+                    <div className={`${LEFT_PANEL_W} shrink-0 flex items-center gap-2 px-3`}>
+                      <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">
+                        {worker.avatar_initials || worker.full_name.slice(0, 2)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold truncate">{worker.full_name}</p>
+                        <div className="flex items-center gap-1">
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                            worker.shift_type === "morning" ? "bg-info/10 text-info" : "bg-accent/10 text-accent-foreground"
+                          }`}>
+                            {worker.shift_type === "morning" ? "בוקר" : "ערב"}
+                          </span>
+                          {overCapacity > 0 && (
+                            <span className="text-[8px] text-destructive font-bold">+{overCapacity}ד׳</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Scrollable timeline */}
+          <ScrollArea className="flex-1" style={{ maxHeight: "calc(100vh - 280px)" }}>
+            <div style={{ width: TIMELINE_WIDTH, minWidth: TIMELINE_WIDTH }}>
+              {filteredWorkers.map((worker) => {
+                const workerTasks = tasksByWorker[worker.id] || [];
+
+                return (
+                  <div key={worker.assignment_id} className={`relative border-b ${ROW_H}`}>
+                    {/* Hour grid lines */}
+                    {Array.from({ length: TOTAL_HOURS }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`absolute top-0 bottom-0 border-l ${
+                          HOUR_START + i === MORNING_END ? "border-accent/40 border-l-2" : "border-border/30"
+                        }`}
+                        style={{ left: i * PX_PER_HOUR }}
+                      />
+                    ))}
+
+                    {/* Now line */}
+                    {showNowLine && (
+                      <div
+                        className="absolute top-0 bottom-0 w-0.5 bg-destructive z-10"
+                        style={{ left: nowLeft }}
+                      />
+                    )}
+
+                    {/* Task tiles */}
+                    {workerTasks.map((task) => {
+                      const startMin = parseTimeToMinutes(task.window_start) || parseTimeToMinutes(task.started_at);
+                      if (startMin === null) {
+                        // Position based on sequence
+                        const seqOffset = (task.sequence_order || 0) * task.standard_minutes;
+                        const baseStart = worker.shift_type === "morning" ? HOUR_START * 60 : MORNING_END * 60;
+                        const left = minutesToLeft(baseStart + seqOffset);
+                        const width = minutesToWidth(task.standard_minutes);
+                        const color = getTileColor(task, now);
+                        return (
+                          <TaskTileGantt
+                            key={task.id}
+                            task={task}
+                            left={left}
+                            width={Math.max(width, 20)}
+                            color={color}
+                            onClick={() => setSelectedTask(task)}
+                          />
+                        );
+                      }
+
+                      const endMin = parseTimeToMinutes(task.window_end) || (startMin + task.standard_minutes);
+                      const left = minutesToLeft(startMin);
+                      const width = minutesToWidth(endMin - startMin);
+                      const color = getTileColor(task, now);
+
+                      return (
+                        <TaskTileGantt
+                          key={task.id}
+                          task={task}
+                          left={left}
+                          width={Math.max(width, 20)}
+                          color={color}
+                          onClick={() => setSelectedTask(task)}
+                        />
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </div>
+      </div>
+
+      {/* ── Task Detail Modal ── */}
+      <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+        <DialogContent className="max-w-md">
+          {selectedTask && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-right">{selectedTask.task_name}</DialogTitle>
+              </DialogHeader>
+              <TaskDetailContent task={selectedTask} now={now} />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+// ── Task Tile on Gantt ──
+const TaskTileGantt = ({
+  task,
+  left,
+  width,
+  color,
+  onClick,
+}: {
+  task: CBTask;
+  left: number;
+  width: number;
+  color: TileColor;
+  onClick: () => void;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        onClick={onClick}
+        className={`absolute top-1 bottom-1 rounded border text-[9px] font-semibold truncate px-1 flex items-center gap-0.5 transition-all hover:ring-1 hover:ring-ring z-[5] ${tileStyles[color]} ${
+          task.is_deferred ? "bg-stripes" : ""
+        }`}
+        style={{ left, width: Math.max(width, 24) }}
+      >
+        {task.priority === "high" && <AlertTriangle size={8} className="shrink-0 text-destructive" />}
+        <span className="truncate">{task.location_name || task.task_name}</span>
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" className="text-right max-w-[220px]">
+      <p className="font-bold text-xs">{task.task_name}</p>
+      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><MapPin size={9} /> {task.location_name}</p>
+      <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Timer size={9} /> {task.standard_minutes} דק׳ תקן</p>
+      {task.started_at && (
+        <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <Clock size={9} /> התחלה: {new Date(task.started_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
+        </p>
+      )}
+    </TooltipContent>
+  </Tooltip>
+);
+
+// ── Task Detail Content ──
+const TaskDetailContent = ({ task, now }: { task: CBTask; now: Date }) => {
+  const elapsed = task.started_at
+    ? Math.round((now.getTime() - new Date(task.started_at).getTime()) / 60000)
+    : null;
+  const variance = elapsed !== null ? Math.round(((elapsed - task.standard_minutes) / task.standard_minutes) * 100) : null;
+
+  const statusLabel: Record<string, string> = {
+    queued: "בתור",
+    ready: "מוכן",
+    in_progress: "בביצוע",
+    completed: "הושלם",
+    blocked: "חסום",
+    failed: "נכשל",
+  };
+
+  return (
+    <div className="space-y-4 text-right">
+      <div className="grid grid-cols-2 gap-3">
+        <InfoBlock label="מיקום" value={task.location_name} icon={<MapPin size={12} />} />
+        <InfoBlock label="סטטוס" value={statusLabel[task.status] || task.status} icon={<Clock size={12} />} />
+        <InfoBlock label="תקן (דק׳)" value={String(task.standard_minutes)} icon={<Timer size={12} />} />
+        <InfoBlock
+          label="זמן שעבר"
+          value={elapsed !== null ? `${elapsed} דק׳` : "—"}
+          icon={<Timer size={12} />}
+          highlight={elapsed !== null && elapsed > task.standard_minutes * 1.15 ? "destructive" : undefined}
+        />
+        {task.started_at && (
+          <InfoBlock label="התחלה" value={new Date(task.started_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })} icon={<Clock size={12} />} />
+        )}
+        {task.finished_at && (
+          <InfoBlock label="סיום" value={new Date(task.finished_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })} icon={<Clock size={12} />} />
+        )}
+        {variance !== null && (
+          <InfoBlock
+            label="סטייה"
+            value={`${variance > 0 ? "+" : ""}${variance}%`}
+            icon={<AlertTriangle size={12} />}
+            highlight={variance > 15 ? "destructive" : variance > 0 ? "warning" : "success"}
+          />
+        )}
+        <InfoBlock label="עדיפות" value={task.priority === "high" ? "גבוה" : "רגיל"} icon={<AlertTriangle size={12} />} />
+      </div>
+
+      {task.is_deferred && (
+        <div className="rounded-lg bg-warning/10 border border-warning/30 p-3 text-xs">
+          <p className="font-bold text-warning">משימה נדחתה</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const InfoBlock = ({
+  label,
+  value,
+  icon,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  highlight?: "destructive" | "warning" | "success";
+}) => (
+  <div className="rounded-lg bg-muted/50 p-2.5">
+    <p className="text-[10px] text-muted-foreground flex items-center gap-1 mb-0.5">{icon} {label}</p>
+    <p className={`text-sm font-semibold mono ${
+      highlight === "destructive" ? "text-destructive" :
+      highlight === "warning" ? "text-warning" :
+      highlight === "success" ? "text-success" : ""
+    }`}>{value}</p>
+  </div>
+);
+
+export default VisualControlBoard;

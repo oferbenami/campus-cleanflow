@@ -9,6 +9,7 @@ import {
   LogOut,
   BarChart3,
   Layers,
+  LayoutGrid,
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
@@ -16,8 +17,9 @@ import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import TemplatesTab from "@/components/property-manager/TemplatesTab";
+import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 
-type PMTab = "staff" | "templates" | "planning" | "assign" | "masterdata" | "eod";
+type PMTab = "staff" | "templates" | "planning" | "assign" | "controlBoard" | "masterdata" | "eod";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("staff");
@@ -35,6 +37,7 @@ const PropertyManagerView = () => {
     { key: "templates", label: "תבניות", icon: <Layers size={16} /> },
     { key: "planning", label: "תכנון מחר", icon: <CalendarPlus size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
+    { key: "controlBoard", label: "לוח בקרה", icon: <LayoutGrid size={16} /> },
     { key: "masterdata", label: "נכסים", icon: <Database size={16} /> },
     { key: "eod", label: "סוף יום", icon: <BarChart3 size={16} /> },
   ];
@@ -78,11 +81,12 @@ const PropertyManagerView = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pb-6">
+      <div className={`${activeTab === "controlBoard" ? "max-w-full" : "max-w-7xl"} mx-auto px-4 sm:px-6 pb-6`}>
         {activeTab === "staff" && <StaffListTab />}
         {activeTab === "templates" && <TemplatesTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
         {activeTab === "assign" && <ZonePlanningTab />}
+        {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
         {activeTab === "eod" && <EndOfDayTab />}
       </div>
