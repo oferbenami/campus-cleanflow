@@ -43,7 +43,12 @@ const ZonePlanningTab = () => {
     setAssignments((prev) => ({ ...prev, [templateId]: staffId || "" }));
   };
 
-  const unassignedCount = filteredTemplates.filter((t) => !assignments[t.id]).length;
+  const unassignedCount = filteredTemplates.filter((t) => {
+    const alreadyExists = existingAssignments.some(
+      (a) => a.template_id === t.id && a.shift_type === shift
+    );
+    return !alreadyExists && !assignments[t.id];
+  }).length;
 
   const handleSend = async () => {
     setSaving(true);
