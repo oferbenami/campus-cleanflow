@@ -35,6 +35,8 @@ import ReportsPanel from "@/components/manager/ReportsPanel";
 import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 import ShortageReportsPanel from "@/components/shared/ShortageReportsPanel";
 import { useShortageReports } from "@/hooks/useShortageReports";
+import IncidentDispatchBoard from "@/components/incidents/IncidentDispatchBoard";
+import IncidentAnalyticsDashboard from "@/components/incidents/IncidentAnalyticsDashboard";
 import {
   computeWorkloadsFromAssignments,
   computeVariancesFromAssignments,
@@ -43,7 +45,7 @@ import {
 } from "@/lib/scheduling-engine";
 
 type DrillDown = "staff" | "completed" | "inProgress" | "overdue" | "sla" | null;
-type ManagerTab = "overview" | "workload" | "tracking" | "controlBoard" | "endOfDay" | "users" | "incentives" | "reports";
+type ManagerTab = "overview" | "workload" | "tracking" | "controlBoard" | "incidents" | "incidentAnalytics" | "endOfDay" | "users" | "incentives" | "reports";
 
 const ManagerDashboard = () => {
   const { signOut } = useAuth();
@@ -106,6 +108,8 @@ const ManagerDashboard = () => {
   const tabs: { key: ManagerTab; icon: React.ElementType; label: string }[] = [
     { key: "overview", icon: Gauge, label: "סקירה" },
     { key: "controlBoard", icon: LayoutGrid, label: "לוח בקרה" },
+    { key: "incidents", icon: AlertTriangle, label: "אירועים" },
+    { key: "incidentAnalytics", icon: BarChart3, label: "ניתוח אירועים" },
     { key: "workload", icon: CalendarClock, label: "עומסים" },
     { key: "tracking", icon: ClipboardList, label: "מעקב" },
     { key: "endOfDay", icon: BarChart3, label: "סוף יום" },
@@ -333,6 +337,8 @@ const ManagerDashboard = () => {
         )}
 
         {activeTab === "controlBoard" && <VisualControlBoard />}
+        {activeTab === "incidents" && <IncidentDispatchBoard />}
+        {activeTab === "incidentAnalytics" && <IncidentAnalyticsDashboard />}
 
         {activeTab === "endOfDay" && (
           <div className="animate-slide-up space-y-6">

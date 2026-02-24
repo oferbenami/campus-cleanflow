@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -27,6 +28,8 @@ import CannotPerformModal from "@/components/staff/CannotPerformModal";
 import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 import type { CannotPerformResult } from "@/components/staff/CannotPerformModal";
 import { useShortageReports } from "@/hooks/useShortageReports";
+import { useIncidents } from "@/hooks/useIncidents";
+import WorkerIncidentAlert from "@/components/incidents/WorkerIncidentAlert";
 import breakIllustration from "@/assets/break-illustration.png";
 
 type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage";
@@ -37,6 +40,7 @@ const StaffView = () => {
   const { signOut, user } = useAuth();
   const { assignment, tasks, loading, error, startTask, finishTask, cannotPerformTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
+  const { myIncidents, startIncident, resolveIncident, reassignIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
 
   const [screen, setScreen] = useState<StaffScreen>("welcome");
@@ -360,6 +364,51 @@ const StaffView = () => {
           התנתק
         </button>
       </div>
+    );
+  }
+
+  // Active incident for this worker
+  const activeIncident = myIncidents[0] || null;
+
+  // If there's a pending incident alert, show full-screen overlay
+  if (activeIncident && activeIncident.status === "assigned") {
+    return (
+      <WorkerIncidentAlert
+        incident={activeIncident}
+        onAccept={async () => {
+          await startIncident(activeIncident.id);
+          toast({ title: "✓ התחלת טיפול באירוע" });
+        }}
+        onDefer={async (reason) => {
+          // Defer back to supervisor by logging event and unassigning
+          await supabase.from("incident_events_log").insert({
+            incident_id: activeIncident.id,
+            event_type: "deferred" as any,
+            user_id: user?.id || "",
+            event_payload: { reason },
+          });
+          await supabase.from("incidents").update({
+            assigned_to_user_id: null,
+            status: "pending_dispatch" as any,
+            assigned_at: null,
+          }).eq("id", activeIncident.id);
+          toast({ title: "⚠️ אירוע הוחזר לתור" });
+        }}
+        onReassignBack={async () => {
+          await supabase.from("incident_events_log").insert({
+            incident_id: activeIncident.id,
+            event_type: "reassigned" as any,
+            user_id: user?.id || "",
+            event_payload: { reason: "returned_to_supervisor" },
+          });
+          await supabase.from("incidents").update({
+            assigned_to_user_id: null,
+            status: "pending_dispatch" as any,
+            assigned_at: null,
+          }).eq("id", activeIncident.id);
+          toast({ title: "↩️ אירוע הוחזר למפקח" });
+        }}
+      />
     );
   }
 
