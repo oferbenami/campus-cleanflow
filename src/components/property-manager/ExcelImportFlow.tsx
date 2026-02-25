@@ -142,7 +142,8 @@ const ExcelImportFlow = () => {
       const tools_qty = parseFloat(getMappedValue(row, "tools_qty")) || null;
       const area_minutes_coeff = parseFloat(getMappedValue(row, "area_minutes_coeff")) || null;
       const tools_minutes_coeff = parseFloat(getMappedValue(row, "tools_minutes_coeff")) || null;
-      const rounds = parseInt(getMappedValue(row, "rounds_per_shift")) || 1;
+      const rawRounds = getMappedValue(row, "rounds_per_shift");
+      const rounds = rawRounds != null ? parseInt(rawRounds) : null;
       // Use per-task standard_minutes (NOT total across rounds)
       let perTaskMinutes = parseFloat(getMappedValue(row, "standard_minutes")) || 0;
 
@@ -160,8 +161,11 @@ const ExcelImportFlow = () => {
       const desc = getMappedValue(row, "description");
       const cleaningType = getMappedValue(row, "cleaning_type");
 
-      // Split into N tasks when rounds > 1
-      const taskCount = rounds > 1 ? rounds : 1;
+      // If rounds is explicitly 0, skip this task entirely
+      if (rounds === 0) return;
+
+      // Split into N tasks when rounds > 1; if null/undefined treat as 1
+      const taskCount = (rounds && rounds > 1) ? rounds : 1;
       for (let round = 1; round <= taskCount; round++) {
         const roundSuffix = taskCount > 1 ? ` (סבב ${round}/${taskCount})` : "";
         grouped[key].tasks.push({
