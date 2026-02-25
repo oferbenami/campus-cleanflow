@@ -93,7 +93,6 @@ const PropertyManagerView = () => {
         {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
         {activeTab === "eod" && <EndOfDayTab />}
-        {activeTab === "eod" && <EndOfDayTab />}
       </div>
     </div>
   );

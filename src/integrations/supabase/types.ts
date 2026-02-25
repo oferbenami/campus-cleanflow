@@ -198,8 +198,9 @@ export type Database = {
           site_id: string
           staff_user_id: string
           status: Database["public"]["Enums"]["assignment_status"]
-          template_id: string
+          template_id: string | null
           updated_at: string
+          work_package_id: string | null
         }
         Insert: {
           created_at?: string
@@ -210,8 +211,9 @@ export type Database = {
           site_id: string
           staff_user_id: string
           status?: Database["public"]["Enums"]["assignment_status"]
-          template_id: string
+          template_id?: string | null
           updated_at?: string
+          work_package_id?: string | null
         }
         Update: {
           created_at?: string
@@ -222,8 +224,9 @@ export type Database = {
           site_id?: string
           staff_user_id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
-          template_id?: string
+          template_id?: string | null
           updated_at?: string
+          work_package_id?: string | null
         }
         Relationships: [
           {
@@ -252,6 +255,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "task_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "work_packages"
             referencedColumns: ["id"]
           },
         ]
