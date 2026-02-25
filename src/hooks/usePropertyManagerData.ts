@@ -169,7 +169,8 @@ export function useCreateAssignment() {
   return useMutation({
     mutationFn: async (params: {
       staffId: string;
-      templateId: string;
+      templateId?: string;
+      workPackageId?: string;
       shiftType: "morning" | "evening";
       date: string;
       addonTemplateIds?: string[];
@@ -179,40 +180,88 @@ export function useCreateAssignment() {
         .from("assignments")
         .insert({
           staff_user_id: params.staffId,
-          template_id: params.templateId,
+          template_id: params.templateId || null,
+          work_package_id: params.workPackageId || null,
           shift_type: params.shiftType,
           date: params.date,
           site_id: SITE_ID,
           created_by: user?.id || null,
           status: "planned",
-        })
+        } as any)
         .select("id")
         .single();
 
       if (aErr) throw aErr;
 
-      // Create assignment_addons records
-      if (params.addonTemplateIds?.length) {
-        const { error: aaErr } = await supabase
-          .from("assignment_addons")
-          .insert(
-            params.addonTemplateIds.map((addonId) => ({
-              assignment_id: assignment.id,
-              addon_template_id: addonId,
-              apply_mode: "merge",
-            }))
-          );
-        if (aaErr) throw aaErr;
-      }
+      // If work package based, generate tasks from work_package_tasks
+      if (params.workPackageId) {
+        const { data: wpTasks } = await supabase
+          .from("work_package_tasks")
+          .select("*")
+          .eq("work_package_id", params.workPackageId);
 
-      // Generate tasks (BASE + ADD-ONS merged)
-      await generateAssignmentTasks(
-        assignment.id,
-        params.templateId,
-        params.addonTemplateIds || [],
-        params.date,
-        params.shiftType
-      );
+        if (wpTasks?.length) {
+          // We need a location_id for assigned_tasks. Use a fallback.
+          const { data: fallbackLoc } = await supabase
+            .from("campus_locations")
+            .select("id")
+            .eq("site_id", SITE_ID)
+            .limit(1)
+            .maybeSingle();
+
+          const fallbackLocationId = fallbackLoc?.id || "00000000-0000-0000-0000-000000000000";
+          const shiftStart = params.shiftType === "morning" ? "07:00" : "16:00";
+          let cursor = shiftStart;
+
+          const tasksToInsert = wpTasks.map((t, i) => {
+            const startDate = new Date(`${params.date}T${cursor}:00`);
+            const mins = Number(t.standard_minutes) || 30;
+            const endDate = new Date(startDate.getTime() + mins * 60000);
+            cursor = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+
+            return {
+              assignment_id: assignment.id,
+              task_name: [t.space_type, t.description, t.cleaning_type].filter(Boolean).join(" - ") || `משימה ${i + 1}`,
+              location_id: fallbackLocationId,
+              standard_minutes: mins,
+              priority: "normal" as const,
+              checklist_json: [],
+              sequence_order: i + 1,
+              queue_order: i + 1,
+              window_start: startDate.toISOString(),
+              window_end: endDate.toISOString(),
+              status: "queued" as const,
+              source_type: "work_package",
+            };
+          });
+
+          const { error: tErr } = await supabase.from("assigned_tasks").insert(tasksToInsert);
+          if (tErr) throw tErr;
+        }
+      } else if (params.templateId) {
+        // Create assignment_addons records
+        if (params.addonTemplateIds?.length) {
+          const { error: aaErr } = await supabase
+            .from("assignment_addons")
+            .insert(
+              params.addonTemplateIds.map((addonId) => ({
+                assignment_id: assignment.id,
+                addon_template_id: addonId,
+                apply_mode: "merge",
+              }))
+            );
+          if (aaErr) throw aaErr;
+        }
+
+        // Generate tasks (BASE + ADD-ONS merged)
+        await generateAssignmentTasks(
+          assignment.id,
+          params.templateId,
+          params.addonTemplateIds || [],
+          params.date,
+          params.shiftType
+        );
+      }
 
       return assignment;
     },
