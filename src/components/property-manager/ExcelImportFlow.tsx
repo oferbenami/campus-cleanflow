@@ -143,36 +143,41 @@ const ExcelImportFlow = () => {
       const area_minutes_coeff = parseFloat(getMappedValue(row, "area_minutes_coeff")) || null;
       const tools_minutes_coeff = parseFloat(getMappedValue(row, "tools_minutes_coeff")) || null;
       const rounds = parseInt(getMappedValue(row, "rounds_per_shift")) || 1;
-      let stdMinutes = parseFloat(getMappedValue(row, "standard_minutes")) || 0;
+      // Use per-task standard_minutes (NOT total across rounds)
+      let perTaskMinutes = parseFloat(getMappedValue(row, "standard_minutes")) || 0;
 
-      // Compute if missing
-      if (!stdMinutes || stdMinutes <= 0) {
-        stdMinutes = computeStandardMinutes({
+      // Compute per-task time if missing (without multiplying by rounds)
+      if (!perTaskMinutes || perTaskMinutes <= 0) {
+        perTaskMinutes = computeStandardMinutes({
           area_sqm,
           area_minutes_coeff,
           tools_qty,
           tools_minutes_coeff,
-          rounds_per_shift: rounds,
-        });
+        }, false); // false = don't apply rounds
       }
 
       const spaceType = getMappedValue(row, "space_type");
       const desc = getMappedValue(row, "description");
       const cleaningType = getMappedValue(row, "cleaning_type");
 
-      grouped[key].tasks.push({
-        location_ref: [building, floor, spaceType, desc].filter(Boolean).join(" / "),
-        space_type: spaceType ? String(spaceType) : null,
-        description: desc ? String(desc) : null,
-        cleaning_type: cleaningType ? String(cleaningType) : null,
-        area_sqm,
-        tools_qty,
-        area_minutes_coeff,
-        tools_minutes_coeff,
-        standard_minutes: stdMinutes,
-        rounds_per_shift: rounds,
-        notes: null,
-      });
+      // Split into N tasks when rounds > 1
+      const taskCount = rounds > 1 ? rounds : 1;
+      for (let round = 1; round <= taskCount; round++) {
+        const roundSuffix = taskCount > 1 ? ` (סבב ${round}/${taskCount})` : "";
+        grouped[key].tasks.push({
+          location_ref: [building, floor, spaceType, desc].filter(Boolean).join(" / "),
+          space_type: spaceType ? String(spaceType) : null,
+          description: desc ? `${String(desc || "")}${roundSuffix}`.trim() || null : roundSuffix.trim() || null,
+          cleaning_type: cleaningType ? String(cleaningType) : null,
+          area_sqm,
+          tools_qty,
+          area_minutes_coeff,
+          tools_minutes_coeff,
+          standard_minutes: perTaskMinutes,
+          rounds_per_shift: 1, // Each split task is 1 round
+          notes: taskCount > 1 ? `סבב ${round} מתוך ${taskCount}` : null,
+        });
+      }
     });
 
     return Object.values(grouped);
