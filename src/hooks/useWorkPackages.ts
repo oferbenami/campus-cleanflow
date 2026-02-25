@@ -360,3 +360,80 @@ export function useDeleteWorkPackage() {
     },
   });
 }
+
+/* ─── Add a task to a work package ─── */
+export function useAddWorkPackageTask() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      work_package_id: string;
+      space_type?: string;
+      description?: string;
+      cleaning_type?: string;
+      standard_minutes?: number;
+      rounds_per_shift?: number;
+      area_sqm?: number;
+    }) => {
+      const { error } = await supabase.from("work_package_tasks").insert({
+        work_package_id: params.work_package_id,
+        space_type: params.space_type || null,
+        description: params.description || null,
+        cleaning_type: params.cleaning_type || null,
+        standard_minutes: params.standard_minutes ?? 10,
+        rounds_per_shift: params.rounds_per_shift ?? 1,
+        area_sqm: params.area_sqm ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-packages"] });
+      toast({ title: "משימה נוספה" });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+/* ─── Delete a task from a work package ─── */
+export function useDeleteWorkPackageTask() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (taskId: string) => {
+      const { error } = await supabase.from("work_package_tasks").delete().eq("id", taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-packages"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
+
+/* ─── Update a task's fields ─── */
+export function useUpdateWorkPackageTask() {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      taskId: string;
+      updates: Partial<Pick<WorkPackageTask, 'space_type' | 'description' | 'cleaning_type' | 'standard_minutes' | 'rounds_per_shift' | 'area_sqm'>>;
+    }) => {
+      const { error } = await supabase
+        .from("work_package_tasks")
+        .update(params.updates)
+        .eq("id", params.taskId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["work-packages"] });
+    },
+    onError: (err: any) => {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    },
+  });
+}
