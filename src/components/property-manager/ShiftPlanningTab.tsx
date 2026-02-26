@@ -59,6 +59,10 @@ const ShiftPlanningTab = () => {
   const [saved, setSaved] = useState(false);
   const [phase, setPhase] = useState<Phase>("staff");
   const [showUnassigned, setShowUnassigned] = useState(false);
+  const [expandedStaff, setExpandedStaff] = useState<Record<string, boolean>>({});
+
+  const toggleExpanded = (staffId: string) =>
+    setExpandedStaff((prev) => ({ ...prev, [staffId]: !prev[staffId] }));
 
   const getStaffShift = (staffId: string) =>
     staffShifts[staffId] || { morning: false, evening: false };
@@ -414,15 +418,7 @@ const ShiftPlanningTab = () => {
 
       {/* ─── Phase 2: WP Assignment ─── */}
       {phase === "assign" && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sun size={12} className="text-warning" />
-            <span>{morningStaffCount} עובדי בוקר</span>
-            <span className="text-border">|</span>
-            <Moon size={12} className="text-info" />
-            <span>{eveningStaffCount} עובדי ערב</span>
-          </div>
-
+        <div className="space-y-4">
           {duplicateAlerts.length > 0 && (
             <div className="space-y-2">
               {duplicateAlerts.map((alert, i) => (
@@ -436,76 +432,101 @@ const ShiftPlanningTab = () => {
             </div>
           )}
 
-          {activeStaff.map((s) => {
-            const sh = getStaffShift(s.id);
-            const sel = getStaffSelections(s.id);
-            const shiftsToShow = (["morning", "evening"] as const).filter(
-              (shift) => sh[shift] && !alreadyAssigned(s.id, shift)
+          {/* ── Morning Shift Section ── */}
+          {(() => {
+            const morningStaff = activeStaff.filter(
+              (s) => getStaffShift(s.id).morning && !alreadyAssigned(s.id, "morning")
+            );
+            const eveningStaff = activeStaff.filter(
+              (s) => getStaffShift(s.id).evening && !alreadyAssigned(s.id, "evening")
             );
 
-            if (shiftsToShow.length === 0) return null;
+            const renderStaffRow = (s: typeof staff[0], shift: "morning" | "evening") => {
+              const key = `${s.id}-${shift}`;
+              const isExpanded = expandedStaff[key] || false;
+              const sel = getStaffSelections(s.id);
+              const wpIds = shift === "morning" ? sel.morningWps : sel.eveningWps;
+              const items = shift === "morning" ? morningWps : eveningWps;
+              const capacity = getCapacity(s.id, shift);
 
-            return (
-              <div key={s.id} className="task-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
-                    {s.avatar_initials || "?"}
-                  </div>
-                  <span className="font-semibold text-sm">{s.full_name}</span>
-                </div>
+              // WPs not yet selected by this staff member for this shift
+              const availableWps = items.filter((wp) => !wpIds.includes(wp.id));
 
-                {shiftsToShow.map((shift) => {
-                  const wpIds = shift === "morning" ? sel.morningWps : sel.eveningWps;
-                  const items = shift === "morning" ? morningWps : eveningWps;
-                  const capacity = getCapacity(s.id, shift);
-                  const canAddMore = items.length > wpIds.length;
+              return (
+                <div key={key} className="task-card">
+                  <button
+                    onClick={() => toggleExpanded(key)}
+                    className="w-full flex items-center gap-2 text-right"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold shrink-0">
+                      {s.avatar_initials || "?"}
+                    </div>
+                    <span className="font-semibold text-sm flex-1 text-right truncate">{s.full_name}</span>
+                    {wpIds.length > 0 && (
+                      <span className="text-[10px] font-mono text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+                        {wpIds.length} חבילות
+                      </span>
+                    )}
+                    {isExpanded ? <ChevronUp size={14} className="text-muted-foreground shrink-0" /> : <ChevronDown size={14} className="text-muted-foreground shrink-0" />}
+                  </button>
 
-                  return (
-                    <div key={shift} className="mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        {shift === "morning" ? (
-                          <Sun size={14} className="text-warning" />
-                        ) : (
-                          <Moon size={14} className="text-info" />
-                        )}
-                        <span className="text-xs font-semibold">
-                          {shift === "morning" ? "בוקר" : "ערב"}
-                        </span>
-                        {canAddMore && (
-                          <button
-                            onClick={() => addWorkPackage(s.id, shift)}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-muted text-muted-foreground hover:bg-accent transition-colors border border-transparent hover:border-primary/30"
-                          >
-                            <Plus size={10} />
-                            הוסף חבילה
-                          </button>
-                        )}
-                      </div>
-
-                      {wpIds.map((wpId, idx) => (
-                        <div key={`${wpId}-${idx}`} className="flex items-center gap-1.5 mb-1.5 mr-4">
-                          <select
-                            value={wpId}
-                            onChange={(e) => changeWorkPackage(s.id, shift, idx, e.target.value)}
-                            className="text-[10px] bg-background border border-input rounded px-2 py-1 flex-1"
-                          >
-                            {items.map((wp) => (
-                              <option key={wp.id} value={wp.id}>
-                                {wp.name || wp.package_code} ({wp.package_code})
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => removeWorkPackage(s.id, shift, wpId)}
-                            className="p-0.5 rounded hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors"
-                          >
-                            <X size={12} />
-                          </button>
+                  {isExpanded && (
+                    <div className="mt-3 space-y-2">
+                      {/* Selected WPs */}
+                      {wpIds.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-semibold text-muted-foreground">חבילות שנבחרו:</p>
+                          {wpIds.map((wpId) => {
+                            const wp = workPackages.find((w) => w.id === wpId);
+                            return (
+                              <div key={wpId} className="flex items-center justify-between bg-success/10 rounded-lg px-3 py-1.5 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 size={12} className="text-success" />
+                                  <span className="font-medium">{wp?.name || wp?.package_code || wpId}</span>
+                                </div>
+                                <button
+                                  onClick={() => removeWorkPackage(s.id, shift, wpId)}
+                                  className="p-0.5 rounded hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))}
+                      )}
 
+                      {/* Available WPs to select */}
+                      {availableWps.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-semibold text-muted-foreground">חבילות זמינות לשיבוץ:</p>
+                          {availableWps.map((wp) => (
+                            <button
+                              key={wp.id}
+                              onClick={() => {
+                                const wpKey = shift === "morning" ? "morningWps" : "eveningWps";
+                                setSelections((prev) => {
+                                  const current = getStaffSelectionsFrom(prev, s.id);
+                                  return { ...prev, [s.id]: { ...current, [wpKey]: [...current[wpKey], wp.id] } };
+                                });
+                              }}
+                              className="w-full flex items-center justify-between bg-muted/30 hover:bg-accent rounded-lg px-3 py-1.5 text-xs transition-colors border border-transparent hover:border-primary/30"
+                            >
+                              <div className="flex items-center gap-2">
+                                <Plus size={12} className="text-primary" />
+                                <span className="font-medium">{wp.name || wp.package_code}</span>
+                              </div>
+                              <span className="text-muted-foreground font-mono text-[10px]">
+                                {wp.tasks.reduce((sum, t) => sum + (Number(t.standard_minutes) || 0), 0)} דק׳
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Capacity bar */}
                       {capacity && (
-                        <div className="mr-4 mb-1">
+                        <div className="mt-2">
                           <div className="flex items-center gap-2 text-[10px]">
                             <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                               <div
@@ -536,11 +557,35 @@ const ShiftPlanningTab = () => {
                         </div>
                       )}
                     </div>
-                  );
-                })}
-              </div>
+                  )}
+                </div>
+              );
+            };
+
+            return (
+              <>
+                {morningStaff.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-warning">
+                      <Sun size={14} />
+                      <span>משמרת בוקר ({morningStaff.length} עובדים)</span>
+                    </div>
+                    {morningStaff.map((s) => renderStaffRow(s, "morning"))}
+                  </div>
+                )}
+
+                {eveningStaff.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-info">
+                      <Moon size={14} />
+                      <span>משמרת ערב ({eveningStaff.length} עובדים)</span>
+                    </div>
+                    {eveningStaff.map((s) => renderStaffRow(s, "evening"))}
+                  </div>
+                )}
+              </>
             );
-          })}
+          })()}
 
           <DailySummaryTable
             staff={staff}
