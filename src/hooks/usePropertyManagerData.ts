@@ -231,7 +231,7 @@ export function useCreateAssignment() {
               window_start: startDate.toISOString(),
               window_end: endDate.toISOString(),
               status: "queued" as const,
-              source_type: "work_package",
+              source_type: "base",
             };
           });
 
