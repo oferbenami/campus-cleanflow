@@ -127,7 +127,7 @@ export function useTodayAssignments(date?: string) {
     queryFn: async () => {
       const { data } = await supabase
         .from("assignments")
-        .select("id, staff_user_id, template_id, shift_type, status, date")
+        .select("id, staff_user_id, template_id, shift_type, status, date, work_package_id")
         .eq("site_id", SITE_ID)
         .eq("date", d);
       return data || [];
