@@ -1030,8 +1030,10 @@ export type Database = {
           building: string | null
           created_at: string
           created_by: string | null
+          days_of_week: number[]
           floor: string | null
           id: string
+          is_recurring: boolean
           name: string
           package_code: string
           shift_type: string
@@ -1043,8 +1045,10 @@ export type Database = {
           building?: string | null
           created_at?: string
           created_by?: string | null
+          days_of_week?: number[]
           floor?: string | null
           id?: string
+          is_recurring?: boolean
           name?: string
           package_code: string
           shift_type?: string
@@ -1056,8 +1060,10 @@ export type Database = {
           building?: string | null
           created_at?: string
           created_by?: string | null
+          days_of_week?: number[]
           floor?: string | null
           id?: string
+          is_recurring?: boolean
           name?: string
           package_code?: string
           shift_type?: string

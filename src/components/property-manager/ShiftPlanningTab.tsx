@@ -7,20 +7,15 @@ import {
   Plus,
   Send,
   Loader2,
-  Zap,
   AlertTriangle,
   Package,
 } from "lucide-react";
 import {
   useStaffProfiles,
-  useTaskTemplates,
   useTodayAssignments,
   useCreateAssignment,
 } from "@/hooks/usePropertyManagerData";
 import { useWorkPackages } from "@/hooks/useWorkPackages";
-import { calculateCapacity } from "@/lib/task-generation";
-
-type AssignMode = "template" | "workpackage";
 
 const ShiftPlanningTab = () => {
   const tomorrow = useMemo(() => {
@@ -29,58 +24,42 @@ const ShiftPlanningTab = () => {
     return d.toISOString().split("T")[0];
   }, []);
 
-  const weekday = new Date(tomorrow).getDay();
+  const tomorrowDay = new Date(tomorrow).getDay();
 
   const { data: staff = [], isLoading: staffLoading } = useStaffProfiles();
-  const { data: baseTemplates = [] } = useTaskTemplates("base");
-  const { data: addonTemplates = [] } = useTaskTemplates("addon");
   const { data: workPackages = [] } = useWorkPackages();
   const { data: existingAssignments = [] } = useTodayAssignments(tomorrow);
   const createAssignment = useCreateAssignment();
 
-  const [assignMode, setAssignMode] = useState<AssignMode>("workpackage");
+  // Filter work packages relevant for tomorrow (recurring matching day, or one-time)
+  const relevantWps = workPackages.filter((wp) => {
+    if (wp.is_recurring) {
+      return wp.days_of_week.includes(tomorrowDay);
+    }
+    return true; // one-time packages always shown
+  });
+
+  const morningWps = relevantWps.filter((wp) => wp.shift_type === "morning");
+  const eveningWps = relevantWps.filter((wp) => wp.shift_type === "evening");
+
   const [selections, setSelections] = useState<
-    Record<string, { morning?: string; evening?: string; addons?: Record<string, string[]>; morningWp?: string; eveningWp?: string }>
+    Record<string, { morningWp?: string; eveningWp?: string }>
   >({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const morningBases = baseTemplates.filter((t) => t.shift_type === "morning");
-  const eveningBases = baseTemplates.filter((t) => t.shift_type === "evening");
-  const morningAddons = addonTemplates.filter((t) => t.shift_type === "morning" || t.shift_type === "any");
-  const eveningAddons = addonTemplates.filter((t) => t.shift_type === "evening" || t.shift_type === "any");
-  const morningWps = workPackages.filter((wp) => wp.shift_type === "morning");
-  const eveningWps = workPackages.filter((wp) => wp.shift_type === "evening");
-
   const toggleShift = (staffId: string, shift: "morning" | "evening") => {
     setSelections((prev) => {
       const current = prev[staffId] || {};
-      if (assignMode === "workpackage") {
-        const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-        if (current[wpKey]) {
-          const next = { ...current };
-          delete next[wpKey];
-          return { ...prev, [staffId]: next };
-        }
-        const wps = shift === "morning" ? morningWps : eveningWps;
-        return { ...prev, [staffId]: { ...current, [wpKey]: wps[0]?.id } };
-      } else {
-        if (current[shift]) {
-          const next = { ...current };
-          delete next[shift];
-          return { ...prev, [staffId]: next };
-        }
-        const tmpl = shift === "morning" ? morningBases[0] : eveningBases[0];
-        return { ...prev, [staffId]: { ...current, [shift]: tmpl?.id } };
+      const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
+      if (current[wpKey]) {
+        const next = { ...current };
+        delete next[wpKey];
+        return { ...prev, [staffId]: next };
       }
+      const wps = shift === "morning" ? morningWps : eveningWps;
+      return { ...prev, [staffId]: { ...current, [wpKey]: wps[0]?.id } };
     });
-  };
-
-  const selectTemplate = (staffId: string, shift: "morning" | "evening", templateId: string) => {
-    setSelections((prev) => ({
-      ...prev,
-      [staffId]: { ...prev[staffId], [shift]: templateId },
-    }));
   };
 
   const selectWorkPackage = (staffId: string, shift: "morning" | "evening", wpId: string) => {
@@ -91,31 +70,12 @@ const ShiftPlanningTab = () => {
     }));
   };
 
-  const toggleAddon = (staffId: string, shift: "morning" | "evening", addonId: string) => {
-    setSelections((prev) => {
-      const current = prev[staffId] || {};
-      const addons = current.addons || {};
-      const shiftAddons = addons[shift] || [];
-      const updated = shiftAddons.includes(addonId)
-        ? shiftAddons.filter((id) => id !== addonId)
-        : [...shiftAddons, addonId];
-      return {
-        ...prev,
-        [staffId]: { ...current, addons: { ...addons, [shift]: updated } },
-      };
-    });
-  };
-
   const isPlanned = (staffId: string, shift: "morning" | "evening") => {
     const sel = selections[staffId];
-    if (!sel) return false;
-    if (assignMode === "workpackage") {
-      return !!(shift === "morning" ? sel.morningWp : sel.eveningWp);
-    }
-    return !!sel[shift];
+    return !!(shift === "morning" ? sel?.morningWp : sel?.eveningWp);
   };
 
-  const getWpCapacity = (staffId: string, shift: "morning" | "evening") => {
+  const getCapacity = (staffId: string, shift: "morning" | "evening") => {
     const sel = selections[staffId];
     const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
     const wpId = sel?.[wpKey];
@@ -125,26 +85,20 @@ const ShiftPlanningTab = () => {
     const totalMins = wp.tasks.reduce((s, t) => s + (Number(t.standard_minutes) || 0), 0);
     const shiftMinutes = 420;
     const pct = Math.round((totalMins / shiftMinutes) * 100);
-    return { totalMinutes: totalMins, shiftMinutes, utilizationPercent: pct, taskCount: wp.tasks.length, status: pct <= 60 ? "under" as const : pct <= 100 ? "balanced" as const : "over" as const };
-  };
-
-  const getCapacity = (staffId: string, shift: "morning" | "evening") => {
-    if (assignMode === "workpackage") return getWpCapacity(staffId, shift);
-    const sel = selections[staffId];
-    if (!sel?.[shift]) return null;
-    const baseId = sel[shift];
-    const base = baseTemplates.find((t) => t.id === baseId);
-    if (!base) return null;
-    const addonIds = sel.addons?.[shift] || [];
-    const addonTasksList = addonTemplates.filter((t) => addonIds.includes(t.id)).flatMap((t) => t.tasks);
-    return calculateCapacity(base.tasks, addonTasksList, weekday);
+    return {
+      totalMinutes: totalMins,
+      shiftMinutes,
+      utilizationPercent: pct,
+      taskCount: wp.tasks.length,
+      status: pct <= 60 ? ("under" as const) : pct <= 100 ? ("balanced" as const) : ("over" as const),
+    };
   };
 
   const alreadyAssigned = (staffId: string, shift: "morning" | "evening") =>
     existingAssignments.some((a) => a.staff_user_id === staffId && a.shift_type === shift);
 
-  const morningCount = Object.values(selections).filter((s) => assignMode === "workpackage" ? s.morningWp : s.morning).length;
-  const eveningCount = Object.values(selections).filter((s) => assignMode === "workpackage" ? s.eveningWp : s.evening).length;
+  const morningCount = Object.values(selections).filter((s) => s.morningWp).length;
+  const eveningCount = Object.values(selections).filter((s) => s.eveningWp).length;
   const totalPlanned = morningCount + eveningCount;
 
   const handleSave = async () => {
@@ -153,30 +107,16 @@ const ShiftPlanningTab = () => {
       const promises: Promise<any>[] = [];
       for (const [staffId, shifts] of Object.entries(selections)) {
         for (const shift of ["morning", "evening"] as const) {
-          if (assignMode === "workpackage") {
-            const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-            if (shifts[wpKey]) {
-              promises.push(
-                createAssignment.mutateAsync({
-                  staffId,
-                  workPackageId: shifts[wpKey]!,
-                  shiftType: shift,
-                  date: tomorrow,
-                })
-              );
-            }
-          } else {
-            if (shifts[shift]) {
-              promises.push(
-                createAssignment.mutateAsync({
-                  staffId,
-                  templateId: shifts[shift]!,
-                  shiftType: shift,
-                  date: tomorrow,
-                  addonTemplateIds: shifts.addons?.[shift] || [],
-                })
-              );
-            }
+          const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
+          if (shifts[wpKey]) {
+            promises.push(
+              createAssignment.mutateAsync({
+                staffId,
+                workPackageId: shifts[wpKey]!,
+                shiftType: shift,
+                date: tomorrow,
+              })
+            );
           }
         }
       }
@@ -191,12 +131,18 @@ const ShiftPlanningTab = () => {
     }
   };
 
-  const tomorrowFormatted = new Date(tomorrow).toLocaleDateString("he-IL", { day: "numeric", month: "short", year: "numeric" });
+  const tomorrowFormatted = new Date(tomorrow).toLocaleDateString("he-IL", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   if (staffLoading) {
     return (
       <div className="animate-pulse space-y-3">
-        {[1, 2, 3].map((i) => <div key={i} className="h-16 bg-muted rounded-xl" />)}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="h-16 bg-muted rounded-xl" />
+        ))}
       </div>
     );
   }
@@ -208,27 +154,9 @@ const ShiftPlanningTab = () => {
           <CalendarPlus size={18} />
           תכנון משמרות — מחר ({tomorrowFormatted})
         </h2>
-        <p className="text-xs text-muted-foreground">שבץ עובדים לחבילת עבודה או תבנית בסיס</p>
-      </div>
-
-      {/* Mode toggle */}
-      <div className="flex gap-1 bg-muted rounded-xl p-1">
-        <button
-          onClick={() => { setAssignMode("workpackage"); setSelections({}); }}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
-            assignMode === "workpackage" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          <Package size={14} /> חבילות עבודה
-        </button>
-        <button
-          onClick={() => { setAssignMode("template"); setSelections({}); }}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
-            assignMode === "template" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-          }`}
-        >
-          <Zap size={14} /> תבניות
-        </button>
+        <p className="text-xs text-muted-foreground">
+          שבץ עובדים לחבילות עבודה. מוצגות רק חבילות רלוונטיות ליום מחר.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -266,10 +194,7 @@ const ShiftPlanningTab = () => {
               }
 
               const capacity = getCapacity(s.id, shift);
-              const items = assignMode === "workpackage"
-                ? (shift === "morning" ? morningWps : eveningWps)
-                : (shift === "morning" ? morningBases : eveningBases);
-              const addons = assignMode === "template" ? (shift === "morning" ? morningAddons : eveningAddons) : [];
+              const items = shift === "morning" ? morningWps : eveningWps;
 
               return (
                 <div key={shift} className="mb-3">
@@ -291,53 +216,18 @@ const ShiftPlanningTab = () => {
 
                     {isPlanned(s.id, shift) && items.length > 0 && (
                       <select
-                        value={
-                          assignMode === "workpackage"
-                            ? (selections[s.id]?.[shift === "morning" ? "morningWp" : "eveningWp"] || "")
-                            : (selections[s.id]?.[shift] || "")
-                        }
-                        onChange={(e) =>
-                          assignMode === "workpackage"
-                            ? selectWorkPackage(s.id, shift, e.target.value)
-                            : selectTemplate(s.id, shift, e.target.value)
-                        }
+                        value={selections[s.id]?.[shift === "morning" ? "morningWp" : "eveningWp"] || ""}
+                        onChange={(e) => selectWorkPackage(s.id, shift, e.target.value)}
                         className="text-[10px] bg-background border border-input rounded px-2 py-1 flex-1"
                       >
-                        {items.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {"name" in item ? item.name : ""} {"package_code" in item ? `(${(item as any).package_code})` : ""}
+                        {items.map((wp) => (
+                          <option key={wp.id} value={wp.id}>
+                            {wp.name || wp.package_code} ({wp.package_code})
                           </option>
                         ))}
                       </select>
                     )}
                   </div>
-
-                  {/* Add-ons selection (template mode only) */}
-                  {assignMode === "template" && isPlanned(s.id, shift) && addons.length > 0 && (
-                    <div className="mr-4 space-y-1 mb-2">
-                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Zap size={10} /> תוספות:
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {addons.map((addon) => {
-                          const isSelected = selections[s.id]?.addons?.[shift]?.includes(addon.id);
-                          return (
-                            <button
-                              key={addon.id}
-                              onClick={() => toggleAddon(s.id, shift, addon.id)}
-                              className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${
-                                isSelected
-                                  ? "bg-warning/15 text-warning border border-warning"
-                                  : "bg-muted text-muted-foreground border border-transparent hover:border-warning/30"
-                              }`}
-                            >
-                              {isSelected ? "✓ " : ""}{addon.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Capacity indicator */}
                   {capacity && (
@@ -355,9 +245,11 @@ const ShiftPlanningTab = () => {
                             style={{ width: `${Math.min(capacity.utilizationPercent, 100)}%` }}
                           />
                         </div>
-                        <span className={`font-mono font-semibold ${
-                          capacity.status === "over" ? "text-destructive" : "text-muted-foreground"
-                        }`}>
+                        <span
+                          className={`font-mono font-semibold ${
+                            capacity.status === "over" ? "text-destructive" : "text-muted-foreground"
+                          }`}
+                        >
                           {capacity.totalMinutes}/{capacity.shiftMinutes} דק׳
                         </span>
                       </div>

@@ -16,6 +16,8 @@ export interface WorkPackage {
   active: boolean;
   created_by: string | null;
   created_at: string;
+  is_recurring: boolean;
+  days_of_week: number[];
 }
 
 export interface WorkPackageTask {
