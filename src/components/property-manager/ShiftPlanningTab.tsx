@@ -120,6 +120,42 @@ const ShiftPlanningTab = () => {
   const morningCount = Object.values(selections).reduce((s, sel) => s + sel.morningWps.length, 0);
   const eveningCount = Object.values(selections).reduce((s, sel) => s + sel.eveningWps.length, 0);
 
+  // Detect duplicate WP assignments across different staff in same shift
+  const duplicateAlerts = useMemo(() => {
+    const alerts: { wpId: string; wpName: string; shift: string; staffNames: string[] }[] = [];
+    for (const shift of ["morning", "evening"] as const) {
+      const wpToStaff: Record<string, string[]> = {};
+      for (const [staffId, sel] of Object.entries(selections)) {
+        const wpIds = shift === "morning" ? sel.morningWps : sel.eveningWps;
+        for (const wpId of wpIds) {
+          if (!wpToStaff[wpId]) wpToStaff[wpId] = [];
+          const s = staff.find((st) => st.id === staffId);
+          wpToStaff[wpId].push(s?.full_name || staffId);
+        }
+      }
+      // Also check existing assignments
+      for (const a of existingAssignments) {
+        if (a.shift_type === shift && a.work_package_id) {
+          if (!wpToStaff[a.work_package_id]) wpToStaff[a.work_package_id] = [];
+          const s = staff.find((st) => st.id === a.staff_user_id);
+          wpToStaff[a.work_package_id].push(s?.full_name || a.staff_user_id);
+        }
+      }
+      for (const [wpId, names] of Object.entries(wpToStaff)) {
+        if (names.length > 1) {
+          const wp = workPackages.find((w) => w.id === wpId);
+          alerts.push({
+            wpId,
+            wpName: wp?.name || wp?.package_code || wpId,
+            shift: shift === "morning" ? "בוקר" : "ערב",
+            staffNames: names,
+          });
+        }
+      }
+    }
+    return alerts;
+  }, [selections, existingAssignments, staff, workPackages]);
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -190,6 +226,19 @@ const ShiftPlanningTab = () => {
           <p className="text-xs text-muted-foreground">חבילות ערב</p>
         </div>
       </div>
+
+      {duplicateAlerts.length > 0 && (
+        <div className="space-y-2">
+          {duplicateAlerts.map((alert, i) => (
+            <div key={i} className="flex items-start gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+              <span>
+                <strong>{alert.wpName}</strong> ({alert.shift}) משובצת ל-{alert.staffNames.length} עובדים: {alert.staffNames.join(", ")}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {staff.map((s) => {
