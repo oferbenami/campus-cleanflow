@@ -1,5 +1,7 @@
-import { Package, Copy, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { Package, Copy, Trash2, ChevronDown, ChevronUp, Repeat, CalendarOff } from "lucide-react";
 import type { WorkPackageWithTasks } from "@/hooks/useWorkPackages";
+
+const DAY_LABELS = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
 
 interface Props {
   pkg: WorkPackageWithTasks;
@@ -17,8 +19,18 @@ const WorkPackageHeader = ({ pkg, totalMinutes, isExpanded, onToggle, onClone, o
     </div>
     <div className="flex-1 min-w-0">
       <p className="font-semibold text-sm">{pkg.name || pkg.package_code}</p>
-      <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
         <span>{pkg.shift_type === "evening" ? "🌙 ערב" : "☀️ בוקר"}</span>
+        <span>·</span>
+        <span className="flex items-center gap-0.5">
+          {pkg.is_recurring ? <><Repeat size={9} /> מחזורי</> : <><CalendarOff size={9} /> חד-פעמי</>}
+        </span>
+        {pkg.is_recurring && (
+          <>
+            <span>·</span>
+            <span>{pkg.days_of_week.map(d => DAY_LABELS[d]).join(",")}</span>
+          </>
+        )}
         <span>·</span>
         <span>{pkg.tasks.length} משימות</span>
         <span>·</span>

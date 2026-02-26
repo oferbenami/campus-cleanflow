@@ -45,6 +45,7 @@ import WorkPackageBulkPanel from "./work-package/WorkPackageBulkPanel";
 import WorkPackageTaskRow from "./work-package/WorkPackageTaskRow";
 import WorkPackageAddTask from "./work-package/WorkPackageAddTask";
 import WorkPackageTaskFilter from "./work-package/WorkPackageTaskFilter";
+import WorkPackageSettingsPanel from "./work-package/WorkPackageSettingsPanel";
 
 const WorkPackageManager = () => {
   const { data: packages = [], isLoading } = useWorkPackages();
@@ -203,6 +204,9 @@ const WorkPackageManager = () => {
 
               {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  {/* Package settings */}
+                  <WorkPackageSettingsPanel pkg={pkg} />
+
                   {/* Search & Filter */}
                   <WorkPackageTaskFilter
                     tasks={pkg.tasks}
