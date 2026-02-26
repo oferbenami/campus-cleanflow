@@ -8,7 +8,7 @@ import {
   Send,
   Loader2,
   AlertTriangle,
-  Package,
+  X,
 } from "lucide-react";
 import {
   useStaffProfiles,
@@ -16,6 +16,11 @@ import {
   useCreateAssignment,
 } from "@/hooks/usePropertyManagerData";
 import { useWorkPackages } from "@/hooks/useWorkPackages";
+
+interface ShiftSelections {
+  morningWps: string[];
+  eveningWps: string[];
+}
 
 const ShiftPlanningTab = () => {
   const tomorrow = useMemo(() => {
@@ -31,65 +36,76 @@ const ShiftPlanningTab = () => {
   const { data: existingAssignments = [] } = useTodayAssignments(tomorrow);
   const createAssignment = useCreateAssignment();
 
-  // Filter work packages relevant for tomorrow (recurring matching day, or one-time)
   const relevantWps = workPackages.filter((wp) => {
-    if (wp.is_recurring) {
-      return wp.days_of_week.includes(tomorrowDay);
-    }
-    return true; // one-time packages always shown
+    if (wp.is_recurring) return wp.days_of_week.includes(tomorrowDay);
+    return true;
   });
 
   const morningWps = relevantWps.filter((wp) => wp.shift_type === "morning");
   const eveningWps = relevantWps.filter((wp) => wp.shift_type === "evening");
 
-  const [selections, setSelections] = useState<
-    Record<string, { morningWp?: string; eveningWp?: string }>
-  >({});
+  const [selections, setSelections] = useState<Record<string, ShiftSelections>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const toggleShift = (staffId: string, shift: "morning" | "evening") => {
+  const getStaffSelections = (staffId: string): ShiftSelections =>
+    selections[staffId] || { morningWps: [], eveningWps: [] };
+
+  const addWorkPackage = (staffId: string, shift: "morning" | "evening") => {
+    const items = shift === "morning" ? morningWps : eveningWps;
+    if (!items.length) return;
+    const key = shift === "morning" ? "morningWps" : "eveningWps";
     setSelections((prev) => {
-      const current = prev[staffId] || {};
-      const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-      if (current[wpKey]) {
-        const next = { ...current };
-        delete next[wpKey];
-        return { ...prev, [staffId]: next };
-      }
-      const wps = shift === "morning" ? morningWps : eveningWps;
-      return { ...prev, [staffId]: { ...current, [wpKey]: wps[0]?.id } };
+      const current = getStaffSelectionsFrom(prev, staffId);
+      const existing = current[key];
+      // Find first WP not already selected
+      const next = items.find((wp) => !existing.includes(wp.id));
+      if (!next) return prev;
+      return { ...prev, [staffId]: { ...current, [key]: [...existing, next.id] } };
     });
   };
 
-  const selectWorkPackage = (staffId: string, shift: "morning" | "evening", wpId: string) => {
-    const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-    setSelections((prev) => ({
-      ...prev,
-      [staffId]: { ...prev[staffId], [wpKey]: wpId },
-    }));
+  const removeWorkPackage = (staffId: string, shift: "morning" | "evening", wpId: string) => {
+    const key = shift === "morning" ? "morningWps" : "eveningWps";
+    setSelections((prev) => {
+      const current = getStaffSelectionsFrom(prev, staffId);
+      return { ...prev, [staffId]: { ...current, [key]: current[key].filter((id) => id !== wpId) } };
+    });
   };
 
-  const isPlanned = (staffId: string, shift: "morning" | "evening") => {
-    const sel = selections[staffId];
-    return !!(shift === "morning" ? sel?.morningWp : sel?.eveningWp);
+  const changeWorkPackage = (staffId: string, shift: "morning" | "evening", index: number, newWpId: string) => {
+    const key = shift === "morning" ? "morningWps" : "eveningWps";
+    setSelections((prev) => {
+      const current = getStaffSelectionsFrom(prev, staffId);
+      const updated = [...current[key]];
+      updated[index] = newWpId;
+      return { ...prev, [staffId]: { ...current, [key]: updated } };
+    });
   };
+
+  const getStaffSelectionsFrom = (sel: Record<string, ShiftSelections>, staffId: string): ShiftSelections =>
+    sel[staffId] || { morningWps: [], eveningWps: [] };
 
   const getCapacity = (staffId: string, shift: "morning" | "evening") => {
-    const sel = selections[staffId];
-    const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-    const wpId = sel?.[wpKey];
-    if (!wpId) return null;
-    const wp = workPackages.find((w) => w.id === wpId);
-    if (!wp) return null;
-    const totalMins = wp.tasks.reduce((s, t) => s + (Number(t.standard_minutes) || 0), 0);
+    const sel = getStaffSelections(staffId);
+    const wpIds = shift === "morning" ? sel.morningWps : sel.eveningWps;
+    if (!wpIds.length) return null;
+    let totalMins = 0;
+    let taskCount = 0;
+    for (const wpId of wpIds) {
+      const wp = workPackages.find((w) => w.id === wpId);
+      if (wp) {
+        totalMins += wp.tasks.reduce((s, t) => s + (Number(t.standard_minutes) || 0), 0);
+        taskCount += wp.tasks.length;
+      }
+    }
     const shiftMinutes = 420;
     const pct = Math.round((totalMins / shiftMinutes) * 100);
     return {
       totalMinutes: totalMins,
       shiftMinutes,
       utilizationPercent: pct,
-      taskCount: wp.tasks.length,
+      taskCount,
       status: pct <= 60 ? ("under" as const) : pct <= 100 ? ("balanced" as const) : ("over" as const),
     };
   };
@@ -97,9 +113,12 @@ const ShiftPlanningTab = () => {
   const alreadyAssigned = (staffId: string, shift: "morning" | "evening") =>
     existingAssignments.some((a) => a.staff_user_id === staffId && a.shift_type === shift);
 
-  const morningCount = Object.values(selections).filter((s) => s.morningWp).length;
-  const eveningCount = Object.values(selections).filter((s) => s.eveningWp).length;
-  const totalPlanned = morningCount + eveningCount;
+  const totalPlanned = Object.values(selections).reduce(
+    (sum, s) => sum + s.morningWps.length + s.eveningWps.length,
+    0
+  );
+  const morningCount = Object.values(selections).reduce((s, sel) => s + sel.morningWps.length, 0);
+  const eveningCount = Object.values(selections).reduce((s, sel) => s + sel.eveningWps.length, 0);
 
   const handleSave = async () => {
     setSaving(true);
@@ -107,12 +126,12 @@ const ShiftPlanningTab = () => {
       const promises: Promise<any>[] = [];
       for (const [staffId, shifts] of Object.entries(selections)) {
         for (const shift of ["morning", "evening"] as const) {
-          const wpKey = shift === "morning" ? "morningWp" : "eveningWp";
-          if (shifts[wpKey]) {
+          const wpIds = shift === "morning" ? shifts.morningWps : shifts.eveningWps;
+          for (const wpId of wpIds) {
             promises.push(
               createAssignment.mutateAsync({
                 staffId,
-                workPackageId: shifts[wpKey]!,
+                workPackageId: wpId,
                 shiftType: shift,
                 date: tomorrow,
               })
@@ -155,7 +174,7 @@ const ShiftPlanningTab = () => {
           תכנון משמרות — מחר ({tomorrowFormatted})
         </h2>
         <p className="text-xs text-muted-foreground">
-          שבץ עובדים לחבילות עבודה. מוצגות רק חבילות רלוונטיות ליום מחר.
+          שבץ עובדים לחבילות עבודה. ניתן לשבץ מספר חבילות לאותה משמרת.
         </p>
       </div>
 
@@ -163,109 +182,125 @@ const ShiftPlanningTab = () => {
         <div className="kpi-card text-center">
           <Sun size={20} className="mx-auto mb-1 text-warning" />
           <p className="text-2xl font-bold">{morningCount}</p>
-          <p className="text-xs text-muted-foreground">משמרת בוקר</p>
+          <p className="text-xs text-muted-foreground">חבילות בוקר</p>
         </div>
         <div className="kpi-card text-center">
           <Moon size={20} className="mx-auto mb-1 text-info" />
           <p className="text-2xl font-bold">{eveningCount}</p>
-          <p className="text-xs text-muted-foreground">משמרת ערב</p>
+          <p className="text-xs text-muted-foreground">חבילות ערב</p>
         </div>
       </div>
 
-      {/* Staff assignment cards */}
       <div className="space-y-3">
-        {staff.map((s) => (
-          <div key={s.id} className="task-card">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
-                {s.avatar_initials || "?"}
+        {staff.map((s) => {
+          const sel = getStaffSelections(s.id);
+          return (
+            <div key={s.id} className="task-card">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">
+                  {s.avatar_initials || "?"}
+                </div>
+                <span className="font-semibold text-sm">{s.full_name}</span>
               </div>
-              <span className="font-semibold text-sm">{s.full_name}</span>
-            </div>
 
-            {(["morning", "evening"] as const).map((shift) => {
-              if (alreadyAssigned(s.id, shift)) {
+              {(["morning", "evening"] as const).map((shift) => {
+                if (alreadyAssigned(s.id, shift)) {
+                  return (
+                    <div key={shift} className="flex items-center gap-2 py-1.5 text-xs text-success font-semibold">
+                      {shift === "morning" ? <Sun size={14} /> : <Moon size={14} />}
+                      ✓ משובץ
+                    </div>
+                  );
+                }
+
+                const wpIds = shift === "morning" ? sel.morningWps : sel.eveningWps;
+                const items = shift === "morning" ? morningWps : eveningWps;
+                const capacity = getCapacity(s.id, shift);
+                const canAddMore = items.length > wpIds.length;
+
                 return (
-                  <div key={shift} className="flex items-center gap-2 py-1.5 text-xs text-success font-semibold">
-                    {shift === "morning" ? <Sun size={14} /> : <Moon size={14} />}
-                    ✓ משובץ
-                  </div>
-                );
-              }
-
-              const capacity = getCapacity(s.id, shift);
-              const items = shift === "morning" ? morningWps : eveningWps;
-
-              return (
-                <div key={shift} className="mb-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <button
-                      onClick={() => toggleShift(s.id, shift)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        isPlanned(s.id, shift)
-                          ? shift === "morning"
-                            ? "bg-warning/15 text-warning border border-warning"
-                            : "bg-info/15 text-info border border-info"
-                          : "bg-muted text-muted-foreground hover:border-primary/50 border border-transparent"
-                      }`}
-                    >
-                      {shift === "morning" ? <Sun size={12} /> : <Moon size={12} />}
-                      {isPlanned(s.id, shift) ? <CheckCircle2 size={12} /> : <Plus size={10} />}
-                      {shift === "morning" ? "בוקר" : "ערב"}
-                    </button>
-
-                    {isPlanned(s.id, shift) && items.length > 0 && (
-                      <select
-                        value={selections[s.id]?.[shift === "morning" ? "morningWp" : "eveningWp"] || ""}
-                        onChange={(e) => selectWorkPackage(s.id, shift, e.target.value)}
-                        className="text-[10px] bg-background border border-input rounded px-2 py-1 flex-1"
-                      >
-                        {items.map((wp) => (
-                          <option key={wp.id} value={wp.id}>
-                            {wp.name || wp.package_code} ({wp.package_code})
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-
-                  {/* Capacity indicator */}
-                  {capacity && (
-                    <div className="mr-4 mb-1">
-                      <div className="flex items-center gap-2 text-[10px]">
-                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              capacity.status === "over"
-                                ? "bg-destructive"
-                                : capacity.status === "balanced"
-                                ? "bg-success"
-                                : "bg-warning"
-                            }`}
-                            style={{ width: `${Math.min(capacity.utilizationPercent, 100)}%` }}
-                          />
-                        </div>
-                        <span
-                          className={`font-mono font-semibold ${
-                            capacity.status === "over" ? "text-destructive" : "text-muted-foreground"
-                          }`}
+                  <div key={shift} className="mb-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      {shift === "morning" ? (
+                        <Sun size={14} className="text-warning" />
+                      ) : (
+                        <Moon size={14} className="text-info" />
+                      )}
+                      <span className="text-xs font-semibold">
+                        {shift === "morning" ? "בוקר" : "ערב"}
+                      </span>
+                      {canAddMore && (
+                        <button
+                          onClick={() => addWorkPackage(s.id, shift)}
+                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-muted text-muted-foreground hover:bg-accent transition-colors border border-transparent hover:border-primary/30"
                         >
-                          {capacity.totalMinutes}/{capacity.shiftMinutes} דק׳
-                        </span>
-                      </div>
-                      {capacity.status === "over" && (
-                        <div className="flex items-center gap-1 text-[10px] text-destructive mt-1">
-                          <AlertTriangle size={10} />
-                          חריגה של {capacity.totalMinutes - capacity.shiftMinutes} דק׳
-                        </div>
+                          <Plus size={10} />
+                          הוסף חבילה
+                        </button>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
+
+                    {/* Selected work packages */}
+                    {wpIds.map((wpId, idx) => (
+                      <div key={`${wpId}-${idx}`} className="flex items-center gap-1.5 mb-1.5 mr-4">
+                        <select
+                          value={wpId}
+                          onChange={(e) => changeWorkPackage(s.id, shift, idx, e.target.value)}
+                          className="text-[10px] bg-background border border-input rounded px-2 py-1 flex-1"
+                        >
+                          {items.map((wp) => (
+                            <option key={wp.id} value={wp.id}>
+                              {wp.name || wp.package_code} ({wp.package_code})
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => removeWorkPackage(s.id, shift, wpId)}
+                          className="p-0.5 rounded hover:bg-destructive/10 text-destructive/70 hover:text-destructive transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Capacity indicator */}
+                    {capacity && (
+                      <div className="mr-4 mb-1">
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${
+                                capacity.status === "over"
+                                  ? "bg-destructive"
+                                  : capacity.status === "balanced"
+                                  ? "bg-success"
+                                  : "bg-warning"
+                              }`}
+                              style={{ width: `${Math.min(capacity.utilizationPercent, 100)}%` }}
+                            />
+                          </div>
+                          <span
+                            className={`font-mono font-semibold ${
+                              capacity.status === "over" ? "text-destructive" : "text-muted-foreground"
+                            }`}
+                          >
+                            {capacity.totalMinutes}/{capacity.shiftMinutes} דק׳ ({capacity.taskCount} משימות)
+                          </span>
+                        </div>
+                        {capacity.status === "over" && (
+                          <div className="flex items-center gap-1 text-[10px] text-destructive mt-1">
+                            <AlertTriangle size={10} />
+                            חריגה של {capacity.totalMinutes - capacity.shiftMinutes} דק׳
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
 
       {saved ? (
