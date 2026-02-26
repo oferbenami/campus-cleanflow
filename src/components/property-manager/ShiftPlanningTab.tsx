@@ -16,6 +16,7 @@ import {
   useCreateAssignment,
 } from "@/hooks/usePropertyManagerData";
 import { useWorkPackages } from "@/hooks/useWorkPackages";
+import DailySummaryTable from "./DailySummaryTable";
 
 interface ShiftSelections {
   morningWps: string[];
@@ -351,6 +352,14 @@ const ShiftPlanningTab = () => {
           );
         })}
       </div>
+
+      <DailySummaryTable
+        staff={staff}
+        workPackages={workPackages}
+        existingAssignments={existingAssignments}
+        selections={selections}
+        tomorrowFormatted={tomorrowFormatted}
+      />
 
       {saved ? (
         <div className="flex items-center justify-center gap-2 py-4 text-success font-semibold">
