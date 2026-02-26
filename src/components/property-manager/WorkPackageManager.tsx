@@ -44,6 +44,7 @@ import WorkPackageCloneDialog from "./work-package/WorkPackageCloneDialog";
 import WorkPackageBulkPanel from "./work-package/WorkPackageBulkPanel";
 import WorkPackageTaskRow from "./work-package/WorkPackageTaskRow";
 import WorkPackageAddTask from "./work-package/WorkPackageAddTask";
+import WorkPackageTaskFilter from "./work-package/WorkPackageTaskFilter";
 
 const WorkPackageManager = () => {
   const { data: packages = [], isLoading } = useWorkPackages();
@@ -66,6 +67,7 @@ const WorkPackageManager = () => {
   const [bulkField, setBulkField] = useState("standard_minutes");
   const [bulkValue, setBulkValue] = useState(1);
   const [addingToPackage, setAddingToPackage] = useState<string | null>(null);
+  const [filteredTasksMap, setFilteredTasksMap] = useState<Record<string, WorkPackageTask[] | null>>({});
 
   const toggleTask = (taskId: string) => {
     setSelectedTaskIds((prev) =>
@@ -201,6 +203,14 @@ const WorkPackageManager = () => {
 
               {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-border space-y-2">
+                  {/* Search & Filter */}
+                  <WorkPackageTaskFilter
+                    tasks={pkg.tasks}
+                    onFilteredChange={(filtered) =>
+                      setFilteredTasksMap((prev) => ({ ...prev, [pkg.id]: filtered.length === pkg.tasks.length ? null : filtered }))
+                    }
+                  />
+
                   {/* Bulk mode toggle */}
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-1">
@@ -267,10 +277,18 @@ const WorkPackageManager = () => {
                   )}
 
                   {/* Draggable task rows */}
+                  {(() => {
+                    const displayTasks = filteredTasksMap[pkg.id] ?? pkg.tasks;
+                    const isFiltered = filteredTasksMap[pkg.id] != null;
+                    return (
+                      <>
+                        {isFiltered && (
+                          <p className="text-[10px] text-muted-foreground">מציג {displayTasks.length} מתוך {pkg.tasks.length} משימות</p>
+                        )}
                   <Droppable droppableId={pkg.id}>
                     {(provided) => (
                       <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-1">
-                        {pkg.tasks.map((task, index) => (
+                        {displayTasks.map((task, index) => (
                           <Draggable key={task.id} draggableId={task.id} index={index}>
                             {(dragProvided, snapshot) => (
                               <div
@@ -306,6 +324,9 @@ const WorkPackageManager = () => {
                       </div>
                     )}
                   </Droppable>
+                      </>
+                    );
+                  })()}
 
                   {/* Package total */}
                   <div className="flex items-center justify-between pt-2 border-t border-border">
