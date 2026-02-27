@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
-import ZonePlanningTab from "@/components/property-manager/ZonePlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import WorkPackagesTab from "@/components/property-manager/WorkPackagesTab";
@@ -85,8 +84,7 @@ const PropertyManagerView = () => {
         {activeTab === "staff" && <StaffListTab />}
         {activeTab === "workpackages" && <WorkPackagesTab />}
         {activeTab === "planning" && <ShiftPlanningTab />}
-        {activeTab === "planning" && <ShiftPlanningTab />}
-        {activeTab === "assign" && <ZonePlanningTab />}
+        {activeTab === "assign" && <ShiftPlanningTab />}
         {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
         {activeTab === "eod" && <EndOfDayTab />}
