@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { RotateCcw, AlertTriangle, Clock, MapPin, Phone, ShieldAlert, PauseCircle } from "lucide-react";
+import { RotateCcw, AlertTriangle, Clock, MapPin, Phone, ShieldAlert, PauseCircle, Building } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { DeferredTaskEvent } from "@/hooks/useSupervisorData";
 
@@ -174,8 +174,11 @@ const DeferredTasksPanel = ({ events }: DeferredTasksPanelProps) => {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 text-muted-foreground">
+                      <div className="flex items-center gap-3 text-muted-foreground flex-wrap">
                         <span className="flex items-center gap-1"><MapPin size={10} />{evt.location_name}</span>
+                        {(evt.building_name || evt.floor_name) && (
+                          <span className="flex items-center gap-1"><Building size={10} />{[evt.building_name, evt.floor_name && `קומה ${evt.floor_name}`].filter(Boolean).join(" · ")}</span>
+                        )}
                         <span className="flex items-center gap-1">
                           <Clock size={10} />
                           {new Date(evt.created_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}

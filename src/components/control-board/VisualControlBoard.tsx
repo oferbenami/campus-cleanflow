@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "@/hooks/useControlBoardData";
 import {
-  Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer,
+  Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Building,
   ChevronLeft, ChevronRight, User, ArrowRightLeft, Pause, Copy,
   XCircle, ChevronDown, GripVertical,
 } from "lucide-react";
@@ -547,6 +547,12 @@ const TaskTileGantt = ({
       <TooltipContent side="top" className="text-right max-w-[220px]">
         <p className="font-bold text-xs">{task.task_name}</p>
         <p className="text-[10px] text-muted-foreground flex items-center gap-1"><MapPin size={9} /> {task.location_name}</p>
+        {(task.building_name || task.floor_name) && (
+          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <Building size={9} />
+            {[task.building_name, task.floor_name && `קומה ${task.floor_name}`].filter(Boolean).join(" · ")}
+          </p>
+        )}
         <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Timer size={9} /> {task.standard_minutes} דק׳ תקן</p>
         {task.started_at && (
           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -578,6 +584,9 @@ const TaskDetailContent = ({ task, now }: { task: CBTask; now: Date }) => {
     <div className="space-y-4 text-right">
       <div className="grid grid-cols-2 gap-3">
         <InfoBlock label="מיקום" value={task.location_name} icon={<MapPin size={12} />} />
+        {(task.building_name || task.floor_name) && (
+          <InfoBlock label="בניין / קומה" value={[task.building_name, task.floor_name && `קומה ${task.floor_name}`].filter(Boolean).join(" · ")} icon={<Building size={12} />} />
+        )}
         <InfoBlock label="סטטוס" value={statusLabel[task.status] || task.status} icon={<Clock size={12} />} />
         <InfoBlock label="תקן (דק׳)" value={String(task.standard_minutes)} icon={<Timer size={12} />} />
         <InfoBlock label="זמן שעבר" value={elapsed !== null ? `${elapsed} דק׳` : "—"} icon={<Timer size={12} />}

@@ -16,6 +16,8 @@ export interface SupervisorTask {
   task_name: string;
   location_name: string;
   location_id: string;
+  building_name: string | null;
+  floor_name: string | null;
   standard_minutes: number;
   actual_minutes: number | null;
   status: string;
@@ -56,6 +58,8 @@ export interface DeferredTaskEvent {
   task_id: string;
   task_name: string;
   location_name: string;
+  building_name: string | null;
+  floor_name: string | null;
   staff_name: string;
   staff_user_id: string;
   reason: string;
@@ -117,7 +121,7 @@ export function useSupervisorData() {
             assigned_tasks (
               id, task_name, standard_minutes, actual_minutes, status, priority,
               started_at, finished_at, variance_percent, location_id,
-              campus_locations!assigned_tasks_location_id_fkey ( name )
+              campus_locations!assigned_tasks_location_id_fkey ( name, parent_location_id, level_type )
             )
           `)
           .eq("date", today)
@@ -170,7 +174,7 @@ export function useSupervisorData() {
             id, event_type, event_payload, created_at, user_id, assigned_task_id,
             profiles!events_log_user_id_fkey ( full_name ),
             assigned_tasks!events_log_assigned_task_id_fkey ( task_name, status, standard_minutes, window_end, location_id, defer_count, is_deferred,
-              campus_locations!assigned_tasks_location_id_fkey ( name )
+              campus_locations!assigned_tasks_location_id_fkey ( name, parent_location_id, level_type )
             )
           `)
           .in("event_type", ["sla_alert", "task_deferred"])
@@ -178,6 +182,47 @@ export function useSupervisorData() {
           .gte("created_at", `${today}T00:00:00`)
           .order("created_at", { ascending: false }),
       ]);
+
+      // Resolve parent location hierarchy for building/floor
+      const allTaskLocs = [
+        ...(assignmentsRes.data || []).flatMap((a: any) => (a.assigned_tasks || []).map((t: any) => t.campus_locations)),
+        ...(deferredRes.data || []).map((e: any) => e.assigned_tasks?.campus_locations),
+      ].filter(Boolean);
+      const parentIds = allTaskLocs.map((l: any) => l?.parent_location_id).filter(Boolean);
+      const uniqueParentIds = [...new Set(parentIds)] as string[];
+      
+      let parentMap: Record<string, { name: string; parent_location_id: string | null; level_type: string | null }> = {};
+      if (uniqueParentIds.length > 0) {
+        const { data: parents } = await supabase
+          .from("campus_locations")
+          .select("id, name, parent_location_id, level_type")
+          .in("id", uniqueParentIds);
+        if (parents) {
+          for (const p of parents) parentMap[p.id] = { name: p.name, parent_location_id: p.parent_location_id, level_type: p.level_type };
+        }
+        const gpIds = Object.values(parentMap).map(p => p.parent_location_id).filter(Boolean) as string[];
+        if (gpIds.length > 0) {
+          const { data: gps } = await supabase.from("campus_locations").select("id, name, level_type").in("id", [...new Set(gpIds)]);
+          if (gps) {
+            for (const gp of gps) parentMap[gp.id] = { ...parentMap[gp.id], name: gp.name, parent_location_id: null, level_type: gp.level_type };
+          }
+        }
+      }
+
+      function resolveBuildingFloor(loc: any): { building_name: string | null; floor_name: string | null } {
+        if (!loc) return { building_name: null, floor_name: null };
+        const parentId = loc.parent_location_id;
+        const parent = parentId ? parentMap[parentId] : null;
+        const grandparent = parent?.parent_location_id ? parentMap[parent.parent_location_id] : null;
+        let building_name: string | null = null;
+        let floor_name: string | null = null;
+        for (const node of [loc, parent, grandparent]) {
+          if (!node) continue;
+          if (node.level_type === "building") building_name = node.name;
+          if (node.level_type === "floor") floor_name = node.name;
+        }
+        return { building_name, floor_name };
+      }
 
       // Map staff
       const staffList: SupervisorStaff[] = (staffRes.data || []).map((s: any) => ({
@@ -193,12 +238,15 @@ export function useSupervisorData() {
       (assignmentsRes.data || []).forEach((a: any) => {
         const staffName = a.profiles?.full_name || "";
         (a.assigned_tasks || []).forEach((t: any) => {
+          const { building_name, floor_name } = resolveBuildingFloor(t.campus_locations);
           allTasks.push({
             id: t.id,
             assignment_id: a.id,
             task_name: t.task_name,
             location_name: t.campus_locations?.name || "",
             location_id: t.location_id,
+            building_name,
+            floor_name,
             standard_minutes: t.standard_minutes,
             actual_minutes: t.actual_minutes,
             status: t.status,
@@ -250,7 +298,7 @@ export function useSupervisorData() {
       }));
       setLocations(locationList);
 
-      // Map deferred events (cannot_perform actions from sla_alert + task_deferred events)
+      // Map deferred events
       const deferredList: DeferredTaskEvent[] = (deferredRes.data || [])
         .filter((e: any) => {
           const payload = e.event_payload as any;
@@ -259,11 +307,14 @@ export function useSupervisorData() {
         .map((e: any) => {
           const payload = e.event_payload as any;
           const task = e.assigned_tasks;
+          const { building_name, floor_name } = resolveBuildingFloor(task?.campus_locations);
           return {
             id: e.id,
             task_id: e.assigned_task_id || "",
             task_name: task?.task_name || payload?.task_name || "",
             location_name: task?.campus_locations?.name || payload?.location || "",
+            building_name,
+            floor_name,
             staff_name: e.profiles?.full_name || "",
             staff_user_id: e.user_id,
             reason: payload?.reason || "",
