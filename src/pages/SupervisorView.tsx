@@ -42,7 +42,7 @@ const SupervisorView = () => {
   const { signOut } = useAuth();
   const { staff, tasks, tickets, audits, deferredEvents, locations, loading, createBreakFixTicket, submitAudit } = useSupervisorData();
   const { reports, loading: shortageLoading, acknowledgeReport, forwardReport, submitShortageReport } = useShortageReports();
-  const [activeTab, setActiveTab] = useState<"dashboard" | "controlBoard" | "incidents" | "breakfix" | "audit">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "controlBoard" | "incidents" | "audit">("dashboard");
   const [showShortageReport, setShowShortageReport] = useState(false);
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
 
@@ -97,8 +97,7 @@ const SupervisorView = () => {
             {([
               { key: "dashboard" as const, icon: BarChart3, label: t("supervisor.dashboard") },
               { key: "controlBoard" as const, icon: LayoutGrid, label: "לוח בקרה" },
-              { key: "incidents" as const, icon: ShieldAlert, label: "אירועים" },
-              { key: "breakfix" as const, icon: Zap, label: t("supervisor.breakFix") },
+              { key: "incidents" as const, icon: ShieldAlert, label: "תקלות ואירועים" },
               { key: "audit" as const, icon: ClipboardCheck, label: t("supervisor.audit") },
             ]).map(({ key, icon: Icon, label }) => (
               <button
@@ -120,7 +119,6 @@ const SupervisorView = () => {
         {activeTab === "dashboard" && <DashboardTab staff={staff} tasks={tasks} tickets={tickets} deferredEvents={deferredEvents} shortageReports={reports} shortageLoading={shortageLoading} onAcknowledge={acknowledgeReport} onForward={forwardReport} onReportShortage={() => setShowShortageReport(true)} />}
         {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "incidents" && <IncidentDispatchBoard />}
-        {activeTab === "breakfix" && <BreakfixTab locations={locations} onSubmit={createBreakFixTicket} tickets={tickets} />}
         {activeTab === "audit" && <AuditTab tasks={tasks} audits={audits} onSubmit={submitAudit} />}
       </div>
     </div>
