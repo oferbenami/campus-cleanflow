@@ -22,8 +22,9 @@ const NfcScanSimulator = ({ expectedTagUid, onScanResult, mode, locationName }: 
 
     // Simulate a brief delay for the "scan"
     setTimeout(() => {
-      const scannedUid = correct ? (expectedTagUid || "UNKNOWN") : "NFC-WRONG-LOCATION";
-      const isMatch = scannedUid === expectedTagUid;
+      // If no NFC tag configured for this location, a "correct" scan always passes
+      const isMatch = correct ? true : false;
+      const scannedUid = correct ? (expectedTagUid || "SIM-VALID") : "NFC-WRONG-LOCATION";
       setResult(isMatch ? "match" : "mismatch");
       setScanning(false);
 
