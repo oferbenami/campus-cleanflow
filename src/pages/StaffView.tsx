@@ -24,12 +24,12 @@ import LiveTaskTile, { getEscalationLevel } from "@/components/staff/LiveTaskTil
 import NfcScanSimulator from "@/components/staff/NfcScanSimulator";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import MyPointsWidget from "@/components/staff/MyPointsWidget";
-import CannotPerformModal from "@/components/staff/CannotPerformModal";
+import DeferTaskModal from "@/components/staff/DeferTaskModal";
+import type { DeferResult } from "@/components/staff/DeferTaskModal";
 import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 import FullTaskBoard from "@/components/staff/FullTaskBoard";
 import UpcomingShifts from "@/components/staff/UpcomingShifts";
 import AbsenceReportScreen from "@/components/staff/AbsenceReportScreen";
-import type { CannotPerformResult } from "@/components/staff/CannotPerformModal";
 import { useShortageReports } from "@/hooks/useShortageReports";
 import { useIncidents } from "@/hooks/useIncidents";
 import WorkerIncidentAlert from "@/components/incidents/WorkerIncidentAlert";
@@ -41,7 +41,7 @@ type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const { assignment, tasks, loading, error, startTask, finishTask, cannotPerformTask, sendSlaAlert } = useStaffAssignment();
+  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
   const { myIncidents, startIncident, resolveIncident, reassignIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
@@ -51,13 +51,14 @@ const StaffView = () => {
   const [onBreak, setOnBreak] = useState(false);
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(0);
-  const [showCannotPerform, setShowCannotPerform] = useState(false);
+  const [showDeferModal, setShowDeferModal] = useState(false);
 
   const currentTask = tasks.find((t) => t.status === "in_progress") 
-    || tasks.find((t) => t.status === "queued" || t.status === "ready");
+    || tasks.find((t) => t.status === "queued" || t.status === "ready")
+    || tasks.find((t) => t.status === "deferred");
   const isActive = currentTask?.status === "in_progress";
   const completedCount = tasks.filter((t) => t.status === "completed").length;
-  const allDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "failed");
+  const allDone = tasks.length > 0 && tasks.every((t) => ["completed", "failed", "missed"].includes(t.status));
 
   const currentIdx = currentTask ? tasks.indexOf(currentTask) : -1;
   const nextTask = currentIdx >= 0 && currentIdx < tasks.length - 1 ? tasks[currentIdx + 1] : null;
@@ -144,14 +145,14 @@ const StaffView = () => {
     setScanMode(null);
   }, [scanMode, startTask, finishTask]);
 
-  const handleCannotPerform = async (result: CannotPerformResult) => {
+  const handleDeferTask = async (result: DeferResult) => {
     if (!currentTask) return;
     try {
-      await cannotPerformTask(currentTask.id, result.reasonCode, result.note, result.action);
-      const actionMsg = result.action === "defer_swap" ? "המשימה הוחלפה עם המשימה הבאה" : result.action === "defer_end" ? "המשימה הועברה לסוף התור" : "דיווח נשלח למפקח";
-      toast({ title: "⚠️ לא ניתן לבצע", description: actionMsg, variant: "destructive" });
+      await deferTask(currentTask.id, result.reasonCode, result.reasonLabel, result.note, result.action);
+      const actionMsg = result.action === "defer_swap" ? "המשימה הוחלפה עם המשימה הבאה" : "המשימה הועברה לסוף התור";
+      toast({ title: "⏸ משימה נדחתה", description: actionMsg });
     } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
-    setShowCannotPerform(false);
+    setShowDeferModal(false);
   };
 
   // Loading
@@ -322,12 +323,13 @@ const StaffView = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {scanModal}
 
-      {showCannotPerform && currentTask && (
-        <CannotPerformModal
+      {showDeferModal && currentTask && (
+        <DeferTaskModal
           task={currentTask}
-          nextTask={nextTask && (nextTask.status === "queued" || nextTask.status === "ready") ? nextTask : null}
-          onSubmit={handleCannotPerform}
-          onCancel={() => setShowCannotPerform(false)}
+          nextTask={nextTask && ["queued", "ready"].includes(nextTask.status) ? nextTask : null}
+          deferCount={currentTask.defer_count || 0}
+          onSubmit={handleDeferTask}
+          onCancel={() => setShowDeferModal(false)}
         />
       )}
 
@@ -374,7 +376,8 @@ const StaffView = () => {
           <div key={t.id} className={`h-1.5 flex-1 rounded-full transition-colors ${
             t.status === "completed" ? "bg-success" :
             t.status === "in_progress" ? "bg-accent animate-pulse-slow" :
-            t.status === "failed" ? "bg-destructive" :
+            t.status === "failed" || t.status === "missed" ? "bg-destructive" :
+            t.status === "deferred" || t.status === "paused" ? "bg-warning" :
             t.status === "blocked" ? "bg-warning" :
             "bg-muted"
           }`} />
@@ -390,7 +393,7 @@ const StaffView = () => {
             elapsedSeconds={isActive ? taskSeconds : 0}
             onScanToStart={() => handleScanToStart(currentTask)}
             onScanToFinish={() => handleScanToFinish(currentTask)}
-            onCannotPerform={() => setShowCannotPerform(true)}
+            onDeferTask={() => setShowDeferModal(true)}
             onTap={() => {}}
           />
         )}

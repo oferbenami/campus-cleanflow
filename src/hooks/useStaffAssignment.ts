@@ -17,7 +17,7 @@ export interface AssignedTaskRow {
   task_name: string;
   standard_minutes: number;
   priority: "normal" | "high";
-  status: "queued" | "ready" | "in_progress" | "blocked" | "completed" | "failed";
+  status: "queued" | "ready" | "in_progress" | "blocked" | "completed" | "failed" | "deferred" | "paused" | "missed";
   checklist_json: ChecklistItem[];
   sequence_order: number;
   window_start: string | null;
@@ -36,9 +36,13 @@ export interface AssignedTaskRow {
   // parent location breadcrumb
   parent_name: string | null;
   grandparent_name: string | null;
-  // defer metadata (client-side only)
+  // defer metadata
   defer_reason?: string;
   deferred_at?: string;
+  defer_count: number;
+  partial_elapsed_minutes: number;
+  is_deferred: boolean;
+  queue_order: number | null;
 }
 
 export interface AssignmentInfo {
@@ -109,7 +113,8 @@ export function useStaffAssignment() {
           id, assignment_id, location_id, task_name, standard_minutes, priority,
           status, checklist_json, sequence_order, window_start, window_end,
           started_at, finished_at, actual_minutes, variance_percent,
-          start_tag_uid, finish_tag_uid,
+          start_tag_uid, finish_tag_uid, is_deferred, defer_reason,
+          deferred_at, defer_count, partial_elapsed_minutes, queue_order,
           campus_locations!assigned_tasks_location_id_fkey (
             name, nfc_tag_uid, level_type, space_type, parent_location_id
           )
@@ -169,6 +174,12 @@ export function useStaffAssignment() {
           location_space_type: loc?.space_type || null,
           parent_name: parent?.name || null,
           grandparent_name: grandparent?.name || null,
+          defer_reason: t.defer_reason || undefined,
+          deferred_at: t.deferred_at || undefined,
+          defer_count: t.defer_count || 0,
+          partial_elapsed_minutes: t.partial_elapsed_minutes || 0,
+          is_deferred: t.is_deferred || false,
+          queue_order: t.queue_order,
         };
       });
 
@@ -187,12 +198,16 @@ export function useStaffAssignment() {
   // ── Task Actions ──
 
   const startTask = useCallback(async (taskId: string, nfcTagUid: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    const isResuming = task?.status === "deferred" && task.partial_elapsed_minutes > 0;
+
     const { error } = await supabase
       .from("assigned_tasks")
       .update({
         status: "in_progress" as any,
-        started_at: new Date().toISOString(),
+        started_at: isResuming ? task.started_at : new Date().toISOString(),
         start_tag_uid: nfcTagUid,
+        is_deferred: false,
       })
       .eq("id", taskId);
 
@@ -204,13 +219,13 @@ export function useStaffAssignment() {
         site_id: SITE_ID,
         assignment_id: assignment.id,
         assigned_task_id: taskId,
-        event_type: "task_start" as any,
-        event_payload: { nfc_tag_uid: nfcTagUid },
+        event_type: (isResuming ? "task_resumed" : "task_start") as any,
+        event_payload: { nfc_tag_uid: nfcTagUid, resumed: isResuming },
       });
     }
 
     await fetchData();
-  }, [user?.id, assignment, fetchData]);
+  }, [user?.id, assignment, tasks, fetchData]);
 
   const finishTask = useCallback(async (taskId: string, nfcTagUid: string) => {
     const task = tasks.find((t) => t.id === taskId);
@@ -218,7 +233,11 @@ export function useStaffAssignment() {
 
     const startedAt = new Date(task.started_at);
     const now = new Date();
-    const actualMinutes = Math.round((now.getTime() - startedAt.getTime()) / 60000);
+    let actualMinutes = Math.round((now.getTime() - startedAt.getTime()) / 60000);
+    // If task was deferred and resumed, add partial time
+    if (task.partial_elapsed_minutes > 0) {
+      actualMinutes = task.partial_elapsed_minutes + Math.round((now.getTime() - startedAt.getTime()) / 60000);
+    }
     const variancePercent = task.standard_minutes > 0
       ? Math.round(((actualMinutes - task.standard_minutes) / task.standard_minutes) * 100)
       : 0;
@@ -231,6 +250,7 @@ export function useStaffAssignment() {
         finish_tag_uid: nfcTagUid,
         actual_minutes: actualMinutes,
         variance_percent: variancePercent,
+        is_deferred: false,
       })
       .eq("id", taskId);
 
@@ -247,7 +267,7 @@ export function useStaffAssignment() {
       });
     }
 
-    const remaining = tasks.filter((t) => t.id !== taskId && t.status !== "completed" && t.status !== "failed");
+    const remaining = tasks.filter((t) => t.id !== taskId && !["completed", "failed", "missed"].includes(t.status));
     if (remaining.length === 0 && assignment) {
       await supabase
         .from("assignments")
@@ -292,53 +312,72 @@ export function useStaffAssignment() {
     await fetchData();
   }, [user?.id, assignment, fetchData]);
 
-  /** Cannot Perform with structured reason codes */
-  const cannotPerformTask = useCallback(async (
+  /** Controlled Defer / Pause with full audit trail */
+  const deferTask = useCallback(async (
     taskId: string,
-    reason: string,
+    reasonCode: string,
+    reasonLabel: string,
     note: string,
-    action: "defer_swap" | "defer_end" | "block"
+    action: "defer_swap" | "defer_end"
   ) => {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    // Determine new status
-    const isDefer = action === "defer_swap" || action === "defer_end";
-    const newStatus = isDefer ? "blocked" : "blocked"; // Using "blocked" for deferred since DB only has these statuses
+    // Calculate partial elapsed time if task was in_progress
+    let partialMinutes = task.partial_elapsed_minutes || 0;
+    if (task.status === "in_progress" && task.started_at) {
+      const elapsed = Math.round((Date.now() - new Date(task.started_at).getTime()) / 60000);
+      partialMinutes += elapsed;
+    }
 
-    // Update task status
+    const newDeferCount = (task.defer_count || 0) + 1;
+    const isCritical = task.location_space_type === "restroom" || task.location_space_type === "lobby" || task.priority === "high";
+
+    // Update task to deferred status
     const { error: updateErr } = await supabase
       .from("assigned_tasks")
-      .update({ status: newStatus as any })
+      .update({
+        status: "deferred" as any,
+        is_deferred: true,
+        defer_reason: reasonLabel,
+        deferred_at: new Date().toISOString(),
+        defer_count: newDeferCount,
+        partial_elapsed_minutes: partialMinutes,
+        started_at: null, // Reset started_at for when it resumes
+      })
       .eq("id", taskId);
     if (updateErr) throw updateErr;
 
-    // Log event
+    // Log defer event
     if (user?.id && assignment) {
       await supabase.from("events_log").insert({
         user_id: user.id,
         site_id: SITE_ID,
         assignment_id: assignment.id,
         assigned_task_id: taskId,
-        event_type: "sla_alert" as any,
+        event_type: "task_deferred" as any,
         event_payload: {
           action: "cannot_perform",
-          reason,
+          reason: reasonLabel,
+          reason_code: reasonCode,
           note: note || undefined,
           defer_action: action,
+          defer_count: newDeferCount,
+          partial_elapsed_minutes: partialMinutes,
           task_name: task.task_name,
           location: task.location_name,
+          is_critical: isCritical,
+          is_escalation: newDeferCount >= 2,
         },
       });
     }
 
     if (action === "defer_swap") {
-      // Swap with next task: find next queued task and swap sequence_order
+      // Swap with next task
       const currentIdx = tasks.findIndex((t) => t.id === taskId);
-      const nextQueued = tasks.find((t, i) => i > currentIdx && (t.status === "queued" || t.status === "ready"));
+      const nextQueued = tasks.find((t, i) => i > currentIdx && ["queued", "ready"].includes(t.status));
       
       if (nextQueued) {
-        // Swap sequence orders
         await supabase
           .from("assigned_tasks")
           .update({ sequence_order: nextQueued.sequence_order } as any)
@@ -348,22 +387,32 @@ export function useStaffAssignment() {
           .update({ sequence_order: task.sequence_order } as any)
           .eq("id", nextQueued.id);
       }
-    } else if (action === "defer_end") {
-      // Move to end: set sequence_order to max + 1
+    } else {
+      // Move to end
       const maxOrder = Math.max(...tasks.map((t) => t.sequence_order));
       await supabase
         .from("assigned_tasks")
         .update({ sequence_order: maxOrder + 1 } as any)
         .eq("id", taskId);
-      // Also reset status to queued so it appears later
-      await supabase
-        .from("assigned_tasks")
-        .update({ status: "queued" as any })
-        .eq("id", taskId);
     }
 
     await fetchData();
   }, [user?.id, assignment, tasks, fetchData]);
+
+  /** Legacy cannot perform (kept for backward compat) */
+  const cannotPerformTask = useCallback(async (
+    taskId: string,
+    reason: string,
+    note: string,
+    action: "defer_swap" | "defer_end" | "block"
+  ) => {
+    // Route through new defer logic
+    if (action === "block") {
+      await deferTask(taskId, reason, reason, note, "defer_end");
+    } else {
+      await deferTask(taskId, reason, reason, note, action);
+    }
+  }, [deferTask]);
 
   /** Send SLA alert event to supervisor dashboard */
   const sendSlaAlert = useCallback(async (taskId: string, elapsedMinutes: number) => {
@@ -397,6 +446,7 @@ export function useStaffAssignment() {
     updateChecklist,
     skipTask,
     cannotPerformTask,
+    deferTask,
     sendSlaAlert,
     refetch: fetchData,
   };

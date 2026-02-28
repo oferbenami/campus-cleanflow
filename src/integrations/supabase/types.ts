@@ -52,14 +52,18 @@ export type Database = {
           assignment_id: string
           checklist_json: Json | null
           created_at: string
+          defer_count: number | null
           defer_reason: string | null
+          deferred_at: string | null
           finish_tag_uid: string | null
           finished_at: string | null
           id: string
           is_deferred: boolean
           location_id: string
+          partial_elapsed_minutes: number | null
           priority: Database["public"]["Enums"]["task_priority"]
           queue_order: number | null
+          resume_by: string | null
           sequence_order: number
           source_template_id: string | null
           source_type: string | null
@@ -77,14 +81,18 @@ export type Database = {
           assignment_id: string
           checklist_json?: Json | null
           created_at?: string
+          defer_count?: number | null
           defer_reason?: string | null
+          deferred_at?: string | null
           finish_tag_uid?: string | null
           finished_at?: string | null
           id?: string
           is_deferred?: boolean
           location_id: string
+          partial_elapsed_minutes?: number | null
           priority?: Database["public"]["Enums"]["task_priority"]
           queue_order?: number | null
+          resume_by?: string | null
           sequence_order?: number
           source_template_id?: string | null
           source_type?: string | null
@@ -102,14 +110,18 @@ export type Database = {
           assignment_id?: string
           checklist_json?: Json | null
           created_at?: string
+          defer_count?: number | null
           defer_reason?: string | null
+          deferred_at?: string | null
           finish_tag_uid?: string | null
           finished_at?: string | null
           id?: string
           is_deferred?: boolean
           location_id?: string
+          partial_elapsed_minutes?: number | null
           priority?: Database["public"]["Enums"]["task_priority"]
           queue_order?: number | null
+          resume_by?: string | null
           sequence_order?: number
           source_template_id?: string | null
           source_type?: string | null
@@ -1209,6 +1221,9 @@ export type Database = {
         | "break_fix_created"
         | "break_fix_assigned"
         | "sla_alert"
+        | "task_deferred"
+        | "task_resumed"
+        | "task_missed"
       incident_category:
         | "spill"
         | "restroom"
@@ -1253,6 +1268,9 @@ export type Database = {
         | "blocked"
         | "completed"
         | "failed"
+        | "deferred"
+        | "paused"
+        | "missed"
       template_type: "base" | "addon"
       ticket_priority: "urgent" | "high" | "normal"
       ticket_status: "open" | "assigned" | "in_progress" | "resolved" | "closed"
@@ -1399,6 +1417,9 @@ export const Constants = {
         "break_fix_created",
         "break_fix_assigned",
         "sla_alert",
+        "task_deferred",
+        "task_resumed",
+        "task_missed",
       ],
       incident_category: [
         "spill",
@@ -1448,6 +1469,9 @@ export const Constants = {
         "blocked",
         "completed",
         "failed",
+        "deferred",
+        "paused",
+        "missed",
       ],
       template_type: ["base", "addon"],
       ticket_priority: ["urgent", "high", "normal"],
