@@ -11,6 +11,8 @@ import {
 } from "@hello-pangea/dnd";
 import {
   CalendarPlus,
+  ChevronRight,
+  ChevronLeft,
   CheckCircle2,
   Sun,
   Moon,
@@ -394,30 +396,59 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
               <CalendarPlus size={18} />
               תכנון עתידי
             </h2>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors border border-border">
-                  <CalendarPlus size={14} />
-                  {dateFormatted}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(d) => {
-                    if (d) {
-                      setSelectedDate(d);
-                      setAssignments({});
-                      setDefaultsInitialized(null);
-                    }
-                  }}
-                  disabled={(date) => date < minDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  const prev = new Date(selectedDate);
+                  prev.setDate(prev.getDate() - 1);
+                  if (prev >= minDate) {
+                    setSelectedDate(prev);
+                    setAssignments({});
+                    setDefaultsInitialized(null);
+                  }
+                }}
+                disabled={selectedDate <= minDate}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-30"
+              >
+                <ChevronRight size={18} />
+              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors border border-border">
+                    <CalendarPlus size={14} />
+                    {dateFormatted}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(d) => {
+                      if (d) {
+                        setSelectedDate(d);
+                        setAssignments({});
+                        setDefaultsInitialized(null);
+                      }
+                    }}
+                    disabled={(date) => date < minDate}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              <button
+                onClick={() => {
+                  const next = new Date(selectedDate);
+                  next.setDate(next.getDate() + 1);
+                  setSelectedDate(next);
+                  setAssignments({});
+                  setDefaultsInitialized(null);
+                }}
+                className="p-1.5 rounded-lg hover:bg-muted transition-colors"
+              >
+                <ChevronLeft size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Shift Toggle + Absent */}
