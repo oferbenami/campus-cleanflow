@@ -350,8 +350,8 @@ const StaffView = () => {
       <header className="bg-primary text-primary-foreground px-4 py-3">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-            <h1 className="text-lg font-bold">{t("worker.homeTitle")}</h1>
+            <p className="text-xs opacity-75 uppercase tracking-wider" style={{ fontFamily: "'Heebo', sans-serif" }}>CleanFlow</p>
+            <h1 className="text-lg font-extrabold" style={{ fontFamily: "'Heebo', sans-serif" }}>{t("worker.homeTitle")}</h1>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="text-left mr-1">
