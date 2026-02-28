@@ -1,4 +1,8 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DragDropContext,
   Droppable,
@@ -56,17 +60,28 @@ interface WorkerAssignments {
 
 type StaffAvailability = "morning" | "evening" | "absent";
 
-const ShiftPlanningTab = () => {
-  const tomorrow = useMemo(() => {
+const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => {
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    if (externalDate) return new Date(externalDate);
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    return d.toISOString().split("T")[0];
+    return d;
+  });
+
+  const planDateStr = useMemo(() => selectedDate.toISOString().split("T")[0], [selectedDate]);
+  const planDay = selectedDate.getDay();
+
+  // Min date = tomorrow
+  const minDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(0, 0, 0, 0);
+    return d;
   }, []);
-  const tomorrowDay = new Date(tomorrow).getDay();
 
   const { data: staff = [], isLoading: staffLoading } = useStaffProfiles();
   const { data: workPackages = [] } = useWorkPackages();
-  const { data: existingAssignments = [] } = useTodayAssignments(tomorrow);
+  const { data: existingAssignments = [] } = useTodayAssignments(planDateStr);
   const { data: defaultPackages = [] } = useStaffDefaultPackages();
   const setStaffDefaults = useSetStaffDefaults();
   const createAssignment = useCreateAssignment();
@@ -102,10 +117,10 @@ const ShiftPlanningTab = () => {
     () =>
       workPackages.filter((wp) => {
         if (wp.shift_type !== shift) return false;
-        if (wp.is_recurring) return wp.days_of_week.includes(tomorrowDay);
+        if (wp.is_recurring) return wp.days_of_week.includes(planDay);
         return true;
       }),
-    [workPackages, shift, tomorrowDay]
+    [workPackages, shift, planDay]
   );
 
   // Pre-fill defaults when shift changes or defaults load
@@ -311,7 +326,7 @@ const ShiftPlanningTab = () => {
               staffId,
               workPackageId: wpId,
               shiftType: shift,
-              date: tomorrow,
+              date: planDateStr,
             })
           );
         }
@@ -340,7 +355,7 @@ const ShiftPlanningTab = () => {
   const getStaffDefaultWpIds = (staffId: string) =>
     defaultPackages.filter((d) => d.staff_user_id === staffId).map((d) => d.work_package_id);
 
-  const tomorrowFormatted = new Date(tomorrow).toLocaleDateString("he-IL", {
+  const dateFormatted = selectedDate.toLocaleDateString("he-IL", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -374,11 +389,35 @@ const ShiftPlanningTab = () => {
       <div className="space-y-4 animate-slide-up">
         {/* ─── Header ─── */}
         <div className="kpi-card">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
             <h2 className="font-bold text-base flex items-center gap-2">
               <CalendarPlus size={18} />
-              לוח שיבוץ — {tomorrowFormatted}
+              תכנון עתידי
             </h2>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-semibold transition-colors border border-border">
+                  <CalendarPlus size={14} />
+                  {dateFormatted}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(d) => {
+                    if (d) {
+                      setSelectedDate(d);
+                      setAssignments({});
+                      setDefaultsInitialized(null);
+                    }
+                  }}
+                  disabled={(date) => date < minDate}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Shift Toggle + Absent */}

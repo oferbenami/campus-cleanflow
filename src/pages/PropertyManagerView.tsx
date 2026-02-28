@@ -32,7 +32,7 @@ const PropertyManagerView = () => {
   const mainTabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
     { key: "controlBoard", label: "לוח בקרה", icon: <LayoutGrid size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
-    { key: "planning", label: "שיבוץ מחר", icon: <CalendarPlus size={16} /> },
+    { key: "planning", label: "תכנון עתידי", icon: <CalendarPlus size={16} /> },
     { key: "workpackages", label: "חבילות עבודה", icon: <Package size={16} /> },
   ];
 
