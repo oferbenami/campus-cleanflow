@@ -661,6 +661,61 @@ export type Database = {
           },
         ]
       }
+      planned_absences: {
+        Row: {
+          absence_date: string
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          id: string
+          reason: string | null
+          reported_at: string
+          site_id: string
+          staff_user_id: string
+        }
+        Insert: {
+          absence_date: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          id?: string
+          reason?: string | null
+          reported_at?: string
+          site_id: string
+          staff_user_id: string
+        }
+        Update: {
+          absence_date?: string
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          id?: string
+          reason?: string | null
+          reported_at?: string
+          site_id?: string
+          staff_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planned_absences_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planned_absences_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planned_absences_staff_user_id_fkey"
+            columns: ["staff_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_initials: string | null
