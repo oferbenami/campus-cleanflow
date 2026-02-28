@@ -1069,9 +1069,11 @@ export type Database = {
         Row: {
           area_minutes_coeff: number | null
           area_sqm: number | null
+          building: string | null
           cleaning_type: string | null
           created_at: string
           description: string | null
+          floor: string | null
           id: string
           location_ref: string | null
           notes: string | null
@@ -1086,9 +1088,11 @@ export type Database = {
         Insert: {
           area_minutes_coeff?: number | null
           area_sqm?: number | null
+          building?: string | null
           cleaning_type?: string | null
           created_at?: string
           description?: string | null
+          floor?: string | null
           id?: string
           location_ref?: string | null
           notes?: string | null
@@ -1103,9 +1107,11 @@ export type Database = {
         Update: {
           area_minutes_coeff?: number | null
           area_sqm?: number | null
+          building?: string | null
           cleaning_type?: string | null
           created_at?: string
           description?: string | null
+          floor?: string | null
           id?: string
           location_ref?: string | null
           notes?: string | null

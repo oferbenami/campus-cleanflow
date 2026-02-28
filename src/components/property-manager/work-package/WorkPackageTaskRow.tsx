@@ -30,6 +30,24 @@ const WorkPackageTaskRow = ({
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <div>
+            <label className="text-[10px] text-muted-foreground">בניין</label>
+            <input
+              value={editFields.building || ""}
+              onChange={(e) => onEditFieldChange("building", e.target.value)}
+              className="w-full bg-background border border-input rounded px-2 py-1 text-xs"
+              placeholder="שם הבניין"
+            />
+          </div>
+          <div>
+            <label className="text-[10px] text-muted-foreground">קומה</label>
+            <input
+              value={editFields.floor || ""}
+              onChange={(e) => onEditFieldChange("floor", e.target.value)}
+              className="w-full bg-background border border-input rounded px-2 py-1 text-xs"
+              placeholder="מספר קומה"
+            />
+          </div>
+          <div>
             <label className="text-[10px] text-muted-foreground">סוג שטח</label>
             <input
               value={editFields.space_type || ""}
@@ -115,6 +133,8 @@ const WorkPackageTaskRow = ({
           {task.space_type || "—"} {task.description ? `/ ${task.description}` : ""}
         </p>
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
+          {task.building && <span className="font-semibold">{task.building}</span>}
+          {task.floor && <span>קומה {task.floor}</span>}
           {task.cleaning_type && <span>{task.cleaning_type}</span>}
           {task.area_sqm && <span>{task.area_sqm} מ״ר</span>}
           {task.rounds_per_shift && task.rounds_per_shift > 1 && <span>{task.rounds_per_shift} סבבים</span>}

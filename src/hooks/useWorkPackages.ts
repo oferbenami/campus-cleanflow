@@ -27,6 +27,8 @@ export interface WorkPackageTask {
   space_type: string | null;
   description: string | null;
   cleaning_type: string | null;
+  building: string | null;
+  floor: string | null;
   area_sqm: number | null;
   tools_qty: number | null;
   area_minutes_coeff: number | null;
@@ -165,6 +167,8 @@ export function useImportWorkPackages() {
             space_type: t.space_type,
             description: t.description,
             cleaning_type: t.cleaning_type,
+            building: t.building,
+            floor: t.floor,
             area_sqm: t.area_sqm,
             tools_qty: t.tools_qty,
             area_minutes_coeff: t.area_minutes_coeff,
@@ -245,6 +249,8 @@ export function useCloneWorkPackage() {
           space_type: t.space_type,
           description: t.description,
           cleaning_type: t.cleaning_type,
+          building: t.building,
+          floor: t.floor,
           area_sqm: t.area_sqm,
           tools_qty: t.tools_qty,
           area_minutes_coeff: t.area_minutes_coeff,
@@ -373,6 +379,8 @@ export function useAddWorkPackageTask() {
       space_type?: string;
       description?: string;
       cleaning_type?: string;
+      building?: string;
+      floor?: string;
       standard_minutes?: number;
       rounds_per_shift?: number;
       area_sqm?: number;
@@ -382,6 +390,8 @@ export function useAddWorkPackageTask() {
         space_type: params.space_type || null,
         description: params.description || null,
         cleaning_type: params.cleaning_type || null,
+        building: params.building || null,
+        floor: params.floor || null,
         standard_minutes: params.standard_minutes ?? 10,
         rounds_per_shift: params.rounds_per_shift ?? 1,
         area_sqm: params.area_sqm ?? null,
@@ -423,7 +433,7 @@ export function useUpdateWorkPackageTask() {
   return useMutation({
     mutationFn: async (params: {
       taskId: string;
-      updates: Partial<Pick<WorkPackageTask, 'space_type' | 'description' | 'cleaning_type' | 'standard_minutes' | 'rounds_per_shift' | 'area_sqm'>>;
+      updates: Partial<Pick<WorkPackageTask, 'space_type' | 'description' | 'cleaning_type' | 'building' | 'floor' | 'standard_minutes' | 'rounds_per_shift' | 'area_sqm'>>;
     }) => {
       const { error } = await supabase
         .from("work_package_tasks")

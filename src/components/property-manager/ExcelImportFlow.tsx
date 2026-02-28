@@ -173,6 +173,8 @@ const ExcelImportFlow = () => {
           space_type: spaceType ? String(spaceType) : null,
           description: desc ? `${String(desc || "")}${roundSuffix}`.trim() || null : roundSuffix.trim() || null,
           cleaning_type: cleaningType ? String(cleaningType) : null,
+          building: building ? String(building) : null,
+          floor: floor ? String(floor) : null,
           area_sqm,
           tools_qty,
           area_minutes_coeff,
