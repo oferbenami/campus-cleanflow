@@ -140,13 +140,13 @@ const LiveTaskTile = ({
 
         <div className="flex items-center gap-2 mb-1">
           <MapPin size={14} className="text-muted-foreground shrink-0" />
-          <span className="font-bold text-lg truncate">{task.location_name}</span>
+          <span className="font-bold text-xl truncate">{task.location_name}</span>
         </div>
 
         {breadcrumb && (
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mb-1.5">
             <Building size={10} />
-            <span>{breadcrumb}</span>
+            <span>{breadcrumb}{task.location_floor ? ` · קומה ${task.location_floor}` : ""}</span>
             {task.location_space_type && (
               <>
                 <span>·</span>
