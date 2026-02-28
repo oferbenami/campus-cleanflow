@@ -8,6 +8,8 @@ interface Props {
     space_type?: string;
     description?: string;
     cleaning_type?: string;
+    building?: string;
+    floor?: string;
     standard_minutes?: number;
     rounds_per_shift?: number;
     area_sqm?: number;
@@ -21,6 +23,8 @@ const WorkPackageAddTask = ({ packageId, onAdd, onCancel, isPending }: Props) =>
     space_type: "",
     description: "",
     cleaning_type: "",
+    building: "",
+    floor: "",
     standard_minutes: 10,
     rounds_per_shift: 1,
     area_sqm: "",
@@ -32,6 +36,8 @@ const WorkPackageAddTask = ({ packageId, onAdd, onCancel, isPending }: Props) =>
       space_type: form.space_type || undefined,
       description: form.description || undefined,
       cleaning_type: form.cleaning_type || undefined,
+      building: form.building || undefined,
+      floor: form.floor || undefined,
       standard_minutes: form.standard_minutes,
       rounds_per_shift: form.rounds_per_shift,
       area_sqm: form.area_sqm ? parseFloat(form.area_sqm) : undefined,
@@ -43,13 +49,22 @@ const WorkPackageAddTask = ({ packageId, onAdd, onCancel, isPending }: Props) =>
       <p className="text-xs font-semibold text-primary">משימה חדשה</p>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="text-[10px] text-muted-foreground">סוג שטח</label>
+          <label className="text-[10px] text-muted-foreground">בניין</label>
           <input
-            value={form.space_type}
-            onChange={(e) => setForm(f => ({ ...f, space_type: e.target.value }))}
+            value={form.building}
+            onChange={(e) => setForm(f => ({ ...f, building: e.target.value }))}
             className="w-full bg-background border border-input rounded px-2 py-1 text-xs"
-            placeholder="משרד, חדר ישיבות..."
+            placeholder="שם הבניין"
             autoFocus
+          />
+        </div>
+        <div>
+          <label className="text-[10px] text-muted-foreground">קומה</label>
+          <input
+            value={form.floor}
+            onChange={(e) => setForm(f => ({ ...f, floor: e.target.value }))}
+            className="w-full bg-background border border-input rounded px-2 py-1 text-xs"
+            placeholder="מספר קומה"
           />
         </div>
         <div>
