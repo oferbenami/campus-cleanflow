@@ -157,7 +157,7 @@ const LiveTaskTile = ({
         )}
 
         {/* Task name - enlarged */}
-        <p className="text-base font-semibold mb-1">{task.task_name}</p>
+        <p className="text-3xl font-bold mb-1">{task.task_name}</p>
 
         {/* Floor display (always shown) */}
         {task.location_floor && !breadcrumb && (
