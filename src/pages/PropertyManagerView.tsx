@@ -60,17 +60,18 @@ const PropertyManagerView = () => {
 
       <div className="sticky top-[52px] sm:top-[60px] z-40 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2">
-          <div className="flex gap-1 bg-muted rounded-xl p-1 overflow-x-auto">
+          <div className="flex gap-0.5 bg-muted rounded-xl p-1">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap min-w-[4rem] ${
+                className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 py-2 sm:py-2.5 rounded-lg text-[10px] sm:text-xs font-semibold transition-colors whitespace-nowrap ${
                   activeTab === tab.key ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
                 }`}
+                title={tab.label}
               >
                 {tab.icon}
-                {tab.label}
+                <span className="leading-tight">{tab.label}</span>
               </button>
             ))}
           </div>
