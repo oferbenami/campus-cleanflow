@@ -21,6 +21,7 @@ import {
   AlertTriangle,
   X,
   Package,
+  Copy,
   Users,
   Clock,
   Building2,
@@ -36,6 +37,7 @@ import {
   useTodayAssignments,
   useCreateAssignment,
 } from "@/hooks/usePropertyManagerData";
+import { supabase } from "@/integrations/supabase/client";
 import { useWorkPackages, WorkPackageWithTasks } from "@/hooks/useWorkPackages";
 import { useStaffDefaultPackages, useSetStaffDefaults } from "@/hooks/useStaffDefaultPackages";
 import {
@@ -102,6 +104,9 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
     wpName: string;
     overMinutes: number;
   } | null>(null);
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [copySourceDate, setCopySourceDate] = useState<Date | undefined>(undefined);
+  const [copying, setCopying] = useState(false);
 
   // Available staff (not absent)
   const availableStaff = useMemo(
@@ -344,7 +349,55 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
     }
   };
 
-  // Save current assignments as defaults for a worker
+  // Copy assignments from another date
+  const handleCopyFromDate = async () => {
+    if (!copySourceDate) return;
+    setCopying(true);
+    try {
+      const sourceStr = copySourceDate.toISOString().split("T")[0];
+      const { data: sourceAssignments } = await supabase
+        .from("assignments")
+        .select("staff_user_id, work_package_id, shift_type")
+        .eq("date", sourceStr)
+        .not("work_package_id", "is", null);
+
+      if (!sourceAssignments || sourceAssignments.length === 0) {
+        setCopying(false);
+        setCopyDialogOpen(false);
+        return;
+      }
+
+      const promises: Promise<any>[] = [];
+      for (const a of sourceAssignments) {
+        // Skip if already exists for target date
+        const alreadyExists = existingAssignments.some(
+          (ex) => ex.staff_user_id === a.staff_user_id && ex.work_package_id === a.work_package_id && ex.shift_type === a.shift_type
+        );
+        if (alreadyExists) continue;
+
+        promises.push(
+          createAssignment.mutateAsync({
+            staffId: a.staff_user_id,
+            workPackageId: a.work_package_id!,
+            shiftType: a.shift_type as "morning" | "evening",
+            date: planDateStr,
+          })
+        );
+      }
+      await Promise.all(promises);
+      setSaved(true);
+      setAssignments({});
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      // handled
+    } finally {
+      setCopying(false);
+      setCopyDialogOpen(false);
+      setCopySourceDate(undefined);
+    }
+  };
+
+
   const handleSaveAsDefaults = (staffId: string) => {
     const draftWpIds = assignments[staffId] || [];
     const savedWpIdsForWorker = savedForShift
@@ -448,6 +501,17 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
               >
                 <ChevronLeft size={18} />
               </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setCopyDialogOpen(true)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors mr-1"
+                  >
+                    <Copy size={16} />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>העתק שיבוץ מיום אחר</TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
@@ -912,6 +976,39 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
                 }}
               >
                 שבץ בכל זאת
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── Copy from Date Dialog ─── */}
+        <Dialog open={copyDialogOpen} onOpenChange={setCopyDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>העתקת שיבוץ מיום אחר</DialogTitle>
+              <DialogDescription>
+                בחר תאריך מקור להעתקת כל השיבוצים אל {dateFormatted}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-center py-2">
+              <Calendar
+                mode="single"
+                selected={copySourceDate}
+                onSelect={setCopySourceDate}
+                initialFocus
+                className={cn("p-3 pointer-events-auto")}
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => { setCopyDialogOpen(false); setCopySourceDate(undefined); }}>
+                ביטול
+              </Button>
+              <Button
+                onClick={handleCopyFromDate}
+                disabled={!copySourceDate || copying}
+              >
+                {copying ? <Loader2 size={16} className="animate-spin ml-2" /> : <Copy size={16} className="ml-2" />}
+                העתק שיבוצים
               </Button>
             </DialogFooter>
           </DialogContent>
