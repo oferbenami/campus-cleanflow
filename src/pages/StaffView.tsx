@@ -52,6 +52,8 @@ const StaffView = () => {
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [totalBreakSeconds, setTotalBreakSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(0);
+  const [taskBreakAccum, setTaskBreakAccum] = useState(0); // total break seconds during current task
+  const [breakStartedAt, setBreakStartedAt] = useState<number | null>(null);
   const [showDeferModal, setShowDeferModal] = useState(false);
 
   const currentTask = tasks.find((t) => t.status === "in_progress") 
@@ -65,19 +67,19 @@ const StaffView = () => {
   const nextTask = currentIdx >= 0 && currentIdx < tasks.length - 1 ? tasks[currentIdx + 1] : null;
   const thirdTask = currentIdx >= 0 && currentIdx < tasks.length - 2 ? tasks[currentIdx + 2] : null;
 
-  // Task timer
+  // Task timer — subtracts accumulated break time
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     if (isActive && !onBreak && currentTask?.started_at) {
       const updateTimer = () => {
         const elapsed = Math.floor((Date.now() - new Date(currentTask.started_at!).getTime()) / 1000);
-        setTaskSeconds(elapsed);
+        setTaskSeconds(elapsed - taskBreakAccum);
       };
       updateTimer();
       interval = setInterval(updateTimer, 1000);
     }
     return () => clearInterval(interval);
-  }, [isActive, onBreak, currentTask?.started_at]);
+  }, [isActive, onBreak, currentTask?.started_at, taskBreakAccum]);
 
   // Break timer
   useEffect(() => {
@@ -108,7 +110,7 @@ const StaffView = () => {
     }
   }, [taskSeconds, currentTask, isActive, sendSlaAlert]);
 
-  useEffect(() => { slaAlertSent.current = false; audioPlayed.current = false; }, [currentTask?.id]);
+  useEffect(() => { slaAlertSent.current = false; audioPlayed.current = false; setTaskBreakAccum(0); }, [currentTask?.id]);
 
   const playAlertSound = () => {
     try {
@@ -277,7 +279,7 @@ const StaffView = () => {
           )}
         </div>
         <div className="px-6 pb-6 pt-2">
-          <button onClick={() => { setTotalBreakSeconds(prev => prev + breakSeconds); setOnBreak(false); setBreakSeconds(0); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
+          <button onClick={() => { setTotalBreakSeconds(prev => prev + breakSeconds); setTaskBreakAccum(prev => prev + breakSeconds); setOnBreak(false); setBreakSeconds(0); setBreakStartedAt(null); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
             <Play size={22} /> {t("worker.backToWork")}
           </button>
         </div>
@@ -419,7 +421,7 @@ const StaffView = () => {
 
       {/* Fixed bottom action banner */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
-        <button onClick={() => setOnBreak(true)} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
+        <button onClick={() => { setOnBreak(true); setBreakStartedAt(Date.now()); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
