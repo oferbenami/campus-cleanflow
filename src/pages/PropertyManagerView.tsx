@@ -7,21 +7,19 @@ import {
   ClipboardList,
   Database,
   LogOut,
-  BarChart3,
   LayoutGrid,
   Package,
 } from "lucide-react";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
-import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import WorkPackagesTab from "@/components/property-manager/WorkPackagesTab";
 import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 
-type PMTab = "staff" | "workpackages" | "planning" | "assign" | "controlBoard" | "masterdata" | "eod";
+type PMTab = "staff" | "workpackages" | "planning" | "assign" | "controlBoard" | "masterdata";
 
 const PropertyManagerView = () => {
-  const [activeTab, setActiveTab] = useState<PMTab>("staff");
+  const [activeTab, setActiveTab] = useState<PMTab>("controlBoard");
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -32,13 +30,12 @@ const PropertyManagerView = () => {
   });
 
   const tabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
-    { key: "staff", label: "עובדים", icon: <Users size={16} /> },
-    { key: "workpackages", label: "חבילות עבודה", icon: <Package size={16} /> },
-    { key: "planning", label: "תכנון מחר", icon: <CalendarPlus size={16} /> },
-    { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
     { key: "controlBoard", label: "לוח בקרה", icon: <LayoutGrid size={16} /> },
+    { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
+    { key: "planning", label: "שיבוץ מחר", icon: <CalendarPlus size={16} /> },
+    { key: "workpackages", label: "חבילות עבודה", icon: <Package size={16} /> },
+    { key: "staff", label: "עובדים", icon: <Users size={16} /> },
     { key: "masterdata", label: "נכסים", icon: <Database size={16} /> },
-    { key: "eod", label: "סוף יום", icon: <BarChart3 size={16} /> },
   ];
 
   return (
@@ -87,7 +84,6 @@ const PropertyManagerView = () => {
         {activeTab === "assign" && <ShiftPlanningTab />}
         {activeTab === "controlBoard" && <VisualControlBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
-        {activeTab === "eod" && <EndOfDayTab />}
       </div>
     </div>
   );
