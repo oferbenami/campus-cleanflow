@@ -29,11 +29,14 @@ const PropertyManagerView = () => {
     year: "numeric",
   });
 
-  const tabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
+  const mainTabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
     { key: "controlBoard", label: "לוח בקרה", icon: <LayoutGrid size={16} /> },
     { key: "assign", label: "שיבוץ היום", icon: <ClipboardList size={16} /> },
     { key: "planning", label: "שיבוץ מחר", icon: <CalendarPlus size={16} /> },
     { key: "workpackages", label: "חבילות עבודה", icon: <Package size={16} /> },
+  ];
+
+  const headerTabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
     { key: "staff", label: "עובדים", icon: <Users size={16} /> },
     { key: "masterdata", label: "נכסים", icon: <Database size={16} /> },
   ];
@@ -46,22 +49,37 @@ const PropertyManagerView = () => {
             <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
             <h1 className="text-lg sm:text-xl font-bold">מנהל נכס</h1>
           </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <div className="text-left hidden sm:block">
-              <p className="text-xs opacity-75">תאריך</p>
-              <p className="text-sm font-semibold mono">{todayFormatted}</p>
+            <div className="flex items-center gap-2 sm:gap-4">
+              {headerTabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    activeTab === tab.key
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                  }`}
+                >
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </button>
+              ))}
+              <div className="w-px h-5 bg-primary-foreground/20 hidden sm:block" />
+              <div className="text-left hidden sm:block">
+                <p className="text-xs opacity-75">תאריך</p>
+                <p className="text-sm font-semibold mono">{todayFormatted}</p>
+              </div>
+              <button onClick={async () => { await signOut(); navigate("/auth", { replace: true }); }} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
+                <LogOut size={18} />
+              </button>
             </div>
-            <button onClick={async () => { await signOut(); navigate("/auth", { replace: true }); }} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
-              <LogOut size={18} />
-            </button>
-          </div>
         </div>
       </header>
 
       <div className="sticky top-[52px] sm:top-[60px] z-40 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-3 pb-2">
           <div className="flex gap-0.5 bg-muted rounded-xl p-1">
-            {tabs.map((tab) => (
+            {mainTabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
