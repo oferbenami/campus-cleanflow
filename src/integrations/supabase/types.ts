@@ -1224,6 +1224,9 @@ export type Database = {
         | "task_deferred"
         | "task_resumed"
         | "task_missed"
+        | "task_reassigned"
+        | "task_cancelled"
+        | "priority_changed"
       incident_category:
         | "spill"
         | "restroom"
@@ -1271,6 +1274,7 @@ export type Database = {
         | "deferred"
         | "paused"
         | "missed"
+        | "cancelled"
       template_type: "base" | "addon"
       ticket_priority: "urgent" | "high" | "normal"
       ticket_status: "open" | "assigned" | "in_progress" | "resolved" | "closed"
@@ -1420,6 +1424,9 @@ export const Constants = {
         "task_deferred",
         "task_resumed",
         "task_missed",
+        "task_reassigned",
+        "task_cancelled",
+        "priority_changed",
       ],
       incident_category: [
         "spill",
@@ -1472,6 +1479,7 @@ export const Constants = {
         "deferred",
         "paused",
         "missed",
+        "cancelled",
       ],
       template_type: ["base", "addon"],
       ticket_priority: ["urgent", "high", "normal"],
