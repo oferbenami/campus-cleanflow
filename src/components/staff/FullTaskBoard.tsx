@@ -1,9 +1,10 @@
-import { CheckCircle2, Clock, AlertTriangle, XCircle, Pause, ArrowRight, X, PauseCircle } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, XCircle, Pause, ArrowRight, X, PauseCircle, Play } from "lucide-react";
 import type { AssignedTaskRow } from "@/hooks/useStaffAssignment";
 
 interface Props {
   tasks: AssignedTaskRow[];
   onClose: () => void;
+  onResumeTask?: (taskId: string) => void;
 }
 
 const statusConfig: Record<string, { bg: string; border: string; icon: React.ReactNode; label: string }> = {
@@ -18,8 +19,11 @@ const statusConfig: Record<string, { bg: string; border: string; icon: React.Rea
   failed: { bg: "bg-destructive/15", border: "border-destructive/30", icon: <XCircle size={18} className="text-destructive" />, label: "נכשל" },
 };
 
-const FullTaskBoard = ({ tasks, onClose }: Props) => {
+const FullTaskBoard = ({ tasks, onClose, onResumeTask }: Props) => {
   const completed = tasks.filter(t => t.status === "completed").length;
+  const deferredTasks = tasks.filter(t => t.status === "deferred" || t.status === "paused");
+  const otherTasks = tasks.filter(t => t.status !== "deferred" && t.status !== "paused");
+  const sortedTasks = [...deferredTasks, ...otherTasks];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -33,23 +37,37 @@ const FullTaskBoard = ({ tasks, onClose }: Props) => {
         </div>
       </header>
 
+      {deferredTasks.length > 0 && (
+        <div className="px-3 pt-3">
+          <div className="bg-warning/10 border border-warning/30 rounded-lg px-3 py-2 flex items-center gap-2">
+            <PauseCircle size={16} className="text-warning shrink-0" />
+            <span className="text-xs font-bold text-warning">{deferredTasks.length} משימות נדחו — מוצגות בראש הרשימה</span>
+          </div>
+        </div>
+      )}
+
       <div className="flex-1 p-3 grid grid-cols-2 gap-2.5 auto-rows-min">
-        {tasks.map((task, i) => {
+        {sortedTasks.map((task, i) => {
           const cfg = statusConfig[task.status] || statusConfig.queued;
           const variance = task.variance_percent;
+          const isDeferred = task.status === "deferred" || task.status === "paused";
+          const originalIndex = tasks.indexOf(task);
           return (
             <div
               key={task.id}
-              className={`rounded-xl border ${cfg.border} ${cfg.bg} p-3 flex flex-col gap-1.5 transition-all`}
+              className={`rounded-xl border ${cfg.border} ${cfg.bg} p-3 flex flex-col gap-1.5 transition-all ${isDeferred ? "ring-2 ring-warning/40" : ""}`}
             >
               <div className="flex items-start justify-between gap-1">
                 <span className="text-[10px] font-bold text-muted-foreground bg-muted rounded px-1.5 py-0.5">
-                  #{i + 1}
+                  #{originalIndex + 1}
                 </span>
                 {cfg.icon}
               </div>
               <p className="text-sm font-bold text-foreground leading-tight line-clamp-2">{task.task_name}</p>
               <p className="text-[11px] text-muted-foreground truncate">{task.location_name}</p>
+              {isDeferred && task.defer_reason && (
+                <p className="text-[10px] text-warning truncate">סיבה: {task.defer_reason}</p>
+              )}
               <div className="flex items-center justify-between mt-auto pt-1">
                 <span className="text-[10px] text-muted-foreground">{task.standard_minutes} דק׳</span>
                 {task.status === "completed" && variance !== null && (
@@ -59,6 +77,14 @@ const FullTaskBoard = ({ tasks, onClose }: Props) => {
                 )}
                 <span className="text-[10px] text-muted-foreground">{cfg.label}</span>
               </div>
+              {isDeferred && onResumeTask && (
+                <button
+                  onClick={() => onResumeTask(task.id)}
+                  className="mt-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+                >
+                  <Play size={14} /> המשך משימה
+                </button>
+              )}
             </div>
           );
         })}

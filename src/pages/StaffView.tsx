@@ -41,7 +41,7 @@ type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, sendSlaAlert } = useStaffAssignment();
+  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
   const { myIncidents, startIncident, resolveIncident, reassignIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
@@ -50,6 +50,7 @@ const StaffView = () => {
   const [scanMode, setScanMode] = useState<ScanMode>(null);
   const [onBreak, setOnBreak] = useState(false);
   const [breakSeconds, setBreakSeconds] = useState(0);
+  const [totalBreakSeconds, setTotalBreakSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(0);
   const [showDeferModal, setShowDeferModal] = useState(false);
 
@@ -234,7 +235,9 @@ const StaffView = () => {
   }
 
   if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
-  if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} />;
+  if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} onResumeTask={async (taskId) => {
+    try { await resumeTask(taskId); toast({ title: "✓ המשימה חזרה לתור" }); setScreen("home"); } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
+  }} />;
   if (screen === "shifts") return <UpcomingShifts onClose={() => setScreen("home")} onReportAbsence={() => setScreen("absence")} />;
   if (screen === "absence") return <AbsenceReportScreen onClose={() => setScreen("home")} />;
   if (screen === "points") return (
@@ -252,6 +255,7 @@ const StaffView = () => {
   // Break screen
   if (onBreak) {
     const breakTimeDisplay = `${String(Math.floor(breakSeconds / 60)).padStart(2, "0")}:${String(breakSeconds % 60).padStart(2, "0")}`;
+    const totalDisplay = `${String(Math.floor(totalBreakSeconds / 60)).padStart(2, "0")}:${String(totalBreakSeconds % 60).padStart(2, "0")}`;
     return (
       <div className="h-screen bg-background flex flex-col overflow-hidden">
         <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
@@ -259,14 +263,21 @@ const StaffView = () => {
           <h1 className="text-2xl font-black text-foreground">{t("worker.onBreakTitle")}</h1>
           <p className="text-sm text-muted-foreground">{t("worker.onBreakSubtitle")}</p>
           <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl px-6 py-3">
+            <p className="text-[10px] text-muted-foreground mb-1">הפסקה נוכחית</p>
             <div className="flex items-center justify-center gap-2">
               <Timer size={20} className="text-primary" />
               <span className="mono text-4xl font-black text-foreground">{breakTimeDisplay}</span>
             </div>
           </div>
+          {totalBreakSeconds > 0 && (
+            <div className="bg-muted/40 rounded-xl px-4 py-2">
+              <p className="text-[10px] text-muted-foreground">סה״כ הפסקות היום</p>
+              <p className="text-lg font-bold text-foreground">{totalDisplay}</p>
+            </div>
+          )}
         </div>
         <div className="px-6 pb-6 pt-2">
-          <button onClick={() => { setOnBreak(false); setBreakSeconds(0); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
+          <button onClick={() => { setTotalBreakSeconds(prev => prev + breakSeconds); setOnBreak(false); setBreakSeconds(0); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
             <Play size={22} /> {t("worker.backToWork")}
           </button>
         </div>

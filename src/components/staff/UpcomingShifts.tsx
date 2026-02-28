@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { CalendarDays, X, Loader2, AlertTriangle } from "lucide-react";
+import { CalendarDays, X, Loader2, AlertTriangle, Ban } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { he } from "date-fns/locale";
 
@@ -13,6 +13,11 @@ interface ShiftRow {
   work_package_id: string | null;
 }
 
+interface AbsenceRow {
+  absence_date: string;
+  reason: string | null;
+}
+
 interface Props {
   onClose: () => void;
   onReportAbsence: () => void;
@@ -21,32 +26,48 @@ interface Props {
 const UpcomingShifts = ({ onClose, onReportAbsence }: Props) => {
   const { user } = useAuth();
   const [shifts, setShifts] = useState<ShiftRow[]>([]);
+  const [absences, setAbsences] = useState<AbsenceRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
-    const fetchShifts = async () => {
+    const fetchData = async () => {
       const today = new Date().toISOString().split("T")[0];
-      const nextWeek = addDays(new Date(), 7).toISOString().split("T")[0];
-      const { data } = await supabase
-        .from("assignments")
-        .select("id, date, shift_type, status, work_package_id")
-        .eq("staff_user_id", user.id)
-        .gte("date", today)
-        .lte("date", nextWeek)
-        .order("date", { ascending: true });
-      setShifts(data || []);
+      const nextWeek = addDays(new Date(), 14).toISOString().split("T")[0];
+
+      const [shiftsRes, absencesRes] = await Promise.all([
+        supabase
+          .from("assignments")
+          .select("id, date, shift_type, status, work_package_id")
+          .eq("staff_user_id", user.id)
+          .gte("date", today)
+          .lte("date", nextWeek)
+          .order("date", { ascending: true }),
+        supabase
+          .from("planned_absences")
+          .select("absence_date, reason")
+          .eq("staff_user_id", user.id)
+          .gte("absence_date", today)
+          .lte("absence_date", nextWeek),
+      ]);
+
+      setShifts(shiftsRes.data || []);
+      setAbsences(absencesRes.data || []);
       setLoading(false);
     };
-    fetchShifts();
+    fetchData();
   }, [user?.id]);
+
+  const absenceMap = new Map(absences.map(a => [a.absence_date, a.reason]));
 
   // Generate next 7 days
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = addDays(new Date(), i);
     const dateStr = d.toISOString().split("T")[0];
     const shift = shifts.find(s => s.date === dateStr);
-    return { date: d, dateStr, shift };
+    const absence = absenceMap.get(dateStr);
+    const hasAbsence = absenceMap.has(dateStr);
+    return { date: d, dateStr, shift, hasAbsence, absenceReason: absence };
   });
 
   return (
@@ -64,13 +85,15 @@ const UpcomingShifts = ({ onClose, onReportAbsence }: Props) => {
         </div>
       ) : (
         <div className="flex-1 p-4 space-y-2">
-          {days.map(({ date, dateStr, shift }) => {
+          {days.map(({ date, dateStr, shift, hasAbsence, absenceReason }) => {
             const isToday = dateStr === new Date().toISOString().split("T")[0];
             return (
               <div
                 key={dateStr}
                 className={`rounded-xl border p-4 flex items-center justify-between transition-colors ${
-                  shift
+                  hasAbsence
+                    ? "bg-destructive/5 border-destructive/20"
+                    : shift
                     ? "bg-primary/5 border-primary/20"
                     : "bg-muted/30 border-border"
                 } ${isToday ? "ring-2 ring-primary/30" : ""}`}
@@ -81,8 +104,20 @@ const UpcomingShifts = ({ onClose, onReportAbsence }: Props) => {
                     {isToday && <span className="text-primary mr-1">(היום)</span>}
                   </p>
                   <p className="text-xs text-muted-foreground">{format(date, "dd/MM")}</p>
+                  {hasAbsence && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Ban size={12} className="text-destructive" />
+                      <span className="text-[11px] text-destructive font-medium">
+                        היעדרות מדווחת{absenceReason ? ` — ${absenceReason}` : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
-                {shift ? (
+                {hasAbsence ? (
+                  <span className="inline-block px-2.5 py-1 rounded-lg bg-destructive/15 text-destructive text-xs font-bold">
+                    🚫 לא מגיע
+                  </span>
+                ) : shift ? (
                   <div className="text-left">
                     <span className="inline-block px-2.5 py-1 rounded-lg bg-primary/15 text-primary text-xs font-bold">
                       {shift.shift_type === "morning" ? "☀️ בוקר" : "🌙 ערב"}
