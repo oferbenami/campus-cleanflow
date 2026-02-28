@@ -33,7 +33,7 @@ import UpcomingShifts from "@/components/staff/UpcomingShifts";
 import AbsenceReportScreen from "@/components/staff/AbsenceReportScreen";
 import { useShortageReports } from "@/hooks/useShortageReports";
 import { useIncidents } from "@/hooks/useIncidents";
-import WorkerIncidentAlert from "@/components/incidents/WorkerIncidentAlert";
+import IncidentTaskTile from "@/components/staff/IncidentTaskTile";
 import breakIllustration from "@/assets/break-illustration.png";
 
 type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points" | "breakfix";
@@ -335,26 +335,8 @@ const StaffView = () => {
     );
   }
 
-  // Active incident overlay
+  // Active incident (shown inline in task list, not as overlay)
   const activeIncident = myIncidents[0] || null;
-  if (activeIncident && activeIncident.status === "assigned") {
-    return (
-      <WorkerIncidentAlert
-        incident={activeIncident}
-        onAccept={async () => { await startIncident(activeIncident.id); toast({ title: "✓ התחלת טיפול באירוע" }); }}
-        onDefer={async (reason) => {
-          await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "deferred" as any, user_id: user?.id || "", event_payload: { reason } });
-          await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
-          toast({ title: "⚠️ אירוע הוחזר לתור" });
-        }}
-        onReassignBack={async () => {
-          await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "reassigned" as any, user_id: user?.id || "", event_payload: { reason: "returned_to_supervisor" } });
-          await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
-          toast({ title: "↩️ אירוע הוחזר למפקח" });
-        }}
-      />
-    );
-  }
 
   // HOME SCREEN
   const scanModal = scanMode && (
@@ -428,6 +410,30 @@ const StaffView = () => {
 
       {/* Task Tiles */}
       <div className="flex-1 px-4 pb-4 flex flex-col gap-3">
+        {/* Incident tile at top - flashing red */}
+        {activeIncident && (activeIncident.status === "assigned" || activeIncident.status === "in_progress") && (
+          <IncidentTaskTile
+            incident={activeIncident}
+            onAccept={async () => {
+              await startIncident(activeIncident.id);
+              toast({ title: "✓ התחלת טיפול בתקלה" });
+            }}
+            onStart={async () => {
+              await startIncident(activeIncident.id);
+              toast({ title: "✓ התחלת טיפול בתקלה" });
+            }}
+            onResolve={async () => {
+              await resolveIncident(activeIncident.id);
+              toast({ title: "✓ תקלה טופלה בהצלחה!" });
+            }}
+            onDefer={async (reason) => {
+              await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "deferred" as any, user_id: user?.id || "", event_payload: { reason } });
+              await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
+              toast({ title: "⚠️ תקלה הוחזרה לתור" });
+            }}
+          />
+        )}
+
         {currentTask && (
           <LiveTaskTile
             task={currentTask} isCurrent={true} isActive={isActive}
