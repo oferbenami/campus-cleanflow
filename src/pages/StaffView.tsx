@@ -11,13 +11,13 @@ import {
   Timer,
   CalendarDays,
   BarChart3,
-  Home,
   MapPin,
-  XCircle,
   LogOut,
   Loader2,
+  LayoutGrid,
+  Trophy,
+  Calendar,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/i18n/I18nContext";
 import { useStaffAssignment } from "@/hooks/useStaffAssignment";
 import LiveTaskTile, { getEscalationLevel } from "@/components/staff/LiveTaskTile";
@@ -26,13 +26,16 @@ import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
 import MyPointsWidget from "@/components/staff/MyPointsWidget";
 import CannotPerformModal from "@/components/staff/CannotPerformModal";
 import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
+import FullTaskBoard from "@/components/staff/FullTaskBoard";
+import UpcomingShifts from "@/components/staff/UpcomingShifts";
+import AbsenceReportScreen from "@/components/staff/AbsenceReportScreen";
 import type { CannotPerformResult } from "@/components/staff/CannotPerformModal";
 import { useShortageReports } from "@/hooks/useShortageReports";
 import { useIncidents } from "@/hooks/useIncidents";
 import WorkerIncidentAlert from "@/components/incidents/WorkerIncidentAlert";
 import breakIllustration from "@/assets/break-illustration.png";
 
-type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points";
 type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | null; locationName: string } | null;
 
 const StaffView = () => {
@@ -50,14 +53,12 @@ const StaffView = () => {
   const [taskSeconds, setTaskSeconds] = useState(0);
   const [showCannotPerform, setShowCannotPerform] = useState(false);
 
-  // Find current task (first non-completed, non-failed, non-blocked)
   const currentTask = tasks.find((t) => t.status === "in_progress") 
     || tasks.find((t) => t.status === "queued" || t.status === "ready");
   const isActive = currentTask?.status === "in_progress";
   const completedCount = tasks.filter((t) => t.status === "completed").length;
   const allDone = tasks.length > 0 && tasks.every((t) => t.status === "completed" || t.status === "failed");
 
-  // Next tasks for preview
   const currentIdx = currentTask ? tasks.indexOf(currentTask) : -1;
   const nextTask = currentIdx >= 0 && currentIdx < tasks.length - 1 ? tasks[currentIdx + 1] : null;
   const thirdTask = currentIdx >= 0 && currentIdx < tasks.length - 2 ? tasks[currentIdx + 2] : null;
@@ -85,112 +86,61 @@ const StaffView = () => {
     return () => clearInterval(interval);
   }, [onBreak]);
 
-  // ── SLA Escalation Logic ──
-  const slaAlertSent = useRef(false); // 115% alert
-  const audioPlayed = useRef(false);  // 125% audio
+  // SLA Escalation
+  const slaAlertSent = useRef(false);
+  const audioPlayed = useRef(false);
 
   useEffect(() => {
     if (!currentTask || !isActive) return;
     const elapsedMin = taskSeconds / 60;
     const standard = currentTask.standard_minutes;
-
-    // 115% -> send SLA alert to supervisor
     if (elapsedMin >= standard * 1.15 && !slaAlertSent.current) {
       slaAlertSent.current = true;
       sendSlaAlert(currentTask.id, Math.floor(elapsedMin));
-      toast({
-        title: "⚠️ חריגה מעל 15%",
-        description: `${currentTask.location_name} — המפקח קיבל התראה`,
-        variant: "destructive",
-      });
+      toast({ title: "⚠️ חריגה מעל 15%", description: `${currentTask.location_name} — המפקח קיבל התראה`, variant: "destructive" });
     }
-
-    // 125% -> audio alert + vibration
     if (elapsedMin >= standard * 1.25 && !audioPlayed.current) {
       audioPlayed.current = true;
       playAlertSound();
-      if (navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
-      }
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
   }, [taskSeconds, currentTask, isActive, sendSlaAlert]);
 
-  // Reset escalation refs when task changes
-  useEffect(() => {
-    slaAlertSent.current = false;
-    audioPlayed.current = false;
-  }, [currentTask?.id]);
+  useEffect(() => { slaAlertSent.current = false; audioPlayed.current = false; }, [currentTask?.id]);
 
-  // ── Audio Alert ──
   const playAlertSound = () => {
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = ctx.createOscillator();
-      const gainNode = ctx.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
-      gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
-      oscillator.start(ctx.currentTime);
-      oscillator.stop(ctx.currentTime + 1.5);
-    } catch {
-      // Audio not available
-    }
+      const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = "sine"; osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.5);
+      osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 1.5);
+    } catch {}
   };
 
-  // ── Handlers ──
-
+  // Handlers
   const handleScanToStart = (task: typeof currentTask) => {
     if (!task) return;
-    setScanMode({
-      type: "entry",
-      taskId: task.id,
-      expectedUid: task.location_nfc_tag_uid,
-      locationName: task.location_name,
-    });
+    setScanMode({ type: "entry", taskId: task.id, expectedUid: task.location_nfc_tag_uid, locationName: task.location_name });
   };
 
   const handleScanToFinish = (task: typeof currentTask) => {
     if (!task) return;
-    setScanMode({
-      type: "exit",
-      taskId: task.id,
-      expectedUid: task.location_nfc_tag_uid,
-      locationName: task.location_name,
-    });
+    setScanMode({ type: "exit", taskId: task.id, expectedUid: task.location_nfc_tag_uid, locationName: task.location_name });
   };
 
   const handleScanResult = useCallback(async (tagUid: string, isMatch: boolean) => {
     if (!scanMode) return;
-
     if (!isMatch) {
-      if (tagUid !== "") {
-        toast({
-          title: "מיקום לא תואם!",
-          description: "התג שנסרק לא מתאים למיקום המשימה",
-          variant: "destructive",
-        });
-      }
-      setScanMode(null);
-      return;
+      if (tagUid !== "") toast({ title: "מיקום לא תואם!", description: "התג שנסרק לא מתאים למיקום המשימה", variant: "destructive" });
+      setScanMode(null); return;
     }
-
     try {
-      if (scanMode.type === "entry") {
-        await startTask(scanMode.taskId, tagUid);
-        setTaskSeconds(0);
-        toast({ title: "✓ משימה התחילה!" });
-      } else {
-        await finishTask(scanMode.taskId, tagUid);
-        setTaskSeconds(0);
-        toast({ title: "✓ משימה הושלמה! המשימה הבאה נטענה." });
-      }
-    } catch (err: any) {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-    }
-
+      if (scanMode.type === "entry") { await startTask(scanMode.taskId, tagUid); setTaskSeconds(0); toast({ title: "✓ משימה התחילה!" }); }
+      else { await finishTask(scanMode.taskId, tagUid); setTaskSeconds(0); toast({ title: "✓ משימה הושלמה! המשימה הבאה נטענה." }); }
+    } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
     setScanMode(null);
   }, [scanMode, startTask, finishTask]);
 
@@ -198,21 +148,13 @@ const StaffView = () => {
     if (!currentTask) return;
     try {
       await cannotPerformTask(currentTask.id, result.reasonCode, result.note, result.action);
-      
-      const actionMsg = result.action === "defer_swap" 
-        ? "המשימה הוחלפה עם המשימה הבאה" 
-        : result.action === "defer_end"
-        ? "המשימה הועברה לסוף התור"
-        : "דיווח נשלח למפקח";
-      
+      const actionMsg = result.action === "defer_swap" ? "המשימה הוחלפה עם המשימה הבאה" : result.action === "defer_end" ? "המשימה הועברה לסוף התור" : "דיווח נשלח למפקח";
       toast({ title: "⚠️ לא ניתן לבצע", description: actionMsg, variant: "destructive" });
-    } catch (err: any) {
-      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-    }
+    } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
     setShowCannotPerform(false);
   };
 
-  // ── Loading ──
+  // Loading
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -231,67 +173,50 @@ const StaffView = () => {
           <CalendarDays size={48} className="mx-auto text-muted-foreground" />
           <h1 className="text-xl font-bold">אין משמרת פעילה היום</h1>
           <p className="text-muted-foreground text-sm">{error || "לא נמצא שיבוץ עבור היום"}</p>
-          <button onClick={signOut} className="flex items-center justify-center gap-2 mx-auto py-3 px-6 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
-            <LogOut size={16} />
-            התנתק
-          </button>
+          <div className="flex flex-col gap-2 items-center">
+            <button onClick={() => setScreen("shifts")} className="flex items-center justify-center gap-2 py-3 px-6 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20">
+              <Calendar size={16} /> צפה בשיבוצים הקרובים
+            </button>
+            <button onClick={signOut} className="flex items-center justify-center gap-2 py-3 px-6 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
+              <LogOut size={16} /> התנתק
+            </button>
+          </div>
         </div>
+        {screen === "shifts" && <div className="fixed inset-0 z-50"><UpcomingShifts onClose={() => setScreen("home")} onReportAbsence={() => setScreen("absence")} /></div>}
+        {screen === "absence" && <div className="fixed inset-0 z-50"><AbsenceReportScreen onClose={() => setScreen("shifts")} /></div>}
       </div>
     );
   }
 
-  // ── NFC Scan Modal ──
-  const scanModal = scanMode && (
-    <NfcScanSimulator
-      expectedTagUid={scanMode.expectedUid}
-      onScanResult={handleScanResult}
-      mode={scanMode.type}
-      locationName={scanMode.locationName}
-    />
-  );
-
-  // ── Welcome Screen ──
+  // Full-screen sub-screens
   if (screen === "welcome") {
     const hour = new Date().getHours();
     const greeting = hour < 12 ? "בוקר טוב" : hour < 17 ? "צהריים טובים" : "ערב טוב";
     const greetingEmoji = hour < 12 ? "☀️" : hour < 17 ? "🌤️" : "🌙";
-
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-8">
           <div className="animate-fade-in">
             <p className="text-6xl mb-4">{greetingEmoji}</p>
-            <h1 className="text-4xl font-black text-foreground mb-2">
-              {greeting}{assignment.staff_name ? `, ${assignment.staff_name}` : ""}!
-            </h1>
+            <h1 className="text-4xl font-black text-foreground mb-2">{greeting}{assignment.staff_name ? `, ${assignment.staff_name}` : ""}!</h1>
             <p className="text-lg text-muted-foreground">שמחים שהגעת למשמרת</p>
           </div>
-
           <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-6 space-y-3">
             <div className="flex items-center justify-center gap-2 text-primary">
               <MapPin size={22} />
               <p className="text-lg font-bold">{tasks.length} משימות מתוכננות</p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              משמרת {assignment.shift_type === "morning" ? "בוקר" : "ערב"}
-            </p>
+            <p className="text-sm text-muted-foreground">משמרת {assignment.shift_type === "morning" ? "בוקר" : "ערב"}</p>
           </div>
-
           <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
-
-          <button
-            onClick={() => setScreen("home")}
-            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
-          >
-            <Play size={22} />
-            יאללה, מתחילים
+          <button onClick={() => setScreen("home")} className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4">
+            <Play size={22} /> יאללה, מתחילים
           </button>
         </div>
       </div>
     );
   }
 
-  // ── Shortage Screen ──
   if (screen === "shortage") {
     return (
       <ShortageReportScreen
@@ -299,25 +224,31 @@ const StaffView = () => {
         submitting={shortageSubmitting}
         onSubmit={async (items, location, category) => {
           setShortageSubmitting(true);
-          try {
-            await submitShortageReport(items, location, category);
-            toast({ title: "✓ דיווח חוסרים נשלח!" });
-            setScreen("home");
-          } catch (err: any) {
-            toast({ title: "שגיאה", description: err.message, variant: "destructive" });
-          }
+          try { await submitShortageReport(items, location, category); toast({ title: "✓ דיווח חוסרים נשלח!" }); setScreen("home"); }
+          catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
           setShortageSubmitting(false);
         }}
       />
     );
   }
 
-  // ── Analysis Screen ──
-  if (screen === "analysis") {
-    return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
-  }
+  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
+  if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} />;
+  if (screen === "shifts") return <UpcomingShifts onClose={() => setScreen("home")} onReportAbsence={() => setScreen("absence")} />;
+  if (screen === "absence") return <AbsenceReportScreen onClose={() => setScreen("home")} />;
+  if (screen === "points") return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold">הנקודות שלי</h1>
+        <button onClick={() => setScreen("home")} className="p-1.5 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20">
+          <span className="text-sm">✕</span>
+        </button>
+      </header>
+      <div className="flex-1 p-4"><MyPointsWidget /></div>
+    </div>
+  );
 
-  // ── Break Screen ──
+  // Break screen
   if (onBreak) {
     const breakTimeDisplay = `${String(Math.floor(breakSeconds / 60)).padStart(2, "0")}:${String(breakSeconds % 60).padStart(2, "0")}`;
     return (
@@ -334,19 +265,15 @@ const StaffView = () => {
           </div>
         </div>
         <div className="px-6 pb-6 pt-2">
-          <button
-            onClick={() => { setOnBreak(false); setBreakSeconds(0); }}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors"
-          >
-            <Play size={22} />
-            {t("worker.backToWork")}
+          <button onClick={() => { setOnBreak(false); setBreakSeconds(0); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
+            <Play size={22} /> {t("worker.backToWork")}
           </button>
         </div>
       </div>
     );
   }
 
-  // ── All Done Screen ──
+  // All done
   if (allDone) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -356,68 +283,45 @@ const StaffView = () => {
           <p className="text-muted-foreground">{t("worker.greatWork")}</p>
         </div>
         <button onClick={() => setScreen("analysis")} className="btn-action-primary flex items-center justify-center gap-3 w-full max-w-xs">
-          <BarChart3 size={20} />
-          {t("worker.endOfDay")}
+          <BarChart3 size={20} /> {t("worker.endOfDay")}
         </button>
         <button onClick={signOut} className="flex items-center justify-center gap-2 w-full max-w-xs mt-3 py-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:bg-muted">
-          <LogOut size={16} />
-          התנתק
+          <LogOut size={16} /> התנתק
         </button>
       </div>
     );
   }
 
-  // Active incident for this worker
+  // Active incident overlay
   const activeIncident = myIncidents[0] || null;
-
-  // If there's a pending incident alert, show full-screen overlay
   if (activeIncident && activeIncident.status === "assigned") {
     return (
       <WorkerIncidentAlert
         incident={activeIncident}
-        onAccept={async () => {
-          await startIncident(activeIncident.id);
-          toast({ title: "✓ התחלת טיפול באירוע" });
-        }}
+        onAccept={async () => { await startIncident(activeIncident.id); toast({ title: "✓ התחלת טיפול באירוע" }); }}
         onDefer={async (reason) => {
-          // Defer back to supervisor by logging event and unassigning
-          await supabase.from("incident_events_log").insert({
-            incident_id: activeIncident.id,
-            event_type: "deferred" as any,
-            user_id: user?.id || "",
-            event_payload: { reason },
-          });
-          await supabase.from("incidents").update({
-            assigned_to_user_id: null,
-            status: "pending_dispatch" as any,
-            assigned_at: null,
-          }).eq("id", activeIncident.id);
+          await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "deferred" as any, user_id: user?.id || "", event_payload: { reason } });
+          await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
           toast({ title: "⚠️ אירוע הוחזר לתור" });
         }}
         onReassignBack={async () => {
-          await supabase.from("incident_events_log").insert({
-            incident_id: activeIncident.id,
-            event_type: "reassigned" as any,
-            user_id: user?.id || "",
-            event_payload: { reason: "returned_to_supervisor" },
-          });
-          await supabase.from("incidents").update({
-            assigned_to_user_id: null,
-            status: "pending_dispatch" as any,
-            assigned_at: null,
-          }).eq("id", activeIncident.id);
+          await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "reassigned" as any, user_id: user?.id || "", event_payload: { reason: "returned_to_supervisor" } });
+          await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
           toast({ title: "↩️ אירוע הוחזר למפקח" });
         }}
       />
     );
   }
 
-  // ── HOME SCREEN ──
+  // HOME SCREEN
+  const scanModal = scanMode && (
+    <NfcScanSimulator expectedTagUid={scanMode.expectedUid} onScanResult={handleScanResult} mode={scanMode.type} locationName={scanMode.locationName} />
+  );
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {scanModal}
 
-      {/* Cannot Perform Modal */}
       {showCannotPerform && currentTask && (
         <CannotPerformModal
           task={currentTask}
@@ -427,22 +331,40 @@ const StaffView = () => {
         />
       )}
 
-      {/* Header */}
-      <header className="bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between">
-        <div>
-          <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
-          <h1 className="text-lg font-bold">{t("worker.homeTitle")}</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setScreen("analysis")} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
-            <BarChart3 size={18} />
-          </button>
-          <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
-            <LogOut size={18} />
-          </button>
-          <div className="text-left">
-            <p className="text-xs opacity-75">{completedCount}/{tasks.length}</p>
+      {/* Header with action buttons */}
+      <header className="bg-primary text-primary-foreground px-4 py-3">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <p className="text-xs opacity-75 uppercase tracking-wider">CleanFlow</p>
+            <h1 className="text-lg font-bold">{t("worker.homeTitle")}</h1>
           </div>
+          <div className="flex items-center gap-1.5">
+            <div className="text-left mr-1">
+              <p className="text-xs opacity-75">{completedCount}/{tasks.length}</p>
+            </div>
+            <button onClick={signOut} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+              <LogOut size={16} />
+            </button>
+          </div>
+        </div>
+        {/* Quick action buttons row */}
+        <div className="flex gap-1.5 -mx-1">
+          <button onClick={() => setScreen("points")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+            <Trophy size={14} />
+            <span className="text-[11px] font-medium">נקודות</span>
+          </button>
+          <button onClick={() => setScreen("taskBoard")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+            <LayoutGrid size={14} />
+            <span className="text-[11px] font-medium">כל המשימות</span>
+          </button>
+          <button onClick={() => setScreen("shifts")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+            <Calendar size={14} />
+            <span className="text-[11px] font-medium">שיבוצים</span>
+          </button>
+          <button onClick={() => setScreen("analysis")} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors">
+            <BarChart3 size={14} />
+            <span className="text-[11px] font-medium">סיכום</span>
+          </button>
         </div>
       </header>
 
@@ -463,11 +385,8 @@ const StaffView = () => {
       <div className="flex-1 px-4 pb-4 flex flex-col gap-3">
         {currentTask && (
           <LiveTaskTile
-            task={currentTask}
-            isCurrent={true}
-            isActive={isActive}
-            orderNumber={currentIdx + 1}
-            totalTasks={tasks.length}
+            task={currentTask} isCurrent={true} isActive={isActive}
+            orderNumber={currentIdx + 1} totalTasks={tasks.length}
             elapsedSeconds={isActive ? taskSeconds : 0}
             onScanToStart={() => handleScanToStart(currentTask)}
             onScanToFinish={() => handleScanToFinish(currentTask)}
@@ -475,44 +394,22 @@ const StaffView = () => {
             onTap={() => {}}
           />
         )}
-
         {nextTask && (
-          <LiveTaskTile
-            task={nextTask}
-            isCurrent={false}
-            isActive={false}
-            orderNumber={currentIdx + 2}
-            totalTasks={tasks.length}
-          />
+          <LiveTaskTile task={nextTask} isCurrent={false} isActive={false} orderNumber={currentIdx + 2} totalTasks={tasks.length} />
         )}
-
         {thirdTask && (
-          <LiveTaskTile
-            task={thirdTask}
-            isCurrent={false}
-            isActive={false}
-            orderNumber={currentIdx + 3}
-            totalTasks={tasks.length}
-          />
+          <LiveTaskTile task={thirdTask} isCurrent={false} isActive={false} orderNumber={currentIdx + 3} totalTasks={tasks.length} />
         )}
-
-        <MyPointsWidget />
         <div className="h-20" />
       </div>
 
       {/* Fixed bottom action banner */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
-        <button
-          onClick={() => setOnBreak(true)}
-          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors"
-        >
+        <button onClick={() => setOnBreak(true)} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
-        <button
-          onClick={() => setScreen("shortage")}
-          className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors"
-        >
+        <button onClick={() => setScreen("shortage")} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors">
           <PackageOpen size={20} className="text-warning" />
           <span className="text-[10px] font-medium text-warning">חוסרים</span>
         </button>
