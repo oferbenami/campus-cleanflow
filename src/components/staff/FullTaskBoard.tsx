@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, AlertTriangle, XCircle, Pause, ArrowRight, X } from "lucide-react";
+import { CheckCircle2, Clock, AlertTriangle, XCircle, Pause, ArrowRight, X, PauseCircle } from "lucide-react";
 import type { AssignedTaskRow } from "@/hooks/useStaffAssignment";
 
 interface Props {
@@ -12,6 +12,9 @@ const statusConfig: Record<string, { bg: string; border: string; icon: React.Rea
   queued: { bg: "bg-muted/40", border: "border-border", icon: <ArrowRight size={18} className="text-muted-foreground" />, label: "ממתין" },
   ready: { bg: "bg-muted/40", border: "border-border", icon: <ArrowRight size={18} className="text-muted-foreground" />, label: "מוכן" },
   blocked: { bg: "bg-warning/15", border: "border-warning/30", icon: <Pause size={18} className="text-warning" />, label: "חסום" },
+  deferred: { bg: "bg-warning/15", border: "border-warning/30", icon: <PauseCircle size={18} className="text-warning" />, label: "נדחה" },
+  paused: { bg: "bg-warning/15", border: "border-warning/30", icon: <PauseCircle size={18} className="text-warning" />, label: "מושהה" },
+  missed: { bg: "bg-destructive/15", border: "border-destructive/30", icon: <AlertTriangle size={18} className="text-destructive" />, label: "הוחמצה" },
   failed: { bg: "bg-destructive/15", border: "border-destructive/30", icon: <XCircle size={18} className="text-destructive" />, label: "נכשל" },
 };
 

@@ -59,10 +59,15 @@ export interface DeferredTaskEvent {
   staff_name: string;
   staff_user_id: string;
   reason: string;
+  reason_code: string;
   defer_action: string;
   note: string | null;
   created_at: string;
-  // SLA risk: is the task still not completed?
+  defer_count: number;
+  partial_elapsed_minutes: number;
+  is_critical: boolean;
+  is_escalation: boolean;
+  // SLA risk
   task_status: string | null;
   standard_minutes: number | null;
   window_end: string | null;
@@ -158,17 +163,17 @@ export function useSupervisorData() {
           .select("id, full_name, avatar_initials, role")
           .eq("role", "cleaning_staff"),
 
-        // Deferred / cannot_perform events (today)
+        // Deferred / cannot_perform events (today) — both legacy sla_alert and new task_deferred
         supabase
           .from("events_log")
           .select(`
             id, event_type, event_payload, created_at, user_id, assigned_task_id,
             profiles!events_log_user_id_fkey ( full_name ),
-            assigned_tasks!events_log_assigned_task_id_fkey ( task_name, status, standard_minutes, window_end, location_id,
+            assigned_tasks!events_log_assigned_task_id_fkey ( task_name, status, standard_minutes, window_end, location_id, defer_count, is_deferred,
               campus_locations!assigned_tasks_location_id_fkey ( name )
             )
           `)
-          .eq("event_type", "sla_alert")
+          .in("event_type", ["sla_alert", "task_deferred"])
           .eq("site_id", siteId)
           .gte("created_at", `${today}T00:00:00`)
           .order("created_at", { ascending: false }),
@@ -245,11 +250,11 @@ export function useSupervisorData() {
       }));
       setLocations(locationList);
 
-      // Map deferred events (cannot_perform actions from sla_alert events)
+      // Map deferred events (cannot_perform actions from sla_alert + task_deferred events)
       const deferredList: DeferredTaskEvent[] = (deferredRes.data || [])
         .filter((e: any) => {
           const payload = e.event_payload as any;
-          return payload?.action === "cannot_perform";
+          return payload?.action === "cannot_perform" || e.event_type === "task_deferred";
         })
         .map((e: any) => {
           const payload = e.event_payload as any;
@@ -262,9 +267,14 @@ export function useSupervisorData() {
             staff_name: e.profiles?.full_name || "",
             staff_user_id: e.user_id,
             reason: payload?.reason || "",
+            reason_code: payload?.reason_code || "",
             defer_action: payload?.defer_action || "",
             note: payload?.note || null,
             created_at: e.created_at,
+            defer_count: payload?.defer_count || task?.defer_count || 0,
+            partial_elapsed_minutes: payload?.partial_elapsed_minutes || 0,
+            is_critical: payload?.is_critical || false,
+            is_escalation: payload?.is_escalation || false,
             task_status: task?.status || null,
             standard_minutes: task?.standard_minutes || null,
             window_end: task?.window_end || null,

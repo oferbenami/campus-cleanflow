@@ -1,4 +1,4 @@
-import { MapPin, Clock, Timer, Building, Play, Square, CheckCircle2, XCircle, AlertTriangle, RotateCcw } from "lucide-react";
+import { MapPin, Clock, Timer, Building, Play, Square, CheckCircle2, XCircle, AlertTriangle, RotateCcw, PauseCircle } from "lucide-react";
 import type { AssignedTaskRow } from "@/hooks/useStaffAssignment";
 import { Progress } from "@/components/ui/progress";
 
@@ -12,6 +12,7 @@ interface LiveTaskTileProps {
   onScanToStart?: () => void;
   onScanToFinish?: () => void;
   onCannotPerform?: () => void;
+  onDeferTask?: () => void;
   onTap?: () => void;
 }
 
@@ -25,7 +26,8 @@ export type EscalationLevel = "on_track" | "at_risk" | "overdue" | "critical" | 
 
 export function getEscalationLevel(task: AssignedTaskRow, elapsedMinutes: number): EscalationLevel {
   if (task.status === "completed") return "done";
-  if (task.status === "failed" || task.status === "blocked") return "gray";
+  if (task.status === "failed" || task.status === "blocked" || task.status === "missed") return "gray";
+  if (task.status === "deferred" || task.status === "paused") return "gray";
   if (task.status === "queued" || task.status === "ready") return "gray";
 
   if (task.status === "in_progress") {
@@ -71,6 +73,7 @@ const LiveTaskTile = ({
   onScanToStart,
   onScanToFinish,
   onCannotPerform,
+  onDeferTask,
   onTap,
 }: LiveTaskTileProps) => {
   const elapsedMinutes = Math.floor(elapsedSeconds / 60);
@@ -78,7 +81,9 @@ const LiveTaskTile = ({
   const style = escalationStyles[level];
   const isCompleted = task.status === "completed";
   const isBlocked = task.status === "blocked";
-  const isDeferred = isBlocked && task.defer_reason;
+  const isTaskDeferred = task.status === "deferred" || task.status === "paused";
+  const isDeferred = isTaskDeferred || (isBlocked && task.defer_reason);
+  const canDefer = task.status === "queued" || task.status === "ready" || task.status === "in_progress" || task.status === "deferred";
   const timeDisplay = `${String(Math.floor(elapsedSeconds / 60)).padStart(2, "0")}:${String(elapsedSeconds % 60).padStart(2, "0")}`;
   const remainingMinutes = Math.max(0, task.standard_minutes - elapsedMinutes);
   const breadcrumb = [task.grandparent_name, task.parent_name].filter(Boolean).join(" · ");
@@ -108,6 +113,7 @@ const LiveTaskTile = ({
             {isDeferred && (
               <span className="status-badge bg-warning/15 text-warning text-[10px] py-0.5 px-1.5 flex items-center gap-1">
                 <RotateCcw size={10} /> חובה לחזור
+                {task.defer_count > 1 && <span className="font-bold">({task.defer_count}x)</span>}
               </span>
             )}
             {/* Escalation badge */}
@@ -184,14 +190,14 @@ const LiveTaskTile = ({
         </div>
       )}
 
-      {/* Scan to Start button */}
-      {isCurrent && !isActive && !isCompleted && task.status !== "failed" && task.status !== "blocked" && onScanToStart && (
+      {/* Scan to Start button (also for deferred tasks that need resuming) */}
+      {isCurrent && !isActive && !isCompleted && !["failed", "blocked", "missed"].includes(task.status) && onScanToStart && (
         <button
           onClick={(e) => { e.stopPropagation(); onScanToStart(); }}
           className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-success text-success-foreground font-bold text-sm hover:bg-success/90 transition-colors min-h-[48px]"
         >
           <Play size={18} />
-          סרוק NFC כדי להתחיל
+          {isTaskDeferred ? "סרוק NFC כדי לחזור למשימה" : "סרוק NFC כדי להתחיל"}
         </button>
       )}
 
@@ -222,14 +228,14 @@ const LiveTaskTile = ({
 
           {/* Action buttons row */}
           <div className="flex gap-2">
-            {/* Cannot Perform */}
-            {onCannotPerform && (
+            {/* Defer / Pause */}
+            {onDeferTask && canDefer && (
               <button
-                onClick={(e) => { e.stopPropagation(); onCannotPerform(); }}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-destructive/30 text-destructive font-bold text-sm hover:bg-destructive/10 transition-colors min-h-[48px]"
+                onClick={(e) => { e.stopPropagation(); onDeferTask(); }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 border-warning/30 text-warning font-bold text-sm hover:bg-warning/10 transition-colors min-h-[48px]"
               >
-                <XCircle size={16} />
-                לא ניתן
+                <PauseCircle size={16} />
+                דחה / השהה
               </button>
             )}
             {/* Scan to Finish */}
@@ -246,14 +252,14 @@ const LiveTaskTile = ({
         </div>
       )}
 
-      {/* Queued Cannot Perform (before start) */}
-      {isCurrent && !isActive && !isCompleted && task.status !== "failed" && task.status !== "blocked" && onCannotPerform && (
+      {/* Queued Defer (before start) */}
+      {isCurrent && !isActive && !isCompleted && !["failed", "blocked", "missed"].includes(task.status) && onDeferTask && canDefer && (
         <button
-          onClick={(e) => { e.stopPropagation(); onCannotPerform(); }}
-          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-destructive/20 text-destructive text-sm font-medium hover:bg-destructive/5 transition-colors min-h-[48px]"
+          onClick={(e) => { e.stopPropagation(); onDeferTask(); }}
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-warning/20 text-warning text-sm font-medium hover:bg-warning/5 transition-colors min-h-[48px]"
         >
-          <XCircle size={16} />
-          לא ניתן לבצע
+          <PauseCircle size={16} />
+          דחה / השהה משימה
         </button>
       )}
 
