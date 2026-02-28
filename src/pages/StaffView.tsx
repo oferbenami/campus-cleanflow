@@ -28,6 +28,7 @@ import DeferTaskModal from "@/components/staff/DeferTaskModal";
 import type { DeferResult } from "@/components/staff/DeferTaskModal";
 import ShortageReportScreen from "@/components/staff/ShortageReportScreen";
 import FullTaskBoard from "@/components/staff/FullTaskBoard";
+import BreakFixReportScreen from "@/components/staff/BreakFixReportScreen";
 import UpcomingShifts from "@/components/staff/UpcomingShifts";
 import AbsenceReportScreen from "@/components/staff/AbsenceReportScreen";
 import { useShortageReports } from "@/hooks/useShortageReports";
@@ -35,7 +36,7 @@ import { useIncidents } from "@/hooks/useIncidents";
 import WorkerIncidentAlert from "@/components/incidents/WorkerIncidentAlert";
 import breakIllustration from "@/assets/break-illustration.png";
 
-type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points";
+type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points" | "breakfix";
 type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | null; locationName: string } | null;
 
 const StaffView = () => {
@@ -43,8 +44,9 @@ const StaffView = () => {
   const { signOut, user } = useAuth();
   const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
-  const { myIncidents, startIncident, resolveIncident, reassignIncident } = useIncidents();
+  const { myIncidents, startIncident, resolveIncident, reassignIncident, createIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
+  const [breakfixSubmitting, setBreakfixSubmitting] = useState(false);
 
   const [screen, setScreen] = useState<StaffScreen>("welcome");
   const [scanMode, setScanMode] = useState<ScanMode>(null);
@@ -231,6 +233,33 @@ const StaffView = () => {
           try { await submitShortageReport(items, location, category); toast({ title: "✓ דיווח חוסרים נשלח!" }); setScreen("home"); }
           catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
           setShortageSubmitting(false);
+        }}
+      />
+    );
+  }
+
+  if (screen === "breakfix") {
+    return (
+      <BreakFixReportScreen
+        onClose={() => setScreen("home")}
+        submitting={breakfixSubmitting}
+        currentLocationId={currentTask?.location_id}
+        currentLocationName={currentTask?.location_name}
+        onSubmit={async (params) => {
+          setBreakfixSubmitting(true);
+          try {
+            await createIncident({
+              locationId: params.locationId,
+              description: params.description,
+              priority: params.priority,
+              category: params.category,
+            });
+            toast({ title: "✓ דיווח תקלה נשלח!", description: "המפקח והמנהל קיבלו התראה" });
+            setScreen("home");
+          } catch (err: any) {
+            toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+          }
+          setBreakfixSubmitting(false);
         }}
       />
     );
@@ -424,6 +453,10 @@ const StaffView = () => {
         <button onClick={() => { setOnBreak(true); setBreakStartedAt(Date.now()); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
+        </button>
+        <button onClick={() => setScreen("breakfix")} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors">
+          <AlertTriangle size={20} className="text-destructive" />
+          <span className="text-[10px] font-medium text-destructive">תקלה</span>
         </button>
         <button onClick={() => setScreen("shortage")} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-warning/10 transition-colors">
           <PackageOpen size={20} className="text-warning" />
