@@ -738,6 +738,42 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_default_packages: {
+        Row: {
+          created_at: string
+          id: string
+          staff_user_id: string
+          work_package_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          staff_user_id: string
+          work_package_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          staff_user_id?: string
+          work_package_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_default_packages_staff_user_id_fkey"
+            columns: ["staff_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_default_packages_work_package_id_fkey"
+            columns: ["work_package_id"]
+            isOneToOne: false
+            referencedRelation: "work_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supply_shortage_reports: {
         Row: {
           acknowledged_at: string | null

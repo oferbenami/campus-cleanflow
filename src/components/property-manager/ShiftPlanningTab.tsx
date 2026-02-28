@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -21,7 +21,9 @@ import {
   Layers,
   GripVertical,
   Info,
-  Undo2,
+  Star,
+  StarOff,
+  UserX,
 } from "lucide-react";
 import {
   useStaffProfiles,
@@ -29,6 +31,7 @@ import {
   useCreateAssignment,
 } from "@/hooks/usePropertyManagerData";
 import { useWorkPackages, WorkPackageWithTasks } from "@/hooks/useWorkPackages";
+import { useStaffDefaultPackages, useSetStaffDefaults } from "@/hooks/useStaffDefaultPackages";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +41,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import {
   Tooltip,
   TooltipContent,
@@ -52,6 +54,8 @@ interface WorkerAssignments {
   [staffId: string]: string[]; // wpIds
 }
 
+type StaffAvailability = "morning" | "evening" | "absent";
+
 const ShiftPlanningTab = () => {
   const tomorrow = useMemo(() => {
     const d = new Date();
@@ -63,12 +67,17 @@ const ShiftPlanningTab = () => {
   const { data: staff = [], isLoading: staffLoading } = useStaffProfiles();
   const { data: workPackages = [] } = useWorkPackages();
   const { data: existingAssignments = [] } = useTodayAssignments(tomorrow);
+  const { data: defaultPackages = [] } = useStaffDefaultPackages();
+  const setStaffDefaults = useSetStaffDefaults();
   const createAssignment = useCreateAssignment();
 
   const [shift, setShift] = useState<"morning" | "evening">("morning");
   const [assignments, setAssignments] = useState<WorkerAssignments>({});
+  const [staffAvailability, setStaffAvailability] = useState<Record<string, StaffAvailability>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [defaultsInitialized, setDefaultsInitialized] = useState<string | null>(null);
+  const [editingDefaultsFor, setEditingDefaultsFor] = useState<string | null>(null);
   const [overloadModal, setOverloadModal] = useState<{
     staffId: string;
     staffName: string;
@@ -76,6 +85,17 @@ const ShiftPlanningTab = () => {
     wpName: string;
     overMinutes: number;
   } | null>(null);
+
+  // Available staff (not absent)
+  const availableStaff = useMemo(
+    () => staff.filter((s) => staffAvailability[s.id] !== "absent"),
+    [staff, staffAvailability]
+  );
+
+  const absentStaff = useMemo(
+    () => staff.filter((s) => staffAvailability[s.id] === "absent"),
+    [staff, staffAvailability]
+  );
 
   // Relevant WPs for tomorrow + selected shift
   const shiftWps = useMemo(
@@ -87,6 +107,33 @@ const ShiftPlanningTab = () => {
       }),
     [workPackages, shift, tomorrowDay]
   );
+
+  // Pre-fill defaults when shift changes or defaults load
+  useEffect(() => {
+    const key = `${shift}-${defaultPackages.length}`;
+    if (defaultsInitialized === key) return;
+    if (!defaultPackages.length || !shiftWps.length) return;
+
+    const initial: WorkerAssignments = {};
+    for (const s of staff) {
+      const staffDefaults = defaultPackages
+        .filter((d) => d.staff_user_id === s.id)
+        .map((d) => d.work_package_id)
+        .filter((wpId) => shiftWps.some((wp) => wp.id === wpId));
+      
+      // Don't add if already saved
+      const savedWpIds = existingAssignments
+        .filter((a) => a.staff_user_id === s.id && a.shift_type === shift && a.work_package_id)
+        .map((a) => a.work_package_id!);
+      
+      const newDefaults = staffDefaults.filter((id) => !savedWpIds.includes(id));
+      if (newDefaults.length > 0) {
+        initial[s.id] = newDefaults;
+      }
+    }
+    setAssignments(initial);
+    setDefaultsInitialized(key);
+  }, [shift, defaultPackages, shiftWps, staff, existingAssignments, defaultsInitialized]);
 
   // Already saved assignments for this shift
   const savedForShift = useMemo(
@@ -129,7 +176,6 @@ const ShiftPlanningTab = () => {
     (staffId: string) => {
       const wpIds = assignments[staffId] || [];
       const draftMins = wpIds.reduce((s, id) => s + wpMinutes(id), 0);
-      // Also count saved
       const savedMins = savedForShift
         .filter((a) => a.staff_user_id === staffId && a.work_package_id)
         .reduce((s, a) => s + wpMinutes(a.work_package_id!), 0);
@@ -205,21 +251,18 @@ const ShiftPlanningTab = () => {
 
       const wpId = draggableId;
 
-      // From unassigned to worker
       if (srcDroppable === "unassigned" && dstDroppable.startsWith("worker-")) {
         const staffId = dstDroppable.replace("worker-", "");
         assignWp(staffId, wpId);
         return;
       }
 
-      // From worker to unassigned
       if (srcDroppable.startsWith("worker-") && dstDroppable === "unassigned") {
         const staffId = srcDroppable.replace("worker-", "");
         unassignWp(staffId, wpId);
         return;
       }
 
-      // Between workers
       if (srcDroppable.startsWith("worker-") && dstDroppable.startsWith("worker-")) {
         const fromStaff = srcDroppable.replace("worker-", "");
         const toStaff = dstDroppable.replace("worker-", "");
@@ -236,7 +279,7 @@ const ShiftPlanningTab = () => {
     if (unassignedWps.length > 0) {
       errors.push(`${unassignedWps.length} חבילות לא שובצו`);
     }
-    const overloadedWorkers = staff.filter((s) => {
+    const overloadedWorkers = availableStaff.filter((s) => {
       const load = getWorkerLoad(s.id);
       return load.totalMinutes > 0 && load.status === "over";
     });
@@ -252,12 +295,8 @@ const ShiftPlanningTab = () => {
       errors.push("לא בוצעו שיבוצים חדשים");
     }
     return errors;
-  }, [unassignedWps, staff, getWorkerLoad, assignments]);
+  }, [unassignedWps, availableStaff, getWorkerLoad, assignments]);
 
-  const canSend = validationErrors.length === 0 || 
-    (validationErrors.length === 1 && validationErrors[0].startsWith("עומס יתר"));
-
-  // Realistically: allow send if at least some drafts exist, even with unassigned
   const hasDrafts = Object.values(assignments).some((ids) => ids.length > 0);
 
   const handleSave = async () => {
@@ -265,6 +304,7 @@ const ShiftPlanningTab = () => {
     try {
       const promises: Promise<any>[] = [];
       for (const [staffId, wpIds] of Object.entries(assignments)) {
+        if (staffAvailability[staffId] === "absent") continue;
         for (const wpId of wpIds) {
           promises.push(
             createAssignment.mutateAsync({
@@ -287,6 +327,19 @@ const ShiftPlanningTab = () => {
     }
   };
 
+  // Save current assignments as defaults for a worker
+  const handleSaveAsDefaults = (staffId: string) => {
+    const draftWpIds = assignments[staffId] || [];
+    const savedWpIdsForWorker = savedForShift
+      .filter((a) => a.staff_user_id === staffId && a.work_package_id)
+      .map((a) => a.work_package_id!);
+    const allWpIds = [...new Set([...draftWpIds, ...savedWpIdsForWorker])];
+    setStaffDefaults.mutate({ staffId, workPackageIds: allWpIds });
+  };
+
+  const getStaffDefaultWpIds = (staffId: string) =>
+    defaultPackages.filter((d) => d.staff_user_id === staffId).map((d) => d.work_package_id);
+
   const tomorrowFormatted = new Date(tomorrow).toLocaleDateString("he-IL", {
     day: "numeric",
     month: "short",
@@ -298,14 +351,13 @@ const ShiftPlanningTab = () => {
     const totalWps = shiftWps.length;
     const assignedCount = allAssignedWpIds.size;
     const unassignedCount = unassignedWps.length;
-    const overloadedWorkers = staff.filter((s) => {
+    const overloadedWorkers = availableStaff.filter((s) => {
       const load = getWorkerLoad(s.id);
       return load.totalMinutes > 0 && load.status === "over";
     }).length;
-    const totalPlannedMins = staff.reduce((s, st) => s + getWorkerLoad(st.id).totalMinutes, 0);
-    const totalCapacity = staff.filter((s) => getWorkerLoad(s.id).totalMinutes > 0).length * SHIFT_CAPACITY;
-    return { totalWps, assignedCount, unassignedCount, overloadedWorkers, totalPlannedMins, totalCapacity };
-  }, [shiftWps, allAssignedWpIds, unassignedWps, staff, getWorkerLoad]);
+    const totalPlannedMins = availableStaff.reduce((s, st) => s + getWorkerLoad(st.id).totalMinutes, 0);
+    return { totalWps, assignedCount, unassignedCount, overloadedWorkers, totalPlannedMins };
+  }, [shiftWps, allAssignedWpIds, unassignedWps, availableStaff, getWorkerLoad]);
 
   if (staffLoading) {
     return (
@@ -329,10 +381,10 @@ const ShiftPlanningTab = () => {
             </h2>
           </div>
 
-          {/* Shift Toggle */}
+          {/* Shift Toggle + Absent */}
           <div className="flex gap-2 mb-3">
             <button
-              onClick={() => { setShift("morning"); setAssignments({}); }}
+              onClick={() => { setShift("morning"); setAssignments({}); setDefaultsInitialized(null); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
                 shift === "morning"
                   ? "bg-warning/15 border-warning text-warning"
@@ -342,7 +394,7 @@ const ShiftPlanningTab = () => {
               <Sun size={16} /> בוקר
             </button>
             <button
-              onClick={() => { setShift("evening"); setAssignments({}); }}
+              onClick={() => { setShift("evening"); setAssignments({}); setDefaultsInitialized(null); }}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all border-2 ${
                 shift === "evening"
                   ? "bg-info/15 border-info text-info"
@@ -455,15 +507,21 @@ const ShiftPlanningTab = () => {
                 <div className="flex items-center gap-2 mb-1">
                   <Users size={14} className="text-muted-foreground" />
                   <h3 className="text-sm font-bold">עובדים</h3>
+                  {absentStaff.length > 0 && (
+                    <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
+                      {absentStaff.length} לא מגיעים
+                    </span>
+                  )}
                 </div>
 
-                {staff.map((s) => {
+                {availableStaff.map((s) => {
                   const load = getWorkerLoad(s.id);
                   const draftWpIds = assignments[s.id] || [];
                   const savedWpIdsForWorker = savedForShift
                     .filter((a) => a.staff_user_id === s.id && a.work_package_id)
                     .map((a) => a.work_package_id!);
                   const hasAny = load.totalMinutes > 0;
+                  const staffDefaultWpIds = getStaffDefaultWpIds(s.id);
 
                   return (
                     <Droppable key={s.id} droppableId={`worker-${s.id}`}>
@@ -485,7 +543,14 @@ const ShiftPlanningTab = () => {
                               {s.avatar_initials || "?"}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm truncate">{s.full_name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-sm truncate">{s.full_name}</p>
+                                {staffDefaultWpIds.length > 0 && (
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-warning/15 text-warning font-bold flex items-center gap-0.5">
+                                    <Star size={8} /> ברירות מחדל
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                                 <span className="flex items-center gap-0.5">
                                   <Clock size={10} />
@@ -493,6 +558,42 @@ const ShiftPlanningTab = () => {
                                 </span>
                                 <span className="mono">{SHIFT_CAPACITY} דק׳ קיבולת</span>
                               </div>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {/* Mark absent */}
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => {
+                                      setStaffAvailability((prev) => ({ ...prev, [s.id]: "absent" }));
+                                      // Remove assignments for absent staff
+                                      setAssignments((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[s.id];
+                                        return copy;
+                                      });
+                                    }}
+                                    className="p-1.5 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                  >
+                                    <UserX size={14} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top"><p>סמן כלא מגיע</p></TooltipContent>
+                              </Tooltip>
+                              {/* Save as defaults */}
+                              {hasAny && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <button
+                                      onClick={() => handleSaveAsDefaults(s.id)}
+                                      className="p-1.5 rounded-lg hover:bg-warning/10 text-muted-foreground hover:text-warning transition-colors"
+                                    >
+                                      <Star size={14} />
+                                    </button>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top"><p>שמור כברירת מחדל</p></TooltipContent>
+                                </Tooltip>
+                              )}
                             </div>
                             {hasAny && (
                               <div className="text-left shrink-0">
@@ -558,6 +659,7 @@ const ShiftPlanningTab = () => {
                             <div className="flex flex-wrap gap-1.5 mb-1">
                               {draftWpIds.map((wpId, idx) => {
                                 const wp = workPackages.find((w) => w.id === wpId);
+                                const isDefault = staffDefaultWpIds.includes(wpId);
                                 return (
                                   <Draggable key={wpId} draggableId={wpId} index={idx}>
                                     {(dragProvided) => (
@@ -565,9 +667,14 @@ const ShiftPlanningTab = () => {
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
-                                        className="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary font-semibold border border-primary/20 cursor-grab active:cursor-grabbing"
+                                        className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-semibold border cursor-grab active:cursor-grabbing ${
+                                          isDefault
+                                            ? "bg-warning/10 text-warning border-warning/20"
+                                            : "bg-primary/10 text-primary border-primary/20"
+                                        }`}
                                       >
                                         <GripVertical size={10} className="opacity-50" />
+                                        {isDefault && <Star size={8} className="opacity-60" />}
                                         {wp?.name || wp?.package_code || "—"}
                                         <span className="mono opacity-70">{wpMinutes(wpId)}′</span>
                                         <button
@@ -599,6 +706,41 @@ const ShiftPlanningTab = () => {
                     </Droppable>
                   );
                 })}
+
+                {/* Absent workers section */}
+                {absentStaff.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1.5">
+                      <UserX size={12} />
+                      לא מגיעים
+                    </h4>
+                    <div className="space-y-1.5">
+                      {absentStaff.map((s) => (
+                        <div
+                          key={s.id}
+                          className="flex items-center justify-between bg-muted/50 border border-dashed border-border/50 rounded-xl px-4 py-2.5 opacity-60"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-bold">
+                              {s.avatar_initials || "?"}
+                            </div>
+                            <p className="text-sm line-through text-muted-foreground">{s.full_name}</p>
+                          </div>
+                          <button
+                            onClick={() => setStaffAvailability((prev) => {
+                              const copy = { ...prev };
+                              delete copy[s.id];
+                              return copy;
+                            })}
+                            className="text-[10px] text-primary font-semibold hover:underline"
+                          >
+                            החזר
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </DragDropContext>
@@ -613,7 +755,6 @@ const ShiftPlanningTab = () => {
               </div>
             ) : (
               <div className="space-y-2">
-                {/* Validation warnings */}
                 {validationErrors.length > 0 && hasDrafts && (
                   <div className="space-y-1.5">
                     {validationErrors.map((err, i) => (
