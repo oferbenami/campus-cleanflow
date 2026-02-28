@@ -139,8 +139,8 @@ const LiveTaskTile = ({
         </div>
 
         <div className="flex items-center gap-2 mb-1">
-          <MapPin size={14} className="text-muted-foreground shrink-0" />
-          <span className="font-bold text-xl truncate">{task.location_name}</span>
+          <MapPin size={16} className="text-muted-foreground shrink-0" />
+          <span className="font-bold text-2xl truncate">{task.location_name}</span>
         </div>
 
         {breadcrumb && (
