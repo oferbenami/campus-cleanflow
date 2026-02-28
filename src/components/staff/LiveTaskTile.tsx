@@ -156,9 +156,20 @@ const LiveTaskTile = ({
           </div>
         )}
 
+        {/* Task name - enlarged */}
+        <p className="text-base font-semibold mb-1">{task.task_name}</p>
+
+        {/* Floor display (always shown) */}
+        {task.location_floor && !breadcrumb && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1.5">
+            <Building size={11} />
+            <span>קומה {task.location_floor}</span>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xs text-muted-foreground">{task.task_name}</span>
+
             <span className="flex items-center gap-1 text-xs text-muted-foreground">
               <Timer size={12} />
               {isActive ? (
