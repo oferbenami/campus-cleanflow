@@ -438,6 +438,40 @@ export function useStaffAssignment() {
     });
   }, [user?.id, assignment, tasks]);
 
+  /** Resume a deferred task — move it to the front of the queue */
+  const resumeTask = useCallback(async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || (task.status !== "deferred" && task.status !== "paused")) return;
+
+    // Find the current front task's sequence_order
+    const activeTasks = tasks.filter(t => !["completed", "failed", "missed"].includes(t.status) && t.id !== taskId);
+    const minOrder = activeTasks.length > 0 ? Math.min(...activeTasks.map(t => t.sequence_order)) : 0;
+
+    const { error } = await supabase
+      .from("assigned_tasks")
+      .update({
+        status: "queued" as any,
+        is_deferred: false,
+        sequence_order: minOrder - 1,
+      })
+      .eq("id", taskId);
+
+    if (error) throw error;
+
+    if (user?.id && assignment) {
+      await supabase.from("events_log").insert({
+        user_id: user.id,
+        site_id: SITE_ID,
+        assignment_id: assignment.id,
+        assigned_task_id: taskId,
+        event_type: "task_resumed" as any,
+        event_payload: { action: "manual_resume" },
+      });
+    }
+
+    await fetchData();
+  }, [user?.id, assignment, tasks, fetchData]);
+
   return {
     assignment,
     tasks,
@@ -449,6 +483,7 @@ export function useStaffAssignment() {
     skipTask,
     cannotPerformTask,
     deferTask,
+    resumeTask,
     sendSlaAlert,
     refetch: fetchData,
   };
