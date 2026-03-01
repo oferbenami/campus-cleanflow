@@ -472,6 +472,49 @@ export function useStaffAssignment() {
     await fetchData();
   }, [user?.id, assignment, tasks, fetchData]);
 
+  /** Pause current task (e.g. when incident takes priority) */
+  const pauseTaskForIncident = useCallback(async (taskId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status !== "in_progress") return;
+
+    // Calculate partial elapsed time
+    let partialMinutes = task.partial_elapsed_minutes || 0;
+    if (task.started_at) {
+      const elapsed = Math.round((Date.now() - new Date(task.started_at).getTime()) / 60000);
+      partialMinutes += elapsed;
+    }
+
+    const { error } = await supabase
+      .from("assigned_tasks")
+      .update({
+        status: "paused" as any,
+        partial_elapsed_minutes: partialMinutes,
+        started_at: null,
+      })
+      .eq("id", taskId);
+    if (error) throw error;
+
+    if (user?.id && assignment) {
+      await supabase.from("events_log").insert({
+        user_id: user.id,
+        site_id: SITE_ID,
+        assignment_id: assignment.id,
+        assigned_task_id: taskId,
+        event_type: "task_deferred" as any,
+        event_payload: { action: "paused_for_incident", task_name: task.task_name, location: task.location_name, partial_elapsed_minutes: partialMinutes },
+      });
+    }
+
+    await fetchData();
+  }, [user?.id, assignment, tasks, fetchData]);
+
+  /** Resume a task that was paused for an incident */
+  const resumePausedTask = useCallback(async () => {
+    const paused = tasks.find(t => t.status === "paused");
+    if (!paused) return;
+    await resumeTask(paused.id);
+  }, [tasks, resumeTask]);
+
   return {
     assignment,
     tasks,
@@ -484,6 +527,8 @@ export function useStaffAssignment() {
     cannotPerformTask,
     deferTask,
     resumeTask,
+    pauseTaskForIncident,
+    resumePausedTask,
     sendSlaAlert,
     refetch: fetchData,
   };

@@ -42,7 +42,7 @@ type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, sendSlaAlert } = useStaffAssignment();
+  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, pauseTaskForIncident, resumePausedTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
   const { myIncidents, myResolvedCount, startIncident, resolveIncident, reassignIncident, createIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
@@ -129,6 +129,12 @@ const StaffView = () => {
   // Handlers
   const handleScanToStart = (task: typeof currentTask) => {
     if (!task) return;
+    // Block starting a regular task if an incident is in progress
+    const incidentInProgress = myIncidents.some(i => i.status === "in_progress");
+    if (incidentInProgress) {
+      toast({ title: "⚠️ לא ניתן להתחיל משימה", description: "יש לסיים את הטיפול בתקלה קודם", variant: "destructive" });
+      return;
+    }
     setScanMode({ type: "entry", taskId: task.id, expectedUid: task.location_nfc_tag_uid, locationName: task.location_name });
   };
 
@@ -417,21 +423,32 @@ const StaffView = () => {
           <IncidentTaskTile
             incident={activeIncident}
             onAccept={async () => {
+              const activeTask = tasks.find(t => t.status === "in_progress");
+              if (activeTask) {
+                await pauseTaskForIncident(activeTask.id);
+                toast({ title: "⏸ משימה הושהתה", description: `${activeTask.task_name} הושהתה לטובת טיפול בתקלה` });
+              }
               await startIncident(activeIncident.id);
               toast({ title: "✓ התחלת טיפול בתקלה" });
             }}
             onStart={async () => {
+              const activeTask = tasks.find(t => t.status === "in_progress");
+              if (activeTask) {
+                await pauseTaskForIncident(activeTask.id);
+              }
               await startIncident(activeIncident.id);
               toast({ title: "✓ התחלת טיפול בתקלה" });
             }}
             onResolve={async () => {
               await resolveIncident(activeIncident.id);
               toast({ title: "✓ תקלה טופלה בהצלחה!" });
+              await resumePausedTask();
             }}
             onDefer={async (reason) => {
               await supabase.from("incident_events_log").insert({ incident_id: activeIncident.id, event_type: "deferred" as any, user_id: user?.id || "", event_payload: { reason } });
               await supabase.from("incidents").update({ assigned_to_user_id: null, status: "pending_dispatch" as any, assigned_at: null }).eq("id", activeIncident.id);
               toast({ title: "⚠️ תקלה הוחזרה לתור" });
+              await resumePausedTask();
             }}
           />
         )}
