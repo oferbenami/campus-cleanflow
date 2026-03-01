@@ -401,10 +401,19 @@ export function useIncidents() {
     );
   }, [incidents, user?.id]);
 
+  // Count of resolved incidents by current user (for stats)
+  const myResolvedCount = useMemo(() => {
+    if (!user?.id) return 0;
+    return incidents.filter(
+      (i) => i.assigned_to_user_id === user.id && ["resolved", "closed"].includes(i.status)
+    ).length;
+  }, [incidents, user?.id]);
+
   return {
     incidents,
     byStatus,
     myIncidents,
+    myResolvedCount,
     loading,
     createIncident,
     assignIncident,

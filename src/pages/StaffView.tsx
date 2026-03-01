@@ -44,7 +44,7 @@ const StaffView = () => {
   const { signOut, user } = useAuth();
   const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, sendSlaAlert } = useStaffAssignment();
   const { submitShortageReport } = useShortageReports();
-  const { myIncidents, startIncident, resolveIncident, reassignIncident, createIncident } = useIncidents();
+  const { myIncidents, myResolvedCount, startIncident, resolveIncident, reassignIncident, createIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
   const [breakfixSubmitting, setBreakfixSubmitting] = useState(false);
 
@@ -253,8 +253,10 @@ const StaffView = () => {
               description: params.description,
               priority: params.priority,
               category: params.category,
+              assignToUserId: params.selfAssign ? user?.id : undefined,
+              photoUrl: params.photoUrl,
             });
-            toast({ title: "✓ דיווח תקלה נשלח!", description: "המפקח והמנהל קיבלו התראה" });
+            toast({ title: "✓ דיווח תקלה נשלח!", description: params.selfAssign ? "התקלה שובצה אליך" : "המפקח והמנהל קיבלו התראה" });
             setScreen("home");
           } catch (err: any) {
             toast({ title: "שגיאה", description: err.message, variant: "destructive" });
@@ -265,7 +267,7 @@ const StaffView = () => {
     );
   }
 
-  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} onClose={() => setScreen("home")} />;
+  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} resolvedIncidentCount={myResolvedCount} onClose={() => setScreen("home")} />;
   if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} onResumeTask={async (taskId) => {
     try { await resumeTask(taskId); toast({ title: "✓ המשימה חזרה לתור" }); setScreen("home"); } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
   }} />;
