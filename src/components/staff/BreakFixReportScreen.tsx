@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertTriangle, MapPin, ArrowRight, Loader2, X } from "lucide-react";
+import { AlertTriangle, MapPin, ArrowRight, Loader2, X, Camera, UserCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface Props {
   onClose: () => void;
@@ -9,6 +10,8 @@ interface Props {
     description: string;
     priority: "critical" | "urgent" | "high" | "normal" | "low";
     category: "spill" | "restroom" | "safety" | "damage" | "equipment" | "other";
+    selfAssign?: boolean;
+    photoUrl?: string;
   }) => Promise<void>;
   submitting?: boolean;
   /** Pre-fill location from current task */
@@ -37,7 +40,12 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
   const [category, setCategory] = useState<typeof categoryOptions[number]["key"] | "">("");
   const [priority, setPriority] = useState<"critical" | "urgent" | "normal">("normal");
   const [description, setDescription] = useState("");
-  const [step, setStep] = useState<1 | 2>(1); // 1 = category, 2 = details
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selfAssign, setSelfAssign] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -52,13 +60,43 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
     fetchLocations();
   }, []);
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadPhoto = async (): Promise<string | undefined> => {
+    if (!photoFile) return undefined;
+    setUploading(true);
+    try {
+      const ext = photoFile.name.split(".").pop() || "jpg";
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("incident-photos").upload(path, photoFile);
+      if (error) throw error;
+      const { data } = supabase.storage.from("incident-photos").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (err) {
+      console.error("Photo upload error:", err);
+      return undefined;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedLocation || !category || !description.trim()) return;
+    const photoUrl = await uploadPhoto();
     await onSubmit({
       locationId: selectedLocation,
       description: description.trim(),
       priority,
       category,
+      selfAssign,
+      photoUrl,
     });
   };
 
@@ -77,7 +115,6 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
       <div className="flex-1 px-4 py-4 space-y-4">
         {step === 1 ? (
           <>
-            {/* Step 1: Category selection */}
             <p className="text-sm font-semibold text-muted-foreground">מה סוג התקלה?</p>
             <div className="grid grid-cols-2 gap-3">
               {categoryOptions.map((cat) => (
@@ -98,7 +135,6 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
           </>
         ) : (
           <>
-            {/* Step 2: Details */}
             <button onClick={() => setStep(1)} className="text-sm text-muted-foreground flex items-center gap-1 hover:text-foreground">
               <ArrowRight size={14} />
               חזרה לבחירת קטגוריה
@@ -164,6 +200,54 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
                 autoFocus
               />
             </label>
+
+            {/* Photo */}
+            <div>
+              <span className="text-sm font-medium text-muted-foreground mb-1.5 block flex items-center gap-1.5">
+                <Camera size={14} />
+                צילום (אופציונלי)
+              </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handlePhotoSelect}
+              />
+              {photoPreview ? (
+                <div className="relative">
+                  <img src={photoPreview} alt="תצוגה מקדימה" className="w-full h-32 object-cover rounded-lg border border-border" />
+                  <button
+                    onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
+                    className="absolute top-1.5 left-1.5 p-1 rounded-full bg-background/80 hover:bg-background"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-3 rounded-lg border-2 border-dashed border-border text-sm text-muted-foreground hover:border-primary/30 hover:text-foreground transition-colors flex items-center justify-center gap-2"
+                >
+                  <Camera size={16} />
+                  לחץ לצילום או בחירת תמונה
+                </button>
+              )}
+            </div>
+
+            {/* Self-assign checkbox */}
+            <label className="flex items-center gap-3 p-3 rounded-xl border-2 border-primary/20 bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors">
+              <Checkbox
+                checked={selfAssign}
+                onCheckedChange={(checked) => setSelfAssign(checked === true)}
+                className="h-5 w-5"
+              />
+              <div className="flex items-center gap-2 flex-1">
+                <UserCheck size={16} className="text-primary shrink-0" />
+                <span className="text-sm font-semibold text-foreground">אני מטפל בזה בעצמי</span>
+              </div>
+            </label>
           </>
         )}
       </div>
@@ -173,11 +257,11 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
         <div className="px-4 pb-6 pt-2">
           <button
             onClick={handleSubmit}
-            disabled={!selectedLocation || !description.trim() || submitting}
+            disabled={!selectedLocation || !description.trim() || submitting || uploading}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-xl bg-destructive text-destructive-foreground font-bold text-lg hover:bg-destructive/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-h-[56px]"
           >
-            {submitting ? <Loader2 size={20} className="animate-spin" /> : <AlertTriangle size={20} />}
-            שלח דיווח תקלה
+            {(submitting || uploading) ? <Loader2 size={20} className="animate-spin" /> : <AlertTriangle size={20} />}
+            {uploading ? "מעלה צילום..." : "שלח דיווח תקלה"}
           </button>
         </div>
       )}

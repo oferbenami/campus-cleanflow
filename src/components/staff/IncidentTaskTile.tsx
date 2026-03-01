@@ -31,7 +31,6 @@ const IncidentTaskTile = ({ incident, onAccept, onStart, onResolve, onDefer }: P
   const isAssigned = incident.status === "assigned";
   const isInProgress = incident.status === "in_progress";
 
-  // Timer for in_progress incidents
   useEffect(() => {
     if (!isInProgress || !incident.started_at) return;
     const update = () => {
@@ -47,119 +46,94 @@ const IncidentTaskTile = ({ incident, onAccept, onStart, onResolve, onDefer }: P
   const prio = priorityConfig[incident.priority] || priorityConfig.normal;
 
   return (
-    <div className="w-full text-right task-card border-2 border-destructive bg-destructive/5 animate-pulse-slow ring-2 ring-destructive/50 shadow-lg relative overflow-hidden">
-      {/* Flashing red top bar */}
-      <div className="h-1.5 w-full rounded-t-xl -mt-5 -mx-5 mb-3 bg-destructive animate-pulse" style={{ width: "calc(100% + 2.5rem)" }} />
+    <div className="w-full text-right rounded-xl border-2 border-destructive bg-destructive/5 ring-1 ring-destructive/40 shadow-md relative overflow-hidden px-3 py-2">
+      {/* Thin flashing red top bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-destructive animate-pulse" />
 
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-destructive/20 flex items-center justify-center">
-            <Shield size={16} className="text-destructive" />
-          </span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-destructive">
-            תקלה מיידית
-          </span>
-        </div>
+      {/* Compact single-row header */}
+      <div className="flex items-center justify-between mt-1">
         <div className="flex items-center gap-1.5">
-          <span className={`status-badge text-[10px] py-0.5 px-1.5 font-bold ${prio.class}`}>
+          <Shield size={14} className="text-destructive" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-destructive">תקלה</span>
+          <span className={`text-[9px] py-0.5 px-1.5 rounded-full font-bold ${prio.class}`}>
             {prio.label}
           </span>
-          <span className="status-badge bg-muted text-muted-foreground text-[10px] py-0.5 px-1.5">
+          <span className="text-[9px] py-0.5 px-1.5 rounded-full bg-muted text-muted-foreground">
             {categoryLabels[incident.category] || incident.category}
           </span>
         </div>
-      </div>
-
-      {/* Location */}
-      <div className="flex items-center gap-2 mb-1">
-        <MapPin size={16} className="text-destructive shrink-0" />
-        <span className="font-bold text-2xl truncate text-foreground">{incident.location_name}</span>
-      </div>
-
-      {/* Description */}
-      <p className="text-lg font-semibold mb-2 text-foreground">{incident.description}</p>
-
-      {/* Photo */}
-      {incident.photo_url && (
-        <img src={incident.photo_url} alt="" className="rounded-lg max-h-24 w-full object-cover mb-2" />
-      )}
-
-      {/* Timer (when in progress) */}
-      {isInProgress && (
-        <div className="flex items-center justify-center gap-2 py-2 rounded-lg bg-destructive/10 mb-2">
-          <Timer size={16} className="text-destructive" />
-          <span className="mono text-2xl font-black text-destructive">{timeDisplay}</span>
-          <span className="text-xs text-muted-foreground">/ {incident.resolution_sla_minutes} דק׳</span>
-        </div>
-      )}
-
-      {/* SLA info */}
-      {isAssigned && incident.response_sla_remaining_min !== null && (
-        <div className="flex items-center gap-2 text-xs text-destructive mb-2">
-          <AlertTriangle size={12} />
-          <span>
+        {isInProgress && (
+          <div className="flex items-center gap-1 bg-destructive/10 rounded-lg px-2 py-0.5">
+            <Timer size={12} className="text-destructive" />
+            <span className="mono text-sm font-black text-destructive">{timeDisplay}</span>
+          </div>
+        )}
+        {isAssigned && incident.response_sla_remaining_min !== null && (
+          <span className="text-[10px] text-destructive font-medium">
             {incident.response_sla_remaining_min > 0
-              ? `${Math.ceil(incident.response_sla_remaining_min)} דק׳ לתגובה`
-              : "חריגת SLA תגובה!"}
+              ? `${Math.ceil(incident.response_sla_remaining_min)} דק׳`
+              : "חריגה!"}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Actions */}
+      {/* Location + description in one compact row */}
+      <div className="flex items-center gap-1.5 mt-1">
+        <MapPin size={12} className="text-destructive shrink-0" />
+        <span className="font-bold text-sm truncate text-foreground">{incident.location_name}</span>
+        <span className="text-muted-foreground text-xs">—</span>
+        <span className="text-xs text-foreground truncate flex-1">{incident.description}</span>
+      </div>
+
+      {/* Actions - compact */}
       {!showDefer ? (
-        <div className="space-y-2 mt-3">
-          {/* Accept (assigned state) */}
+        <div className="flex gap-2 mt-2">
           {isAssigned && (
             <button
               onClick={onAccept}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-destructive text-destructive-foreground font-bold text-sm hover:bg-destructive/90 transition-colors min-h-[48px]"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-destructive text-destructive-foreground font-bold text-xs hover:bg-destructive/90 transition-colors"
             >
-              <Play size={18} />
-              קבל תקלה והתחל טיפול
+              <Play size={14} />
+              קבל וטפל
             </button>
           )}
-
-          {/* Resolve (in_progress state) */}
           {isInProgress && (
             <button
               onClick={onResolve}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-success text-success-foreground font-bold text-sm hover:bg-success/90 transition-colors min-h-[48px]"
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-success text-success-foreground font-bold text-xs hover:bg-success/90 transition-colors"
             >
-              <CheckCircle2 size={18} />
-              סיום טיפול בתקלה
+              <CheckCircle2 size={14} />
+              סיום טיפול
             </button>
           )}
-
-          {/* Defer */}
           <button
             onClick={() => setShowDefer(true)}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-warning/30 text-warning text-sm font-medium hover:bg-warning/5 transition-colors min-h-[44px]"
+            className="flex items-center justify-center gap-1 py-2 px-3 rounded-lg border border-warning/30 text-warning text-xs font-medium hover:bg-warning/5 transition-colors"
           >
-            <PauseCircle size={16} />
-            דחה תקלה
+            <PauseCircle size={13} />
+            דחה
           </button>
         </div>
       ) : (
-        <div className="space-y-2 mt-3">
+        <div className="space-y-1.5 mt-2">
           <textarea
             value={deferReason}
             onChange={(e) => setDeferReason(e.target.value)}
             placeholder="סיבת הדחייה..."
-            className="w-full rounded-xl bg-muted/50 border border-border text-foreground placeholder-muted-foreground p-3 text-sm min-h-[70px] resize-none"
+            className="w-full rounded-lg bg-muted/50 border border-border text-foreground placeholder-muted-foreground p-2 text-xs min-h-[50px] resize-none"
             autoFocus
           />
           <div className="flex gap-2">
             <button
               onClick={() => { if (deferReason.trim()) onDefer(deferReason.trim()); }}
               disabled={!deferReason.trim()}
-              className="flex-1 py-3 rounded-xl bg-warning text-warning-foreground font-bold text-sm disabled:opacity-50"
+              className="flex-1 py-2 rounded-lg bg-warning text-warning-foreground font-bold text-xs disabled:opacity-50"
             >
               שלח דחייה
             </button>
             <button
               onClick={() => setShowDefer(false)}
-              className="py-3 px-4 rounded-xl bg-muted text-muted-foreground font-semibold text-sm"
+              className="py-2 px-3 rounded-lg bg-muted text-muted-foreground font-semibold text-xs"
             >
               ביטול
             </button>
