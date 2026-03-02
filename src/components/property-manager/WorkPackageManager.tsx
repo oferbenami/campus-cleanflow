@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   Package,
   Copy,
@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  AlertTriangle,
   Save,
   X,
   Calculator,
@@ -69,6 +70,34 @@ const WorkPackageManager = () => {
   const [bulkValue, setBulkValue] = useState(1);
   const [addingToPackage, setAddingToPackage] = useState<string | null>(null);
   const [filteredTasksMap, setFilteredTasksMap] = useState<Record<string, WorkPackageTask[] | null>>({});
+
+  // ── Duplicate detection across packages ──
+  const duplicateAlerts = useMemo(() => {
+    const alerts: { taskDesc: string; packages: string[] }[] = [];
+    const taskMap: Record<string, string[]> = {};
+
+    packages.forEach((pkg) => {
+      pkg.tasks.forEach((t) => {
+        const key = [t.space_type, t.description, t.cleaning_type, t.building, t.floor]
+          .filter(Boolean)
+          .join("|")
+          .toLowerCase();
+        if (!key) return;
+        if (!taskMap[key]) taskMap[key] = [];
+        if (!taskMap[key].includes(pkg.package_code)) {
+          taskMap[key].push(pkg.package_code);
+        }
+      });
+    });
+
+    Object.entries(taskMap).forEach(([key, pkgs]) => {
+      if (pkgs.length > 1) {
+        alerts.push({ taskDesc: key.replace(/\|/g, " · "), packages: pkgs });
+      }
+    });
+
+    return alerts;
+  }, [packages]);
 
   const toggleTask = (taskId: string) => {
     setSelectedTaskIds((prev) =>
@@ -174,6 +203,31 @@ const WorkPackageManager = () => {
           <Package size={18} className="text-primary" />
           <h3 className="font-bold text-sm">חבילות עבודה ({packages.length})</h3>
         </div>
+
+        {/* Duplicate alerts */}
+        {duplicateAlerts.length > 0 && (
+          <div className="rounded-xl border-2 border-warning/30 bg-warning/5 p-3 space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle size={16} className="text-warning" />
+              <span className="text-xs font-bold text-warning">
+                {duplicateAlerts.length} כפילויות זוהו בין חבילות
+              </span>
+            </div>
+            {duplicateAlerts.slice(0, 5).map((dup, i) => (
+              <div key={i} className="flex items-start gap-2 text-[11px]">
+                <span className="text-warning font-bold shrink-0">•</span>
+                <div>
+                  <span className="font-medium">{dup.taskDesc}</span>
+                  <span className="text-muted-foreground"> — מופיע ב: </span>
+                  <span className="font-bold">{dup.packages.join(", ")}</span>
+                </div>
+              </div>
+            ))}
+            {duplicateAlerts.length > 5 && (
+              <p className="text-[10px] text-muted-foreground">ו-{duplicateAlerts.length - 5} נוספות...</p>
+            )}
+          </div>
+        )}
 
         {packages.map((pkg) => {
           const isExpanded = expandedId === pkg.id;

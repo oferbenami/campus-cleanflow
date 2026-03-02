@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "@/hooks/useControlBoardData";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Building,
   ChevronLeft, ChevronRight, User, ArrowRightLeft, Pause, Copy,
@@ -68,10 +69,11 @@ const VisualControlBoard = () => {
   const [dropTargetWorkerId, setDropTargetWorkerId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [editingInline, setEditingInline] = useState<{ taskName: string; standardMinutes: number } | null>(null);
 
   const {
     workers, tasks, tickets, loading,
-    reassignTask, changePriority, deferTaskManager, cancelTask, duplicateTask,
+    reassignTask, changePriority, deferTaskManager, cancelTask, duplicateTask, refetch: fetchData,
   } = useControlBoardData(selectedDate);
 
   const shift = SHIFTS[activeShift];
@@ -233,6 +235,22 @@ const VisualControlBoard = () => {
       toast({ title: "שגיאה", description: err.message, variant: "destructive" });
     }
   }, [duplicateTask]);
+
+  const handleInlineEdit = useCallback(async (taskId: string, updates: { task_name?: string; standard_minutes?: number }) => {
+    try {
+      const { error } = await supabase
+        .from("assigned_tasks")
+        .update(updates)
+        .eq("id", taskId);
+      if (error) throw error;
+      toast({ title: "✓ משימה עודכנה" });
+      setEditingInline(null);
+      setSelectedTask(null);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "שגיאה", description: err.message, variant: "destructive" });
+    }
+  }, [fetchData]);
 
   if (loading) {
     return (
@@ -415,7 +433,61 @@ const VisualControlBoard = () => {
               {!["completed", "cancelled"].includes(selectedTask.status) && (
                 <div className="border-t pt-4 space-y-3">
                   <p className="text-xs font-bold text-muted-foreground">פעולות מהירות</p>
+
+                  {/* Inline edit form */}
+                  {editingInline ? (
+                    <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">שם משימה</label>
+                        <input
+                          value={editingInline.taskName}
+                          onChange={(e) => setEditingInline({ ...editingInline, taskName: e.target.value })}
+                          className="w-full text-sm rounded-lg border bg-background px-3 py-1.5 mt-0.5"
+                          dir="rtl"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] text-muted-foreground">דקות תקן</label>
+                        <input
+                          type="number"
+                          value={editingInline.standardMinutes}
+                          onChange={(e) => setEditingInline({ ...editingInline, standardMinutes: Number(e.target.value) })}
+                          className="w-full text-sm rounded-lg border bg-background px-3 py-1.5 mt-0.5"
+                          min={1}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleInlineEdit(selectedTask.id, {
+                            task_name: editingInline.taskName,
+                            standard_minutes: editingInline.standardMinutes,
+                          })}
+                          className="flex-1 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium"
+                        >
+                          שמור
+                        </button>
+                        <button
+                          onClick={() => setEditingInline(null)}
+                          className="flex-1 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted"
+                        >
+                          ביטול
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
                   <div className="grid grid-cols-2 gap-2">
+                    {/* Edit task */}
+                    {!editingInline && (
+                      <button
+                        onClick={() => setEditingInline({ taskName: selectedTask.task_name, standardMinutes: selectedTask.standard_minutes })}
+                        className="flex items-center justify-center gap-1.5 py-2 rounded-lg border text-xs font-medium hover:bg-muted transition-colors col-span-2"
+                      >
+                        <ArrowRightLeft size={12} className="text-primary" />
+                        ערוך משימה
+                      </button>
+                    )}
+
                     {/* Reassign dropdown */}
                     <div className="col-span-2">
                       <label className="text-[10px] text-muted-foreground mb-1 block">שיבוץ מחדש לעובד:</label>
