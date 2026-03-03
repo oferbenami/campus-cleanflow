@@ -56,6 +56,7 @@ const StaffView = () => {
   const [taskSeconds, setTaskSeconds] = useState(0);
   const [taskBreakAccum, setTaskBreakAccum] = useState(0); // total break seconds during current task
   const [breakStartedAt, setBreakStartedAt] = useState<number | null>(null);
+  const [breakCount, setBreakCount] = useState(0);
   const [showDeferModal, setShowDeferModal] = useState(false);
 
   const currentTask = tasks.find((t) => t.status === "in_progress") 
@@ -273,7 +274,7 @@ const StaffView = () => {
     );
   }
 
-  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} resolvedIncidentCount={myResolvedCount} onClose={() => setScreen("home")} />;
+  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} resolvedIncidentCount={myResolvedCount} totalBreakMinutes={Math.round(totalBreakSeconds / 60)} breakCount={breakCount} onClose={() => setScreen("home")} />;
   if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} onResumeTask={async (taskId) => {
     try { await resumeTask(taskId); toast({ title: "✓ המשימה חזרה לתור" }); setScreen("home"); } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
   }} />;
@@ -475,7 +476,7 @@ const StaffView = () => {
 
       {/* Fixed bottom action banner */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border px-4 py-3 flex items-center justify-around gap-2 z-40">
-        <button onClick={() => { setOnBreak(true); setBreakStartedAt(Date.now()); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
+        <button onClick={() => { setOnBreak(true); setBreakStartedAt(Date.now()); setBreakCount(c => c + 1); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
         </button>
