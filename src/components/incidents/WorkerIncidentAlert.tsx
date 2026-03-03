@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { type Incident } from "@/hooks/useIncidents";
+import IncidentPhoto from "@/components/shared/IncidentPhoto";
 import { AlertTriangle, MapPin, Play, ArrowRight, Timer, Shield, XCircle } from "lucide-react";
 
 interface Props {
@@ -57,9 +58,7 @@ const WorkerIncidentAlert = ({ incident, onAccept, onDefer, onReassignBack }: Pr
           <span>{incident.location_name}</span>
         </div>
 
-        {incident.photo_url && (
-          <img src={incident.photo_url} alt="" className="rounded-lg max-h-32 w-full object-cover" />
-        )}
+        <IncidentPhoto photoPath={incident.photo_url} />
       </div>
 
       {/* Actions */}
