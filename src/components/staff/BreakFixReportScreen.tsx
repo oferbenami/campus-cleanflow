@@ -77,8 +77,8 @@ const BreakFixReportScreen = ({ onClose, onSubmit, submitting, currentLocationId
       const path = `${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from("incident-photos").upload(path, photoFile);
       if (error) throw error;
-      const { data } = supabase.storage.from("incident-photos").getPublicUrl(path);
-      return data.publicUrl;
+      // Store the path, not a public URL — bucket is private
+      return path;
     } catch (err) {
       console.error("Photo upload error:", err);
       return undefined;

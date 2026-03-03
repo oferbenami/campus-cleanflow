@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useIncidents, type Incident } from "@/hooks/useIncidents";
+import IncidentPhoto from "@/components/shared/IncidentPhoto";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -316,9 +317,7 @@ const IncidentDetail = ({
         />
       </div>
 
-      {incident.photo_url && (
-        <img src={incident.photo_url} alt="תמונה" className="rounded-lg max-h-40 object-cover w-full" />
-      )}
+      <IncidentPhoto photoPath={incident.photo_url} />
 
       {/* Actions */}
       <div className="space-y-2 pt-2 border-t">
