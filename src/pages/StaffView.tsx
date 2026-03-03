@@ -17,6 +17,7 @@ import {
   LayoutGrid,
   Trophy,
   Calendar,
+  Wrench as WrenchIcon,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nContext";
 import { useStaffAssignment } from "@/hooks/useStaffAssignment";
@@ -54,10 +55,15 @@ const StaffView = () => {
   const [breakSeconds, setBreakSeconds] = useState(0);
   const [totalBreakSeconds, setTotalBreakSeconds] = useState(0);
   const [taskSeconds, setTaskSeconds] = useState(0);
-  const [taskBreakAccum, setTaskBreakAccum] = useState(0); // total break seconds during current task
+  const [taskBreakAccum, setTaskBreakAccum] = useState(0);
   const [breakStartedAt, setBreakStartedAt] = useState<number | null>(null);
   const [breakCount, setBreakCount] = useState(0);
   const [showDeferModal, setShowDeferModal] = useState(false);
+  // Equipment prep tracking
+  const [onEquipPrep, setOnEquipPrep] = useState(false);
+  const [equipPrepSeconds, setEquipPrepSeconds] = useState(0);
+  const [totalEquipPrepSeconds, setTotalEquipPrepSeconds] = useState(0);
+  const [equipPrepCount, setEquipPrepCount] = useState(0);
 
   const currentTask = tasks.find((t) => t.status === "in_progress") 
     || tasks.find((t) => t.status === "queued" || t.status === "ready")
@@ -92,6 +98,15 @@ const StaffView = () => {
     }
     return () => clearInterval(interval);
   }, [onBreak]);
+
+  // Equipment prep timer
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (onEquipPrep) {
+      interval = setInterval(() => setEquipPrepSeconds((s) => s + 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [onEquipPrep]);
 
   // SLA Escalation
   const slaAlertSent = useRef(false);
@@ -274,7 +289,7 @@ const StaffView = () => {
     );
   }
 
-  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} resolvedIncidentCount={myResolvedCount} totalBreakMinutes={Math.round(totalBreakSeconds / 60)} breakCount={breakCount} onClose={() => setScreen("home")} />;
+  if (screen === "analysis") return <EndOfDayAnalysis tasks={tasks} resolvedIncidentCount={myResolvedCount} totalBreakMinutes={Math.round(totalBreakSeconds / 60)} breakCount={breakCount} totalEquipPrepMinutes={Math.round(totalEquipPrepSeconds / 60)} equipPrepCount={equipPrepCount} onClose={() => setScreen("home")} />;
   if (screen === "taskBoard") return <FullTaskBoard tasks={tasks} onClose={() => setScreen("home")} onResumeTask={async (taskId) => {
     try { await resumeTask(taskId); toast({ title: "✓ המשימה חזרה לתור" }); setScreen("home"); } catch (err: any) { toast({ title: "שגיאה", description: err.message, variant: "destructive" }); }
   }} />;
@@ -319,6 +334,41 @@ const StaffView = () => {
         <div className="px-6 pb-6 pt-2">
           <button onClick={() => { setTotalBreakSeconds(prev => prev + breakSeconds); setTaskBreakAccum(prev => prev + breakSeconds); setOnBreak(false); setBreakSeconds(0); setBreakStartedAt(null); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
             <Play size={22} /> {t("worker.backToWork")}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Equipment prep screen
+  if (onEquipPrep) {
+    const prepTimeDisplay = `${String(Math.floor(equipPrepSeconds / 60)).padStart(2, "0")}:${String(equipPrepSeconds % 60).padStart(2, "0")}`;
+    const totalPrepDisplay = `${String(Math.floor(totalEquipPrepSeconds / 60)).padStart(2, "0")}:${String(totalEquipPrepSeconds % 60).padStart(2, "0")}`;
+    return (
+      <div className="h-screen bg-background flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center gap-3">
+          <div className="w-28 h-28 rounded-2xl bg-accent/20 flex items-center justify-center">
+            <WrenchIcon size={48} className="text-accent-foreground" />
+          </div>
+          <h1 className="text-2xl font-black text-foreground">סידור ציוד ועגלה</h1>
+          <p className="text-sm text-muted-foreground">הטיימר רץ — קח את הזמן לסדר הכל</p>
+          <div className="bg-accent/10 border-2 border-accent/20 rounded-2xl px-6 py-3">
+            <p className="text-[10px] text-muted-foreground mb-1">זמן סידור נוכחי</p>
+            <div className="flex items-center justify-center gap-2">
+              <Timer size={20} className="text-accent-foreground" />
+              <span className="mono text-4xl font-black text-foreground">{prepTimeDisplay}</span>
+            </div>
+          </div>
+          {totalEquipPrepSeconds > 0 && (
+            <div className="bg-muted/40 rounded-xl px-4 py-2">
+              <p className="text-[10px] text-muted-foreground">סה״כ סידור ציוד היום</p>
+              <p className="text-lg font-bold text-foreground">{totalPrepDisplay}</p>
+            </div>
+          )}
+        </div>
+        <div className="px-6 pb-6 pt-2">
+          <button onClick={() => { setTotalEquipPrepSeconds(prev => prev + equipPrepSeconds); setTaskBreakAccum(prev => prev + equipPrepSeconds); setOnEquipPrep(false); setEquipPrepSeconds(0); }} className="w-full flex items-center justify-center gap-3 py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg hover:bg-primary/90 transition-colors">
+            <Play size={22} /> סיימתי, חזרה לעבודה
           </button>
         </div>
       </div>
@@ -479,6 +529,10 @@ const StaffView = () => {
         <button onClick={() => { setOnBreak(true); setBreakStartedAt(Date.now()); setBreakCount(c => c + 1); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-primary/10 transition-colors">
           <Coffee size={20} className="text-primary" />
           <span className="text-[10px] font-medium text-primary">{t("worker.breakButton")}</span>
+        </button>
+        <button onClick={() => { setOnEquipPrep(true); setEquipPrepCount(c => c + 1); }} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-accent/10 transition-colors">
+          <WrenchIcon size={20} className="text-accent-foreground" />
+          <span className="text-[10px] font-medium text-accent-foreground">ציוד</span>
         </button>
         <button onClick={() => setScreen("breakfix")} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-destructive/10 transition-colors">
           <AlertTriangle size={20} className="text-destructive" />

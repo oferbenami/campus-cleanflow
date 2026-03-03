@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, Zap, Trophy, MapPin, Clock, XCircle, ChevronLeft, Wrench, Coffee } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Zap, Trophy, MapPin, Clock, XCircle, ChevronLeft, Wrench, Coffee, Wrench as WrenchIcon } from "lucide-react";
 import type { AssignedTaskRow } from "@/hooks/useStaffAssignment";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -9,11 +9,13 @@ interface EndOfDayAnalysisProps {
   resolvedIncidentCount?: number;
   totalBreakMinutes?: number;
   breakCount?: number;
+  totalEquipPrepMinutes?: number;
+  equipPrepCount?: number;
 }
 
 type DrillDown = "tasks" | "faults" | null;
 
-const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0, totalBreakMinutes = 0, breakCount = 0 }: EndOfDayAnalysisProps) => {
+const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0, totalBreakMinutes = 0, breakCount = 0, totalEquipPrepMinutes = 0, equipPrepCount = 0 }: EndOfDayAnalysisProps) => {
   const { user } = useAuth();
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
 
@@ -82,6 +84,15 @@ const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0, totalBrea
               {totalBreakMinutes}<span className="text-lg text-muted-foreground"> דק׳</span>
             </p>
             <p className="text-xs text-muted-foreground mt-1">{breakCount} הפסקות</p>
+          </div>
+
+          {/* Equipment prep stats */}
+          <div className="rounded-2xl p-5 text-center bg-accent/10 border border-border animate-scale-in">
+            <WrenchIcon size={28} className="mx-auto mb-2 text-accent-foreground" />
+            <p className="text-4xl font-black mono text-accent-foreground">
+              {totalEquipPrepMinutes}<span className="text-lg text-muted-foreground"> דק׳</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{equipPrepCount} סידורי ציוד</p>
           </div>
         </div>
       </div>
