@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, AlertTriangle, Zap, Trophy, MapPin, Clock, XCircle, ChevronLeft, Wrench } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Zap, Trophy, MapPin, Clock, XCircle, ChevronLeft, Wrench, Coffee } from "lucide-react";
 import type { AssignedTaskRow } from "@/hooks/useStaffAssignment";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -7,11 +7,13 @@ interface EndOfDayAnalysisProps {
   tasks: AssignedTaskRow[];
   onClose: () => void;
   resolvedIncidentCount?: number;
+  totalBreakMinutes?: number;
+  breakCount?: number;
 }
 
 type DrillDown = "tasks" | "faults" | null;
 
-const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0 }: EndOfDayAnalysisProps) => {
+const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0, totalBreakMinutes = 0, breakCount = 0 }: EndOfDayAnalysisProps) => {
   const { user } = useAuth();
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
 
@@ -67,10 +69,19 @@ const EndOfDayAnalysis = ({ tasks, onClose, resolvedIncidentCount = 0 }: EndOfDa
           </div>
 
           {/* Incident count */}
-          <div className="rounded-2xl p-5 text-center bg-warning/10 border border-border animate-scale-in col-span-2">
+          <div className="rounded-2xl p-5 text-center bg-warning/10 border border-border animate-scale-in">
             <Wrench size={28} className="mx-auto mb-2 text-warning" />
             <p className="text-4xl font-black mono text-warning">{resolvedIncidentCount}</p>
             <p className="text-xs text-muted-foreground mt-1">תקלות שטופלו</p>
+          </div>
+
+          {/* Break stats */}
+          <div className="rounded-2xl p-5 text-center bg-primary/10 border border-border animate-scale-in">
+            <Coffee size={28} className="mx-auto mb-2 text-primary" />
+            <p className="text-4xl font-black mono text-primary">
+              {totalBreakMinutes}<span className="text-lg text-muted-foreground"> דק׳</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{breakCount} הפסקות</p>
           </div>
         </div>
       </div>
