@@ -13,6 +13,7 @@ import ManagerDashboard from "./pages/ManagerDashboard";
 import SupervisorView from "./pages/SupervisorView";
 import PropertyManagerView from "./pages/PropertyManagerView";
 import NotFound from "./pages/NotFound";
+import NotebookLMShare from "./pages/NotebookLMShare";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/notebooklm" element={<NotebookLMShare />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

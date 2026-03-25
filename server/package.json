@@ -1,0 +1,19 @@
+{
+  "name": "notebooklm-share-server",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Backend server for NotebookLM file sharing via WhatsApp and Gmail",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "nodemailer": "^6.9.14",
+    "playwright": "^1.44.1",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}
