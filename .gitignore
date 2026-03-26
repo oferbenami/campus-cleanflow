@@ -1,3 +1,10 @@
+# Garmin
+workouts/*.fit
+garmin/.env
+garmin/data/parsed_workouts.json
+garmin/data/.parse_state.json
+workouts/.state.json
+
 # Logs
 logs
 *.log
