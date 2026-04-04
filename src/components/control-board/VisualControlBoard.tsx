@@ -88,6 +88,25 @@ const VisualControlBoard = () => {
 
   const filteredWorkers = useMemo(() => workers.filter((w) => w.shift_type === activeShift), [workers, activeShift]);
 
+  // Detect shared work packages (same work_package_id assigned to multiple workers)
+  const sharedPackageMap = useMemo(() => {
+    const wpWorkers: Record<string, string[]> = {};
+    filteredWorkers.forEach((w) => {
+      if (w.work_package_id) {
+        if (!wpWorkers[w.work_package_id]) wpWorkers[w.work_package_id] = [];
+        wpWorkers[w.work_package_id].push(w.id);
+      }
+    });
+    // Map workerId -> count of workers sharing their package
+    const result: Record<string, number> = {};
+    filteredWorkers.forEach((w) => {
+      if (w.work_package_id && wpWorkers[w.work_package_id]?.length > 1) {
+        result[w.id] = wpWorkers[w.work_package_id].length;
+      }
+    });
+    return result;
+  }, [filteredWorkers]);
+
   const tasksByWorker = useMemo(() => {
     const map: Record<string, CBTask[]> = {};
     tasks.forEach((t) => {
