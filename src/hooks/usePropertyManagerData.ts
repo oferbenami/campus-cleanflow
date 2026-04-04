@@ -174,6 +174,8 @@ export function useCreateAssignment() {
       shiftType: "morning" | "evening";
       date: string;
       addonTemplateIds?: string[];
+      /** If provided, only create tasks at these indices from the WP (for split assignments) */
+      selectedTaskIndices?: number[];
     }) => {
       // Create assignment
       const { data: assignment, error: aErr } = await supabase
