@@ -167,6 +167,7 @@ export function useControlBoardData(selectedDate: string) {
           assignment_id: a.id,
           total_planned_minutes: totalPlanned,
           shift_capacity_minutes: shiftCapacity,
+          work_package_id: a.work_package_id || null,
         });
 
         workerTasks.forEach((t: any) => {
