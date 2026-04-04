@@ -31,6 +31,7 @@ import {
   Star,
   StarOff,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import {
   useStaffProfiles,
@@ -55,6 +56,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const SHIFT_CAPACITY = 420; // 7h net
 
@@ -107,6 +111,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
   const [copyDialogOpen, setCopyDialogOpen] = useState(false);
   const [copySourceDate, setCopySourceDate] = useState<Date | undefined>(undefined);
   const [copying, setCopying] = useState(false);
+
+  // Split assignment state: wpId -> { staffId -> taskIndices[] }
+  const [taskSplits, setTaskSplits] = useState<Record<string, Record<string, number[]>>>({});
+  const [splitDialog, setSplitDialog] = useState<{
+    wpId: string;
+    existingStaffId: string;
+  } | null>(null);
+  const [splitSecondStaff, setSplitSecondStaff] = useState<string>("");
+  const [splitTaskAssignment, setSplitTaskAssignment] = useState<Record<number, string>>({}); // taskIndex -> staffId
 
   // Available staff (not absent)
   const availableStaff = useMemo(
@@ -197,7 +210,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
   const getWorkerLoad = useCallback(
     (staffId: string) => {
       const wpIds = assignments[staffId] || [];
-      const draftMins = wpIds.reduce((s, id) => s + wpMinutes(id), 0);
+      const draftMins = wpIds.reduce((s, id) => {
+        // If there's a split, only count assigned tasks
+        const split = taskSplits[id]?.[staffId];
+        if (split) {
+          const wp = workPackages.find((w) => w.id === id);
+          return s + split.reduce((sum, idx) => sum + (Number(wp?.tasks[idx]?.standard_minutes) || 0), 0);
+        }
+        return s + wpMinutes(id);
+      }, 0);
       const savedMins = savedForShift
         .filter((a) => a.staff_user_id === staffId && a.work_package_id)
         .reduce((s, a) => s + wpMinutes(a.work_package_id!), 0);
@@ -211,6 +232,8 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
         status: pct <= 60 ? "under" : pct <= 100 ? "balanced" : "over",
         taskCount:
           wpIds.reduce((s, id) => {
+            const split = taskSplits[id]?.[staffId];
+            if (split) return s + split.length;
             const wp = workPackages.find((w) => w.id === id);
             return s + (wp?.tasks.length || 0);
           }, 0) +
@@ -222,7 +245,7 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
             }, 0),
       };
     },
-    [assignments, savedForShift, wpMinutes, workPackages]
+    [assignments, savedForShift, wpMinutes, workPackages, taskSplits]
   );
 
   // Assign a WP to a worker (with overload check)
@@ -271,7 +294,8 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
 
       if (srcDroppable === dstDroppable) return;
 
-      const wpId = draggableId;
+      // draggableId may be "wpId" (from unassigned) or "staffId::wpId" (from worker)
+      const wpId = draggableId.includes("::") ? draggableId.split("::")[1] : draggableId;
 
       if (srcDroppable === "unassigned" && dstDroppable.startsWith("worker-")) {
         const staffId = dstDroppable.replace("worker-", "");
@@ -282,6 +306,14 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       if (srcDroppable.startsWith("worker-") && dstDroppable === "unassigned") {
         const staffId = srcDroppable.replace("worker-", "");
         unassignWp(staffId, wpId);
+        // Clean up splits
+        if (taskSplits[wpId]) {
+          setTaskSplits((prev) => {
+            const copy = { ...prev };
+            delete copy[wpId];
+            return copy;
+          });
+        }
         return;
       }
 
@@ -290,9 +322,17 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
         const toStaff = dstDroppable.replace("worker-", "");
         unassignWp(fromStaff, wpId);
         assignWp(toStaff, wpId);
+        // Clean up splits
+        if (taskSplits[wpId]) {
+          setTaskSplits((prev) => {
+            const copy = { ...prev };
+            delete copy[wpId];
+            return copy;
+          });
+        }
       }
     },
-    [assignWp, unassignWp]
+    [assignWp, unassignWp, taskSplits]
   );
 
   // Validation for send button
@@ -328,12 +368,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       for (const [staffId, wpIds] of Object.entries(assignments)) {
         if (staffAvailability[staffId] === "absent") continue;
         for (const wpId of wpIds) {
+          // Check if this WP has a task split
+          const split = taskSplits[wpId]?.[staffId];
           promises.push(
             createAssignment.mutateAsync({
               staffId,
               workPackageId: wpId,
               shiftType: shift,
               date: planDateStr,
+              selectedTaskIndices: split, // undefined = all tasks
             })
           );
         }
@@ -341,6 +384,7 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       await Promise.all(promises);
       setSaved(true);
       setAssignments({});
+      setTaskSplits({});
       setTimeout(() => setSaved(false), 2500);
     } catch {
       // handled
@@ -397,6 +441,48 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
     }
   };
 
+  // Open split dialog for a WP
+  const openSplitDialog = (wpId: string, existingStaffId: string) => {
+    const wp = workPackages.find((w) => w.id === wpId);
+    if (!wp) return;
+    const initial: Record<number, string> = {};
+    wp.tasks.forEach((_, i) => { initial[i] = existingStaffId; });
+    setSplitTaskAssignment(initial);
+    setSplitSecondStaff("");
+    setSplitDialog({ wpId, existingStaffId });
+  };
+
+  const confirmSplit = () => {
+    if (!splitDialog || !splitSecondStaff) return;
+    const { wpId, existingStaffId } = splitDialog;
+
+    const worker1Tasks: number[] = [];
+    const worker2Tasks: number[] = [];
+    for (const [idx, staffId] of Object.entries(splitTaskAssignment)) {
+      if (staffId === existingStaffId) worker1Tasks.push(Number(idx));
+      else worker2Tasks.push(Number(idx));
+    }
+
+    if (worker2Tasks.length === 0) return;
+
+    // Add WP to second worker's assignments
+    setAssignments((prev) => ({
+      ...prev,
+      [splitSecondStaff]: [...(prev[splitSecondStaff] || []), wpId],
+    }));
+
+    // Store task splits
+    setTaskSplits((prev) => ({
+      ...prev,
+      [wpId]: {
+        ...prev[wpId],
+        [existingStaffId]: worker1Tasks,
+        [splitSecondStaff]: worker2Tasks,
+      },
+    }));
+
+    setSplitDialog(null);
+  };
 
   const handleSaveAsDefaults = (staffId: string) => {
     const draftWpIds = assignments[staffId] || [];
@@ -794,27 +880,60 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
                               {draftWpIds.map((wpId, idx) => {
                                 const wp = workPackages.find((w) => w.id === wpId);
                                 const isDefault = staffDefaultWpIds.includes(wpId);
+                                const hasSplit = !!taskSplits[wpId]?.[s.id];
+                                const splitInfo = hasSplit ? taskSplits[wpId][s.id] : null;
+                                const splitMins = splitInfo
+                                  ? splitInfo.reduce((sum, i) => sum + (Number(wp?.tasks[i]?.standard_minutes) || 0), 0)
+                                  : wpMinutes(wpId);
                                 return (
-                                  <Draggable key={wpId} draggableId={wpId} index={idx}>
+                                  <Draggable key={`${s.id}-${wpId}`} draggableId={`${s.id}::${wpId}`} index={idx}>
                                     {(dragProvided) => (
                                       <span
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
                                         className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-semibold border cursor-grab active:cursor-grabbing ${
-                                          isDefault
+                                          hasSplit
+                                            ? "bg-info/10 text-info border-info/20"
+                                            : isDefault
                                             ? "bg-warning/10 text-warning border-warning/20"
                                             : "bg-primary/10 text-primary border-primary/20"
                                         }`}
                                       >
                                         <GripVertical size={10} className="opacity-50" />
                                         {isDefault && <Star size={8} className="opacity-60" />}
+                                        {hasSplit && <Users size={8} className="opacity-60" />}
                                         {wp?.name || wp?.package_code || "—"}
-                                        <span className="mono opacity-70">{wpMinutes(wpId)}′</span>
+                                        <span className="mono opacity-70">{splitMins}′</span>
+                                        {/* Split button - add another worker */}
+                                        {!hasSplit && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openSplitDialog(wpId, s.id);
+                                                }}
+                                                className="mr-0.5 p-0.5 rounded hover:bg-info/10 text-info/60 hover:text-info"
+                                              >
+                                                <UserPlus size={10} />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top"><p>צרף עובד נוסף</p></TooltipContent>
+                                          </Tooltip>
+                                        )}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             unassignWp(s.id, wpId);
+                                            // Also remove splits
+                                            if (taskSplits[wpId]) {
+                                              setTaskSplits((prev) => {
+                                                const copy = { ...prev };
+                                                delete copy[wpId];
+                                                return copy;
+                                              });
+                                            }
                                           }}
                                           className="mr-0.5 p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"
                                         >
@@ -1009,6 +1128,134 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
               >
                 {copying ? <Loader2 size={16} className="animate-spin ml-2" /> : <Copy size={16} className="ml-2" />}
                 העתק שיבוצים
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ─── Split Assignment Dialog ─── */}
+        <Dialog open={!!splitDialog} onOpenChange={(open) => !open && setSplitDialog(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserPlus size={18} className="text-info" />
+                חלוקת חבילה בין שני עובדים
+              </DialogTitle>
+              <DialogDescription className="text-right">
+                בחר עובד נוסף וחלק את המשימות בין שני העובדים
+              </DialogDescription>
+            </DialogHeader>
+
+            {splitDialog && (() => {
+              const wp = workPackages.find((w) => w.id === splitDialog.wpId);
+              const existingWorker = availableStaff.find((s) => s.id === splitDialog.existingStaffId);
+              const otherWorkers = availableStaff.filter((s) => s.id !== splitDialog.existingStaffId);
+
+              return (
+                <div className="space-y-4">
+                  {/* Worker selection */}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">עובד נוסף</label>
+                    <Select value={splitSecondStaff} onValueChange={setSplitSecondStaff}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="בחר עובד..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {otherWorkers.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.full_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Tasks distribution */}
+                  {splitSecondStaff && (
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground mb-1.5 block">
+                        חלוקת משימות — {wp?.name || wp?.package_code}
+                      </label>
+                      <ScrollArea className="max-h-[300px]">
+                        <div className="space-y-1.5">
+                          {wp?.tasks.map((task, i) => {
+                            const assignedTo = splitTaskAssignment[i] || splitDialog.existingStaffId;
+                            const secondWorker = availableStaff.find((s) => s.id === splitSecondStaff);
+                            const taskLabel = [task.space_type, task.description, task.cleaning_type].filter(Boolean).join(" - ") || `משימה ${i + 1}`;
+                            return (
+                              <div
+                                key={i}
+                                className={`flex items-center justify-between p-2 rounded-lg border text-xs ${
+                                  assignedTo === splitDialog.existingStaffId
+                                    ? "bg-primary/5 border-primary/20"
+                                    : "bg-info/5 border-info/20"
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium truncate">{taskLabel}</p>
+                                  <p className="text-[10px] text-muted-foreground mono">{Number(task.standard_minutes) || 0}′</p>
+                                </div>
+                                <Select
+                                  value={assignedTo}
+                                  onValueChange={(val) => {
+                                    setSplitTaskAssignment((prev) => ({ ...prev, [i]: val }));
+                                  }}
+                                >
+                                  <SelectTrigger className="w-[120px] h-7 text-[10px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={splitDialog.existingStaffId}>
+                                      {existingWorker?.full_name || "עובד 1"}
+                                    </SelectItem>
+                                    <SelectItem value={splitSecondStaff}>
+                                      {secondWorker?.full_name || "עובד 2"}
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+
+                      {/* Summary */}
+                      <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div className="rounded-lg bg-primary/5 border border-primary/20 p-2 text-center">
+                          <p className="text-[10px] text-muted-foreground">{existingWorker?.full_name}</p>
+                          <p className="text-sm font-bold mono text-primary">
+                            {Object.entries(splitTaskAssignment)
+                              .filter(([, sid]) => sid === splitDialog.existingStaffId)
+                              .reduce((sum, [idx]) => sum + (Number(wp?.tasks[Number(idx)]?.standard_minutes) || 0), 0)}′
+                          </p>
+                        </div>
+                        <div className="rounded-lg bg-info/5 border border-info/20 p-2 text-center">
+                          <p className="text-[10px] text-muted-foreground">
+                            {availableStaff.find((s) => s.id === splitSecondStaff)?.full_name}
+                          </p>
+                          <p className="text-sm font-bold mono text-info">
+                            {Object.entries(splitTaskAssignment)
+                              .filter(([, sid]) => sid === splitSecondStaff)
+                              .reduce((sum, [idx]) => sum + (Number(wp?.tasks[Number(idx)]?.standard_minutes) || 0), 0)}′
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => setSplitDialog(null)}>
+                ביטול
+              </Button>
+              <Button
+                onClick={confirmSplit}
+                disabled={!splitSecondStaff || Object.values(splitTaskAssignment).filter((s) => s === splitSecondStaff).length === 0}
+              >
+                <UserPlus size={14} className="ml-2" />
+                אשר חלוקה
               </Button>
             </DialogFooter>
           </DialogContent>
