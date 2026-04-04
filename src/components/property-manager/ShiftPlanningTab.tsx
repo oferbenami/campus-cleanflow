@@ -414,6 +414,48 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
     }
   };
 
+  // Open split dialog for a WP
+  const openSplitDialog = (wpId: string, existingStaffId: string) => {
+    const wp = workPackages.find((w) => w.id === wpId);
+    if (!wp) return;
+    const initial: Record<number, string> = {};
+    wp.tasks.forEach((_, i) => { initial[i] = existingStaffId; });
+    setSplitTaskAssignment(initial);
+    setSplitSecondStaff("");
+    setSplitDialog({ wpId, existingStaffId });
+  };
+
+  const confirmSplit = () => {
+    if (!splitDialog || !splitSecondStaff) return;
+    const { wpId, existingStaffId } = splitDialog;
+
+    const worker1Tasks: number[] = [];
+    const worker2Tasks: number[] = [];
+    for (const [idx, staffId] of Object.entries(splitTaskAssignment)) {
+      if (staffId === existingStaffId) worker1Tasks.push(Number(idx));
+      else worker2Tasks.push(Number(idx));
+    }
+
+    if (worker2Tasks.length === 0) return;
+
+    // Add WP to second worker's assignments
+    setAssignments((prev) => ({
+      ...prev,
+      [splitSecondStaff]: [...(prev[splitSecondStaff] || []), wpId],
+    }));
+
+    // Store task splits
+    setTaskSplits((prev) => ({
+      ...prev,
+      [wpId]: {
+        ...prev[wpId],
+        [existingStaffId]: worker1Tasks,
+        [splitSecondStaff]: worker2Tasks,
+      },
+    }));
+
+    setSplitDialog(null);
+  };
 
   const handleSaveAsDefaults = (staffId: string) => {
     const draftWpIds = assignments[staffId] || [];
