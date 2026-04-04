@@ -112,6 +112,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
   const [copySourceDate, setCopySourceDate] = useState<Date | undefined>(undefined);
   const [copying, setCopying] = useState(false);
 
+  // Split assignment state: wpId -> { staffId -> taskIndices[] }
+  const [taskSplits, setTaskSplits] = useState<Record<string, Record<string, number[]>>>({});
+  const [splitDialog, setSplitDialog] = useState<{
+    wpId: string;
+    existingStaffId: string;
+  } | null>(null);
+  const [splitSecondStaff, setSplitSecondStaff] = useState<string>("");
+  const [splitTaskAssignment, setSplitTaskAssignment] = useState<Record<number, string>>({}); // taskIndex -> staffId
+
   // Available staff (not absent)
   const availableStaff = useMemo(
     () => staff.filter((s) => staffAvailability[s.id] !== "absent"),
