@@ -3,7 +3,7 @@ import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Building,
-  ChevronLeft, ChevronRight, User, ArrowRightLeft, Pause, Copy,
+  ChevronLeft, ChevronRight, User, Users, ArrowRightLeft, Pause, Copy,
   XCircle, ChevronDown, GripVertical,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -87,6 +87,25 @@ const VisualControlBoard = () => {
   }, []);
 
   const filteredWorkers = useMemo(() => workers.filter((w) => w.shift_type === activeShift), [workers, activeShift]);
+
+  // Detect shared work packages (same work_package_id assigned to multiple workers)
+  const sharedPackageMap = useMemo(() => {
+    const wpWorkers: Record<string, string[]> = {};
+    filteredWorkers.forEach((w) => {
+      if (w.work_package_id) {
+        if (!wpWorkers[w.work_package_id]) wpWorkers[w.work_package_id] = [];
+        wpWorkers[w.work_package_id].push(w.id);
+      }
+    });
+    // Map workerId -> count of workers sharing their package
+    const result: Record<string, number> = {};
+    filteredWorkers.forEach((w) => {
+      if (w.work_package_id && wpWorkers[w.work_package_id]?.length > 1) {
+        result[w.id] = wpWorkers[w.work_package_id].length;
+      }
+    });
+    return result;
+  }, [filteredWorkers]);
 
   const tasksByWorker = useMemo(() => {
     const map: Record<string, CBTask[]> = {};
@@ -351,7 +370,22 @@ const VisualControlBoard = () => {
                       )}
                     </div>
                     <div className={`${LEFT_PANEL_W} shrink-0 flex flex-col justify-center px-2`}>
-                      <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
+                        {sharedPackageMap[worker.id] && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="shrink-0 inline-flex items-center gap-0.5 bg-info/20 text-info border border-info/30 rounded-full px-1 py-0.5">
+                                <Users size={9} />
+                                <span className="text-[8px] font-bold">{sharedPackageMap[worker.id]}</span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p className="text-xs">חבילה מחולקת בין {sharedPackageMap[worker.id]} עובדים</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className={`text-[9px] mono ${utilPct > 100 ? "text-destructive font-bold" : utilPct > 90 ? "text-warning" : "text-muted-foreground"}`}>
                         {utilPct}% ניצולת
                       </p>

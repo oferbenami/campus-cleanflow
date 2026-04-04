@@ -11,6 +11,7 @@ export interface CBWorker {
   assignment_id: string;
   total_planned_minutes: number;
   shift_capacity_minutes: number;
+  work_package_id: string | null;
 }
 
 export interface CBTask {
@@ -74,7 +75,7 @@ export function useControlBoardData(selectedDate: string) {
         supabase
           .from("assignments")
           .select(`
-            id, staff_user_id, shift_type, status,
+            id, staff_user_id, shift_type, status, work_package_id,
             profiles!assignments_staff_user_id_fkey ( full_name, avatar_initials, default_shift_start, default_shift_end, default_break_minutes ),
             assigned_tasks (
               id, task_name, standard_minutes, actual_minutes, status, priority,
@@ -166,6 +167,7 @@ export function useControlBoardData(selectedDate: string) {
           assignment_id: a.id,
           total_planned_minutes: totalPlanned,
           shift_capacity_minutes: shiftCapacity,
+          work_package_id: a.work_package_id || null,
         });
 
         workerTasks.forEach((t: any) => {
