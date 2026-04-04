@@ -11,6 +11,7 @@ export interface CBWorker {
   assignment_id: string;
   total_planned_minutes: number;
   shift_capacity_minutes: number;
+  work_package_id: string | null;
 }
 
 export interface CBTask {
