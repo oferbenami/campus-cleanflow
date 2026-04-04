@@ -210,7 +210,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
   const getWorkerLoad = useCallback(
     (staffId: string) => {
       const wpIds = assignments[staffId] || [];
-      const draftMins = wpIds.reduce((s, id) => s + wpMinutes(id), 0);
+      const draftMins = wpIds.reduce((s, id) => {
+        // If there's a split, only count assigned tasks
+        const split = taskSplits[id]?.[staffId];
+        if (split) {
+          const wp = workPackages.find((w) => w.id === id);
+          return s + split.reduce((sum, idx) => sum + (Number(wp?.tasks[idx]?.standard_minutes) || 0), 0);
+        }
+        return s + wpMinutes(id);
+      }, 0);
       const savedMins = savedForShift
         .filter((a) => a.staff_user_id === staffId && a.work_package_id)
         .reduce((s, a) => s + wpMinutes(a.work_package_id!), 0);
@@ -224,6 +232,8 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
         status: pct <= 60 ? "under" : pct <= 100 ? "balanced" : "over",
         taskCount:
           wpIds.reduce((s, id) => {
+            const split = taskSplits[id]?.[staffId];
+            if (split) return s + split.length;
             const wp = workPackages.find((w) => w.id === id);
             return s + (wp?.tasks.length || 0);
           }, 0) +
@@ -235,7 +245,7 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
             }, 0),
       };
     },
-    [assignments, savedForShift, wpMinutes, workPackages]
+    [assignments, savedForShift, wpMinutes, workPackages, taskSplits]
   );
 
   // Assign a WP to a worker (with overload check)
