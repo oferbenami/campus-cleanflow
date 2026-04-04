@@ -853,27 +853,60 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
                               {draftWpIds.map((wpId, idx) => {
                                 const wp = workPackages.find((w) => w.id === wpId);
                                 const isDefault = staffDefaultWpIds.includes(wpId);
+                                const hasSplit = !!taskSplits[wpId]?.[s.id];
+                                const splitInfo = hasSplit ? taskSplits[wpId][s.id] : null;
+                                const splitMins = splitInfo
+                                  ? splitInfo.reduce((sum, i) => sum + (Number(wp?.tasks[i]?.standard_minutes) || 0), 0)
+                                  : wpMinutes(wpId);
                                 return (
-                                  <Draggable key={wpId} draggableId={wpId} index={idx}>
+                                  <Draggable key={`${s.id}-${wpId}`} draggableId={`${s.id}::${wpId}`} index={idx}>
                                     {(dragProvided) => (
                                       <span
                                         ref={dragProvided.innerRef}
                                         {...dragProvided.draggableProps}
                                         {...dragProvided.dragHandleProps}
                                         className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-lg font-semibold border cursor-grab active:cursor-grabbing ${
-                                          isDefault
+                                          hasSplit
+                                            ? "bg-info/10 text-info border-info/20"
+                                            : isDefault
                                             ? "bg-warning/10 text-warning border-warning/20"
                                             : "bg-primary/10 text-primary border-primary/20"
                                         }`}
                                       >
                                         <GripVertical size={10} className="opacity-50" />
                                         {isDefault && <Star size={8} className="opacity-60" />}
+                                        {hasSplit && <Users size={8} className="opacity-60" />}
                                         {wp?.name || wp?.package_code || "—"}
-                                        <span className="mono opacity-70">{wpMinutes(wpId)}′</span>
+                                        <span className="mono opacity-70">{splitMins}′</span>
+                                        {/* Split button - add another worker */}
+                                        {!hasSplit && (
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openSplitDialog(wpId, s.id);
+                                                }}
+                                                className="mr-0.5 p-0.5 rounded hover:bg-info/10 text-info/60 hover:text-info"
+                                              >
+                                                <UserPlus size={10} />
+                                              </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top"><p>צרף עובד נוסף</p></TooltipContent>
+                                          </Tooltip>
+                                        )}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             unassignWp(s.id, wpId);
+                                            // Also remove splits
+                                            if (taskSplits[wpId]) {
+                                              setTaskSplits((prev) => {
+                                                const copy = { ...prev };
+                                                delete copy[wpId];
+                                                return copy;
+                                              });
+                                            }
                                           }}
                                           className="mr-0.5 p-0.5 rounded hover:bg-destructive/10 text-destructive/60 hover:text-destructive"
                                         >
