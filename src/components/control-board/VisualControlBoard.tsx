@@ -3,7 +3,7 @@ import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Building,
-  ChevronLeft, ChevronRight, User, ArrowRightLeft, Pause, Copy,
+  ChevronLeft, ChevronRight, User, Users, ArrowRightLeft, Pause, Copy,
   XCircle, ChevronDown, GripVertical,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
