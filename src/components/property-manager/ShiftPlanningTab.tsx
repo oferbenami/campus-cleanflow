@@ -31,6 +31,7 @@ import {
   Star,
   StarOff,
   UserX,
+  UserPlus,
 } from "lucide-react";
 import {
   useStaffProfiles,
