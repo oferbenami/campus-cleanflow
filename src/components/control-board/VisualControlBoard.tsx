@@ -370,7 +370,22 @@ const VisualControlBoard = () => {
                       )}
                     </div>
                     <div className={`${LEFT_PANEL_W} shrink-0 flex flex-col justify-center px-2`}>
-                      <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
+                      <div className="flex items-center gap-1">
+                        <p className="text-[11px] font-semibold truncate">{worker.full_name}</p>
+                        {sharedPackageMap[worker.id] && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="shrink-0 inline-flex items-center gap-0.5 bg-info/20 text-info border border-info/30 rounded-full px-1 py-0.5">
+                                <Users size={9} />
+                                <span className="text-[8px] font-bold">{sharedPackageMap[worker.id]}</span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p className="text-xs">חבילה מחולקת בין {sharedPackageMap[worker.id]} עובדים</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                       <p className={`text-[9px] mono ${utilPct > 100 ? "text-destructive font-bold" : utilPct > 90 ? "text-warning" : "text-muted-foreground"}`}>
                         {utilPct}% ניצולת
                       </p>
