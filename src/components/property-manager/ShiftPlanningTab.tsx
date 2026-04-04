@@ -341,12 +341,15 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       for (const [staffId, wpIds] of Object.entries(assignments)) {
         if (staffAvailability[staffId] === "absent") continue;
         for (const wpId of wpIds) {
+          // Check if this WP has a task split
+          const split = taskSplits[wpId]?.[staffId];
           promises.push(
             createAssignment.mutateAsync({
               staffId,
               workPackageId: wpId,
               shiftType: shift,
               date: planDateStr,
+              selectedTaskIndices: split, // undefined = all tasks
             })
           );
         }
@@ -354,6 +357,7 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       await Promise.all(promises);
       setSaved(true);
       setAssignments({});
+      setTaskSplits({});
       setTimeout(() => setSaved(false), 2500);
     } catch {
       // handled
