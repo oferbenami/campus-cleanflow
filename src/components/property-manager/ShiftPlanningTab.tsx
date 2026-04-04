@@ -284,7 +284,8 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
 
       if (srcDroppable === dstDroppable) return;
 
-      const wpId = draggableId;
+      // draggableId may be "wpId" (from unassigned) or "staffId::wpId" (from worker)
+      const wpId = draggableId.includes("::") ? draggableId.split("::")[1] : draggableId;
 
       if (srcDroppable === "unassigned" && dstDroppable.startsWith("worker-")) {
         const staffId = dstDroppable.replace("worker-", "");
@@ -295,6 +296,14 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
       if (srcDroppable.startsWith("worker-") && dstDroppable === "unassigned") {
         const staffId = srcDroppable.replace("worker-", "");
         unassignWp(staffId, wpId);
+        // Clean up splits
+        if (taskSplits[wpId]) {
+          setTaskSplits((prev) => {
+            const copy = { ...prev };
+            delete copy[wpId];
+            return copy;
+          });
+        }
         return;
       }
 
@@ -303,9 +312,17 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
         const toStaff = dstDroppable.replace("worker-", "");
         unassignWp(fromStaff, wpId);
         assignWp(toStaff, wpId);
+        // Clean up splits
+        if (taskSplits[wpId]) {
+          setTaskSplits((prev) => {
+            const copy = { ...prev };
+            delete copy[wpId];
+            return copy;
+          });
+        }
       }
     },
-    [assignWp, unassignWp]
+    [assignWp, unassignWp, taskSplits]
   );
 
   // Validation for send button
