@@ -203,6 +203,13 @@ export function useCreateAssignment() {
           .eq("work_package_id", params.workPackageId);
 
         if (wpTasks?.length) {
+          // Filter tasks by selected indices if doing a split assignment
+          const filteredTasks = params.selectedTaskIndices
+            ? wpTasks.filter((_, i) => params.selectedTaskIndices!.includes(i))
+            : wpTasks;
+
+          if (filteredTasks.length === 0) return assignment;
+
           // We need a location_id for assigned_tasks. Use a fallback.
           const { data: fallbackLoc } = await supabase
             .from("campus_locations")
@@ -215,7 +222,7 @@ export function useCreateAssignment() {
           const shiftStart = params.shiftType === "morning" ? "07:00" : "16:00";
           let cursor = shiftStart;
 
-          const tasksToInsert = wpTasks.map((t, i) => {
+          const tasksToInsert = filteredTasks.map((t, i) => {
             const startDate = new Date(`${params.date}T${cursor}:00`);
             const mins = Number(t.standard_minutes) || 30;
             const endDate = new Date(startDate.getTime() + mins * 60000);
