@@ -13,6 +13,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
 import SiteReadinessChecklist from "./SiteReadinessChecklist";
+import ShiftSiteScorePanel from "./ShiftSiteScorePanel";
 
 /* ─── Data fetching ─── */
 
@@ -451,6 +452,9 @@ const EndOfDayTab = () => {
           </table>
         </div>
       </div>
+
+      {/* Shift & Site Score */}
+      <ShiftSiteScorePanel date={selectedDate} shiftType="morning" />
 
       {/* Site Readiness Checklist */}
       <SiteReadinessChecklist date={selectedDate} />
