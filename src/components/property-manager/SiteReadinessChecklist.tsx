@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import { toast } from "sonner";
+import { useComputeShiftScore } from "@/hooks/useShiftScores";
 import {
   ClipboardCheck, AlertTriangle, CheckCircle2, XCircle, MinusCircle,
   Send, Users, Trash2, Building2, MapPin, Plus, X, ChevronDown, ChevronUp,
