@@ -11,6 +11,7 @@ import {
   PieChart, Pie, Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
 
 /* ─── Data fetching ─── */
 
@@ -449,6 +450,9 @@ const EndOfDayTab = () => {
           </table>
         </div>
       </div>
+
+      {/* Executive Sensitive Areas */}
+      <ExecutiveAreasChecklist date={selectedDate} />
     </div>
   );
 };
