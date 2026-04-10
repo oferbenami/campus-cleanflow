@@ -916,6 +916,77 @@ export type Database = {
           },
         ]
       }
+      shift_scores: {
+        Row: {
+          cleaning_actions_completed: boolean
+          computed_by: string
+          created_at: string
+          date: string
+          executive_failures: number
+          extra_tasks_completed: number
+          id: string
+          previous_site_score: number
+          score_breakdown_json: Json
+          shift_score: number
+          shift_type: string
+          site_id: string
+          site_score: number
+          sla_breaches: number
+          tasks_assigned: number
+          tasks_completed: number
+          tasks_missed: number
+          updated_at: string
+        }
+        Insert: {
+          cleaning_actions_completed?: boolean
+          computed_by?: string
+          created_at?: string
+          date: string
+          executive_failures?: number
+          extra_tasks_completed?: number
+          id?: string
+          previous_site_score?: number
+          score_breakdown_json?: Json
+          shift_score?: number
+          shift_type?: string
+          site_id: string
+          site_score?: number
+          sla_breaches?: number
+          tasks_assigned?: number
+          tasks_completed?: number
+          tasks_missed?: number
+          updated_at?: string
+        }
+        Update: {
+          cleaning_actions_completed?: boolean
+          computed_by?: string
+          created_at?: string
+          date?: string
+          executive_failures?: number
+          extra_tasks_completed?: number
+          id?: string
+          previous_site_score?: number
+          score_breakdown_json?: Json
+          shift_score?: number
+          shift_type?: string
+          site_id?: string
+          site_score?: number
+          sla_breaches?: number
+          tasks_assigned?: number
+          tasks_completed?: number
+          tasks_missed?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_scores_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_readiness_checklists: {
         Row: {
           checklist_items_json: Json
