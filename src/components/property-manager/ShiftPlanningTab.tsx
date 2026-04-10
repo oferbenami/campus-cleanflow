@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import PreviousShiftTasks from "./PreviousShiftTasks";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
@@ -646,6 +647,13 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
             />
           </div>
         </div>
+
+        {/* ─── Previous Shift Tasks ─── */}
+        <PreviousShiftTasks
+          date={planDateStr}
+          shiftType={shift}
+          staff={availableStaff.map((s) => ({ id: s.id, full_name: s.full_name }))}
+        />
 
         {/* ─── Empty states ─── */}
         {shiftWps.length === 0 && (
