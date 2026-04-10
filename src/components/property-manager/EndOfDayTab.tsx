@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
+import SiteReadinessChecklist from "./SiteReadinessChecklist";
 
 /* ─── Data fetching ─── */
 
@@ -450,6 +451,9 @@ const EndOfDayTab = () => {
           </table>
         </div>
       </div>
+
+      {/* Site Readiness Checklist */}
+      <SiteReadinessChecklist date={selectedDate} />
 
       {/* Executive Sensitive Areas */}
       <ExecutiveAreasChecklist date={selectedDate} />
