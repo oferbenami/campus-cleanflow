@@ -178,12 +178,48 @@ const RealTimeAlertsTab = () => {
   const [now, setNow] = useState(new Date());
   const [expandedCategory, setExpandedCategory] = useState<AlertCategory | null>(null);
 
+  // Fetch executive area issues for today (realtime-enabled)
+  const { data: execChecks } = useQuery({
+    queryKey: ["exec-area-alerts-today", todayStr],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("executive_area_checks")
+        .select("*")
+        .eq("site_id", SITE_ID)
+        .eq("date", todayStr)
+        .neq("status", "ok");
+      return data || [];
+    },
+    refetchInterval: 15000,
+  });
+
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 15000);
     return () => clearInterval(iv);
   }, []);
 
-  const alerts = useMemo(() => generateAlerts(workers, tasks, now), [workers, tasks, now]);
+  // Generate executive area alerts
+  const execAlerts: AlertItem[] = useMemo(() => {
+    if (!execChecks?.length) return [];
+    return execChecks.map((c: any) => ({
+      id: `exec-${c.id}`,
+      category: "executive_area" as AlertCategory,
+      severity: c.status === "not_ok" ? "critical" as const : "warning" as const,
+      title: `${c.area_label}: ${c.status === "not_ok" ? "לא תקין" : "חלקי"}`,
+      description: c.gap_description || "נדרשת תשומת לב",
+      timestamp: new Date(c.created_at),
+      meta: {
+        cleanliness_level: c.cleanliness_level,
+        requires_reclean: c.requires_reclean,
+        area_name: c.area_name,
+      },
+    }));
+  }, [execChecks]);
+
+  const alerts = useMemo(() => {
+    const baseAlerts = generateAlerts(workers, tasks, now);
+    return [...execAlerts, ...baseAlerts];
+  }, [workers, tasks, now, execAlerts]);
 
   // Group by category
   const grouped = useMemo(() => {
