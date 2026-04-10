@@ -118,6 +118,7 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: existing, isLoading } = useExistingChecklist(today, shiftType);
+  const computeScore = useComputeShiftScore();
 
   const [submitted, setSubmitted] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -386,6 +387,8 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
       if (criticalIssues.length > 0) {
         toast.warning(`${criticalIssues.length} התראות קריטיות נשלחו למנהל התפעול`, { duration: 5000 });
       }
+      // Auto-compute shift & site scores
+      computeScore.mutate({ date: today, shiftType });
     },
     onError: (err: any) => {
       toast.error("שגיאה בשמירה: " + err.message);
