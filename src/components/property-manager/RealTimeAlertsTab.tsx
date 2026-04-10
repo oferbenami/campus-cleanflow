@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   AlertTriangle, Clock, TrendingDown, Users, Zap, ChevronDown, ChevronUp,
-  RefreshCw, Building2, Timer, ArrowDown, ArrowUp, X,
+  RefreshCw, Building2, Timer, ArrowDown, ArrowUp, X, Crown,
 } from "lucide-react";
 import { useControlBoardData, type CBTask, type CBWorker } from "@/hooks/useControlBoardData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import { Badge } from "@/components/ui/badge";
 
 /* ─── Alert types ─── */
@@ -20,6 +23,7 @@ interface AlertItem {
 }
 
 type AlertCategory =
+  | "executive_area"     // אזורי הנהלה
   | "time_overrun"      // חריגת זמן
   | "delayed_start"     // פיגור בהתחלה
   | "capacity_breach"   // חריגת קיבולת
@@ -28,6 +32,7 @@ type AlertCategory =
   | "plan_mismatch";    // אי-התאמה תוכנית-ביצוע
 
 const CATEGORY_META: Record<AlertCategory, { label: string; icon: React.ReactNode; color: string }> = {
+  executive_area:  { label: "אזורי הנהלה",      icon: <Crown size={16} />,         color: "bg-destructive/15 border-destructive/30 text-destructive" },
   time_overrun:    { label: "חריגת זמן",       icon: <Clock size={16} />,         color: "bg-destructive/15 border-destructive/30 text-destructive" },
   delayed_start:   { label: "פיגור בהתחלה",    icon: <Timer size={16} />,         color: "bg-warning/15 border-warning/30 text-warning" },
   capacity_breach: { label: "חריגת קיבולת",    icon: <TrendingDown size={16} />,  color: "bg-destructive/15 border-destructive/30 text-destructive" },
