@@ -517,6 +517,72 @@ export type Database = {
           },
         ]
       }
+      executive_area_checks: {
+        Row: {
+          area_label: string
+          area_name: string
+          checked_by: string
+          cleanliness_level: Database["public"]["Enums"]["cleanliness_level"]
+          created_at: string
+          date: string
+          gap_description: string | null
+          id: string
+          notes: string | null
+          reported_to_operations: boolean
+          requires_reclean: boolean
+          site_id: string
+          status: Database["public"]["Enums"]["exec_area_status"]
+          updated_at: string
+        }
+        Insert: {
+          area_label: string
+          area_name: string
+          checked_by: string
+          cleanliness_level?: Database["public"]["Enums"]["cleanliness_level"]
+          created_at?: string
+          date?: string
+          gap_description?: string | null
+          id?: string
+          notes?: string | null
+          reported_to_operations?: boolean
+          requires_reclean?: boolean
+          site_id: string
+          status?: Database["public"]["Enums"]["exec_area_status"]
+          updated_at?: string
+        }
+        Update: {
+          area_label?: string
+          area_name?: string
+          checked_by?: string
+          cleanliness_level?: Database["public"]["Enums"]["cleanliness_level"]
+          created_at?: string
+          date?: string
+          gap_description?: string | null
+          id?: string
+          notes?: string | null
+          reported_to_operations?: boolean
+          requires_reclean?: boolean
+          site_id?: string
+          status?: Database["public"]["Enums"]["exec_area_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "executive_area_checks_checked_by_fkey"
+            columns: ["checked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "executive_area_checks_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       incident_events_log: {
         Row: {
           created_at: string
@@ -1218,6 +1284,7 @@ export type Database = {
         | "supervisor"
         | "cleaning_staff"
       assignment_status: "planned" | "active" | "completed" | "cancelled"
+      cleanliness_level: "high" | "medium" | "low"
       event_type:
         | "nfc_scan"
         | "task_start"
@@ -1233,6 +1300,7 @@ export type Database = {
         | "task_reassigned"
         | "task_cancelled"
         | "priority_changed"
+      exec_area_status: "ok" | "partial" | "not_ok"
       incident_category:
         | "spill"
         | "restroom"
@@ -1418,6 +1486,7 @@ export const Constants = {
         "cleaning_staff",
       ],
       assignment_status: ["planned", "active", "completed", "cancelled"],
+      cleanliness_level: ["high", "medium", "low"],
       event_type: [
         "nfc_scan",
         "task_start",
@@ -1434,6 +1503,7 @@ export const Constants = {
         "task_cancelled",
         "priority_changed",
       ],
+      exec_area_status: ["ok", "partial", "not_ok"],
       incident_category: [
         "spill",
         "restroom",
