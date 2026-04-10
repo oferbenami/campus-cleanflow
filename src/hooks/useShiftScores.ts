@@ -96,7 +96,7 @@ export function useComputeShiftScore() {
         .select("id")
         .eq("site_id", SITE_ID)
         .eq("date", params.date)
-        .eq("shift_type", params.shiftType);
+        .eq("shift_type", params.shiftType as "morning" | "evening");
 
       if (!assignments?.length) throw new Error("No assignments found");
 
