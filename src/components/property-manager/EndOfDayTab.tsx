@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
+import SiteReadinessChecklist from "./SiteReadinessChecklist";
 
 /* ─── Data fetching ─── */
 
