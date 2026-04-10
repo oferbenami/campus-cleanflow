@@ -188,6 +188,7 @@ const RealTimeAlertsTab = () => {
   // Group by category
   const grouped = useMemo(() => {
     const map: Record<AlertCategory, AlertItem[]> = {
+      executive_area: [],
       time_overrun: [],
       delayed_start: [],
       capacity_breach: [],
