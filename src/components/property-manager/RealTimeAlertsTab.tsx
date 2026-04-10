@@ -1,9 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import {
   AlertTriangle, Clock, TrendingDown, Users, Zap, ChevronDown, ChevronUp,
-  RefreshCw, Building2, Timer, ArrowDown, ArrowUp, X,
+  RefreshCw, Building2, Timer, ArrowDown, ArrowUp, X, Crown,
 } from "lucide-react";
 import { useControlBoardData, type CBTask, type CBWorker } from "@/hooks/useControlBoardData";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import { Badge } from "@/components/ui/badge";
 
 /* ─── Alert types ─── */
@@ -20,6 +23,7 @@ interface AlertItem {
 }
 
 type AlertCategory =
+  | "executive_area"     // אזורי הנהלה
   | "time_overrun"      // חריגת זמן
   | "delayed_start"     // פיגור בהתחלה
   | "capacity_breach"   // חריגת קיבולת
@@ -28,6 +32,7 @@ type AlertCategory =
   | "plan_mismatch";    // אי-התאמה תוכנית-ביצוע
 
 const CATEGORY_META: Record<AlertCategory, { label: string; icon: React.ReactNode; color: string }> = {
+  executive_area:  { label: "אזורי הנהלה",      icon: <Crown size={16} />,         color: "bg-destructive/15 border-destructive/30 text-destructive" },
   time_overrun:    { label: "חריגת זמן",       icon: <Clock size={16} />,         color: "bg-destructive/15 border-destructive/30 text-destructive" },
   delayed_start:   { label: "פיגור בהתחלה",    icon: <Timer size={16} />,         color: "bg-warning/15 border-warning/30 text-warning" },
   capacity_breach: { label: "חריגת קיבולת",    icon: <TrendingDown size={16} />,  color: "bg-destructive/15 border-destructive/30 text-destructive" },
@@ -173,16 +178,53 @@ const RealTimeAlertsTab = () => {
   const [now, setNow] = useState(new Date());
   const [expandedCategory, setExpandedCategory] = useState<AlertCategory | null>(null);
 
+  // Fetch executive area issues for today (realtime-enabled)
+  const { data: execChecks } = useQuery({
+    queryKey: ["exec-area-alerts-today", todayStr],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("executive_area_checks")
+        .select("*")
+        .eq("site_id", SITE_ID)
+        .eq("date", todayStr)
+        .neq("status", "ok");
+      return data || [];
+    },
+    refetchInterval: 15000,
+  });
+
   useEffect(() => {
     const iv = setInterval(() => setNow(new Date()), 15000);
     return () => clearInterval(iv);
   }, []);
 
-  const alerts = useMemo(() => generateAlerts(workers, tasks, now), [workers, tasks, now]);
+  // Generate executive area alerts
+  const execAlerts: AlertItem[] = useMemo(() => {
+    if (!execChecks?.length) return [];
+    return execChecks.map((c: any) => ({
+      id: `exec-${c.id}`,
+      category: "executive_area" as AlertCategory,
+      severity: c.status === "not_ok" ? "critical" as const : "warning" as const,
+      title: `${c.area_label}: ${c.status === "not_ok" ? "לא תקין" : "חלקי"}`,
+      description: c.gap_description || "נדרשת תשומת לב",
+      timestamp: new Date(c.created_at),
+      meta: {
+        cleanliness_level: c.cleanliness_level,
+        requires_reclean: c.requires_reclean,
+        area_name: c.area_name,
+      },
+    }));
+  }, [execChecks]);
+
+  const alerts = useMemo(() => {
+    const baseAlerts = generateAlerts(workers, tasks, now);
+    return [...execAlerts, ...baseAlerts];
+  }, [workers, tasks, now, execAlerts]);
 
   // Group by category
   const grouped = useMemo(() => {
     const map: Record<AlertCategory, AlertItem[]> = {
+      executive_area: [],
       time_overrun: [],
       delayed_start: [],
       capacity_breach: [],
