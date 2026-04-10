@@ -455,6 +455,75 @@ export type Database = {
           },
         ]
       }
+      checklist_followup_tasks: {
+        Row: {
+          area_label: string
+          area_name: string
+          assigned_to: string | null
+          checklist_id: string
+          completed_at: string | null
+          created_at: string
+          deferred_reason: string | null
+          due_date: string
+          due_shift_type: string
+          gap_description: string
+          id: string
+          priority: string
+          source_section: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          area_label: string
+          area_name: string
+          assigned_to?: string | null
+          checklist_id: string
+          completed_at?: string | null
+          created_at?: string
+          deferred_reason?: string | null
+          due_date: string
+          due_shift_type?: string
+          gap_description: string
+          id?: string
+          priority?: string
+          source_section?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          area_label?: string
+          area_name?: string
+          assigned_to?: string | null
+          checklist_id?: string
+          completed_at?: string | null
+          created_at?: string
+          deferred_reason?: string | null
+          due_date?: string
+          due_shift_type?: string
+          gap_description?: string
+          id?: string
+          priority?: string
+          source_section?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_followup_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checklist_followup_tasks_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "site_readiness_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events_log: {
         Row: {
           assigned_task_id: string | null
