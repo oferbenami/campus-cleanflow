@@ -452,6 +452,9 @@ const EndOfDayTab = () => {
         </div>
       </div>
 
+      {/* Site Readiness Checklist */}
+      <SiteReadinessChecklist date={selectedDate} />
+
       {/* Executive Sensitive Areas */}
       <ExecutiveAreasChecklist date={selectedDate} />
     </div>
