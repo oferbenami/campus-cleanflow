@@ -847,6 +847,78 @@ export type Database = {
           },
         ]
       }
+      site_readiness_checklists: {
+        Row: {
+          checklist_items_json: Json
+          cleaning_actions_json: Json
+          created_at: string
+          date: string
+          deviation_from_plan: number
+          handover_notes: string
+          id: string
+          overall_status: string
+          shift_type: string
+          site_id: string
+          special_areas_json: Json
+          submitted_by: string
+          total_actual_hours: number
+          total_workers: number
+          updated_at: string
+          workforce_json: Json
+        }
+        Insert: {
+          checklist_items_json?: Json
+          cleaning_actions_json?: Json
+          created_at?: string
+          date?: string
+          deviation_from_plan?: number
+          handover_notes?: string
+          id?: string
+          overall_status?: string
+          shift_type?: string
+          site_id: string
+          special_areas_json?: Json
+          submitted_by: string
+          total_actual_hours?: number
+          total_workers?: number
+          updated_at?: string
+          workforce_json?: Json
+        }
+        Update: {
+          checklist_items_json?: Json
+          cleaning_actions_json?: Json
+          created_at?: string
+          date?: string
+          deviation_from_plan?: number
+          handover_notes?: string
+          id?: string
+          overall_status?: string
+          shift_type?: string
+          site_id?: string
+          special_areas_json?: Json
+          submitted_by?: string
+          total_actual_hours?: number
+          total_workers?: number
+          updated_at?: string
+          workforce_json?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_readiness_checklists_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_readiness_checklists_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           active: boolean
