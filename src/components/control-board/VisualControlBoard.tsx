@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useControlBoardData, type CBWorker, type CBTask, type CBTicket } from "@/hooks/useControlBoardData";
+import ShiftSiteScorePanel from "@/components/property-manager/ShiftSiteScorePanel";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Calendar, Loader2, AlertTriangle, Zap, Clock, MapPin, Timer, Building,
@@ -304,6 +305,7 @@ const VisualControlBoard = () => {
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-info/30 border border-info/40" /> נדחה</span>
         </div>
         <span className="text-xs text-muted-foreground">{filteredWorkers.length} עובדים · {tasks.length} משימות</span>
+        <ShiftSiteScorePanel date={selectedDate} shiftType={activeShift} compact />
       </div>
 
       <p className="text-[10px] text-muted-foreground flex items-center gap-1">
