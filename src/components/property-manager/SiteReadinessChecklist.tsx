@@ -219,6 +219,98 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
     );
   }, [specialAreas]);
 
+  // Determine next shift info
+  const getNextShift = () => {
+    if (shiftType === "morning") return { date: today, shift: "evening" };
+    const nextDate = new Date(today);
+    nextDate.setDate(nextDate.getDate() + 1);
+    return { date: nextDate.toISOString().split("T")[0], shift: "morning" };
+  };
+
+  // Determine priority for a gap
+  const getGapPriority = (areaId: string, status: ItemStatus, section: string): string => {
+    if (CRITICAL_AREA_IDS.includes(areaId)) return "critical";
+    if (section === "special_areas" && status === "not_ok") return "critical";
+    if (status === "not_ok") return "high";
+    if (status === "partial") return "high";
+    return "normal";
+  };
+
+  // Generate followup tasks from gaps
+  const generateFollowupTasks = async (checklistId: string) => {
+    const nextShift = getNextShift();
+    const gaps: {
+      area_name: string;
+      area_label: string;
+      gap_description: string;
+      priority: string;
+      source_section: string;
+    }[] = [];
+
+    // Collect gaps from all sections
+    items.forEach((item) => {
+      if ((item.status === "partial" || item.status === "not_ok") || (item.gap_description?.trim())) {
+        if (item.status !== "ok" && item.status !== "na") {
+          gaps.push({
+            area_name: item.id,
+            area_label: item.label,
+            gap_description: item.gap_description || `סטטוס: ${item.status === "partial" ? "חלקי" : "לא תקין"}`,
+            priority: getGapPriority(item.id, item.status, "checklist_items"),
+            source_section: "checklist_items",
+          });
+        }
+      }
+    });
+
+    cleaningActions.forEach((action) => {
+      if (action.status !== "ok" && action.status !== "na") {
+        const areasSuffix = action.affected_areas?.length
+          ? ` (אזורים: ${action.affected_areas.join(", ")})`
+          : "";
+        gaps.push({
+          area_name: action.id,
+          area_label: action.label,
+          gap_description: (action.gap_description || `סטטוס: ${action.status === "partial" ? "חלקי" : "לא תקין"}`) + areasSuffix,
+          priority: getGapPriority(action.id, action.status, "cleaning_actions"),
+          source_section: "cleaning_actions",
+        });
+      }
+    });
+
+    specialAreas.forEach((area) => {
+      if (area.status !== "ok" && area.status !== "na") {
+        gaps.push({
+          area_name: area.id,
+          area_label: area.label,
+          gap_description: area.gap_description || `סטטוס: ${area.status === "partial" ? "חלקי" : "לא תקין"}`,
+          priority: getGapPriority(area.id, area.status, "special_areas"),
+          source_section: "special_areas",
+        });
+      }
+    });
+
+    if (gaps.length === 0) return 0;
+
+    const tasksToInsert = gaps.map((g) => ({
+      checklist_id: checklistId,
+      area_name: g.area_name,
+      area_label: g.area_label,
+      gap_description: g.gap_description,
+      priority: g.priority,
+      source_section: g.source_section,
+      status: "pending",
+      due_date: nextShift.date,
+      due_shift_type: nextShift.shift,
+    }));
+
+    const { error } = await supabase
+      .from("checklist_followup_tasks")
+      .insert(tasksToInsert as any);
+    if (error) throw error;
+
+    return gaps.length;
+  };
+
   // Save
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -240,10 +332,25 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
         overall_status: overallStatus,
       };
 
-      const { error } = await supabase
+      const { data: upserted, error } = await supabase
         .from("site_readiness_checklists")
-        .upsert(payload as any, { onConflict: "site_id,date,shift_type" });
+        .upsert(payload as any, { onConflict: "site_id,date,shift_type" })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      // Generate followup tasks from gaps
+      let gapCount = 0;
+      if (upserted?.id) {
+        // Delete existing followup tasks for this checklist (re-submit scenario)
+        await supabase
+          .from("checklist_followup_tasks")
+          .delete()
+          .eq("checklist_id", upserted.id)
+          .eq("status", "pending");
+
+        gapCount = (await generateFollowupTasks(upserted.id)) || 0;
+      }
 
       // Alert for critical area issues
       if (criticalIssues.length > 0) {
@@ -264,11 +371,17 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
           });
         }
       }
+
+      return { gapCount };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["site-readiness"] });
+      queryClient.invalidateQueries({ queryKey: ["checklist-followup-tasks"] });
       setSubmitted(true);
       toast.success("צ׳קליסט מוכנות אתר נשמר בהצלחה");
+      if (result?.gapCount && result.gapCount > 0) {
+        toast.info(`${result.gapCount} משימות מעקב נוצרו למשמרת הבאה`, { duration: 5000 });
+      }
       if (criticalIssues.length > 0) {
         toast.warning(`${criticalIssues.length} התראות קריטיות נשלחו למנהל התפעול`, { duration: 5000 });
       }
