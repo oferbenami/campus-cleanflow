@@ -255,12 +255,43 @@ export async function generateEodPdf(data: EodPdfData): Promise<void> {
       heightLeft -= pageHeight;
     }
 
-    // Open PDF in new tab for viewing
     const pdfBlob = pdf.output("blob");
-    const blobUrl = URL.createObjectURL(pdfBlob);
-    window.open(blobUrl, "_blank");
-    // Clean up blob URL after a delay
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    const blobUrl = URL.createObjectURL(new Blob([pdfBlob], { type: "application/pdf" }));
+    
+    // Create a temporary link to download the file
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = `shift-report-${data.date}.pdf`;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Also try to open in new tab (may be blocked by popup blocker)
+    // Use an iframe as fallback for viewing
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "fixed";
+    iframe.style.top = "0";
+    iframe.style.left = "0";
+    iframe.style.width = "100vw";
+    iframe.style.height = "100vh";
+    iframe.style.zIndex = "99999";
+    iframe.style.border = "none";
+    iframe.style.background = "white";
+    iframe.src = blobUrl;
+    
+    // Add close button
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕ סגור";
+    closeBtn.style.cssText = "position:fixed;top:10px;right:10px;z-index:100000;padding:8px 16px;background:#ef4444;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-family:Arial";
+    closeBtn.onclick = () => {
+      document.body.removeChild(iframe);
+      document.body.removeChild(closeBtn);
+      URL.revokeObjectURL(blobUrl);
+    };
+    
+    document.body.appendChild(iframe);
+    document.body.appendChild(closeBtn);
   } finally {
     document.body.removeChild(container);
   }
