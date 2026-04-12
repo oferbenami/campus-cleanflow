@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
+import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import {
   Users,
   AlertTriangle,
