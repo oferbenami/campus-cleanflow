@@ -93,6 +93,7 @@ function useEndOfDayData(date: string) {
 /* ─── Component ─── */
 
 const EndOfDayTab = () => {
+  const [selectedShift, setSelectedShift] = useState<"morning" | "evening">("morning");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const dateStr = selectedDate.toISOString().split("T")[0];
