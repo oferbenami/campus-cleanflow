@@ -160,9 +160,28 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
   const toggleSection = (key: string) =>
     setExpandedSections((p) => ({ ...p, [key]: !p[key] }));
 
-  // Validation
+  // Soft-warning: detect gaps without description (non-blocking)
+  const [showGapWarning, setShowGapWarning] = useState(false);
+  const [gapWarnings, setGapWarnings] = useState<string[]>([]);
+
+  const collectGapWarnings = (): string[] => {
+    const warnings: string[] = [];
+    const allSections: { list: { id: string; label: string; status: ItemStatus; gap_description: string }[]; sectionName: string }[] = [
+      { list: items, sectionName: "מוכנות אתר" },
+      { list: cleaningActions, sectionName: "פעולות ניקיון" },
+      { list: specialAreas, sectionName: "אזורים מיוחדים" },
+    ];
+    for (const { list, sectionName } of allSections) {
+      for (const item of list) {
+        if ((item.status === "partial" || item.status === "not_ok") && !item.gap_description?.trim()) {
+          warnings.push(`${sectionName} → ${item.label}: חסר תיאור פער`);
+        }
+      }
+    }
+    return warnings;
+  };
+
   const validate = (): string[] => {
-    // No blocking validation — allow submission even with gaps
     return [];
   };
 
