@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
+import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
 import {
   Users,
   AlertTriangle,
@@ -24,7 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
-import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
+
 import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
@@ -53,7 +54,7 @@ const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
-  const [showEndOfDay, setShowEndOfDay] = useState(false);
+  
   const [now, setNow] = useState(new Date());
   const [assignments, setAssignments] = useState(mockAssignments);
   const { reports, loading: shortageLoading, resolveReport } = useShortageReports();
@@ -341,27 +342,8 @@ const ManagerDashboard = () => {
         {activeTab === "incidentAnalytics" && <IncidentAnalyticsDashboard />}
 
         {activeTab === "endOfDay" && (
-          <div className="animate-slide-up space-y-6">
-            <div className="kpi-card">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp size={18} className="text-success" />
-                <h3 className="font-semibold">אחוז השלמה היום</h3>
-              </div>
-              <div className="flex items-center gap-4">
-                <p className="text-4xl font-bold mono">
-                  {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                </p>
-                <Progress value={(completedTasks / totalTasks) * 100} className="flex-1 h-3 [&>div]:bg-success" />
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowEndOfDay(true)}
-              className="btn-action-primary w-full flex items-center justify-center gap-3"
-            >
-              <BarChart3 size={20} />
-              ניתוח סוף יום
-            </button>
+          <div className="animate-slide-up">
+            <EndOfDayTab />
           </div>
         )}
 
@@ -390,10 +372,6 @@ const ManagerDashboard = () => {
         />
       )}
 
-      {/* End of Day analysis */}
-      {showEndOfDay && (
-        <ManagerEndOfDay onClose={() => setShowEndOfDay(false)} />
-      )}
     </div>
   );
 };
