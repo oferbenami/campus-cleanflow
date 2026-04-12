@@ -173,7 +173,8 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
     ];
     for (const { list, sectionName } of allSections) {
       for (const item of list) {
-        if ((item.status === "partial" || item.status === "not_ok") && !item.gap_description?.trim()) {
+        // Only warn for partial (yellow) without description — not_ok is blocked in validate()
+        if (item.status === "partial" && !item.gap_description?.trim()) {
           warnings.push(`${sectionName} → ${item.label}: חסר תיאור פער`);
         }
       }
@@ -182,7 +183,20 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
   };
 
   const validate = (): string[] => {
-    return [];
+    const errs: string[] = [];
+    const allSections: { list: { id: string; label: string; status: ItemStatus; gap_description: string }[]; sectionName: string }[] = [
+      { list: items, sectionName: "מוכנות אתר" },
+      { list: cleaningActions, sectionName: "פעולות ניקיון" },
+      { list: specialAreas, sectionName: "אזורים מיוחדים" },
+    ];
+    for (const { list, sectionName } of allSections) {
+      for (const item of list) {
+        if (item.status === "not_ok" && !item.gap_description?.trim()) {
+          errs.push(`${sectionName} → ${item.label}: חובה להזין תיאור פער כשהסטטוס אדום`);
+        }
+      }
+    }
+    return errs;
   };
 
   // Computed workforce summary
@@ -841,10 +855,13 @@ function StatusRow({
           <Textarea
             value={gap_description}
             onChange={(e) => onGapChange(e.target.value)}
-            placeholder="תיאור הפער..."
-            className="text-xs min-h-[40px]"
+            placeholder={status === "not_ok" ? "חובה — תאר את הפער..." : "תיאור הפער..."}
+            className={`text-xs min-h-[40px] ${status === "not_ok" && !gap_description?.trim() ? "border-destructive ring-1 ring-destructive/30" : ""}`}
             disabled={disabled}
           />
+          {status === "not_ok" && !gap_description?.trim() && (
+            <p className="text-[10px] text-destructive mt-0.5">חובה להזין תיאור פער כשהסטטוס אדום</p>
+          )}
         </div>
       )}
     </div>
