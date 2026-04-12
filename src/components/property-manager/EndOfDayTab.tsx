@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import {
-  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star,
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -11,6 +11,12 @@ import {
   PieChart, Pie, Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { he } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
 import SiteReadinessChecklist from "./SiteReadinessChecklist";
 import ShiftSiteScorePanel from "./ShiftSiteScorePanel";
@@ -85,9 +91,10 @@ function useEndOfDayData(date: string) {
 /* ─── Component ─── */
 
 const EndOfDayTab = () => {
-  const today = new Date().toISOString().split("T")[0];
-  const [selectedDate] = useState(today);
-  const { data, isLoading } = useEndOfDayData(selectedDate);
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState(today);
+  const dateStr = selectedDate.toISOString().split("T")[0];
+  const { data, isLoading } = useEndOfDayData(dateStr);
 
   const computed = useMemo(() => {
     if (!data) return null;
@@ -214,18 +221,38 @@ const EndOfDayTab = () => {
       <div className="task-card text-center py-16">
         <Clock size={48} className="mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-semibold mb-2">אין נתונים להיום</h3>
-        <p className="text-sm text-muted-foreground">לא נמצאו שיבוצים לתאריך {selectedDate}</p>
+        <p className="text-sm text-muted-foreground">לא נמצאו שיבוצים לתאריך {dateStr}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
-          <BarChart3 size={20} /> סיכום סוף יום
-        </h2>
-        <p className="text-sm text-muted-foreground">{new Date(selectedDate).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
+            <BarChart3 size={20} /> סיכום סוף יום
+          </h2>
+          <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, d בMMMM yyyy", { locale: he })}</p>
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <CalendarIcon size={16} />
+              {format(selectedDate, "dd/MM/yyyy")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => d && setSelectedDate(d)}
+              disabled={(d) => d > today}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {data.noAssignments && (
@@ -480,13 +507,13 @@ const EndOfDayTab = () => {
       </>)}
 
       {/* Shift & Site Score */}
-      <ShiftSiteScorePanel date={selectedDate} shiftType="morning" />
+      <ShiftSiteScorePanel date={dateStr} shiftType="morning" />
 
       {/* Site Readiness Checklist */}
-      <SiteReadinessChecklist date={selectedDate} />
+      <SiteReadinessChecklist date={dateStr} />
 
       {/* Executive Sensitive Areas */}
-      <ExecutiveAreasChecklist date={selectedDate} />
+      <ExecutiveAreasChecklist date={dateStr} />
     </div>
   );
 };
