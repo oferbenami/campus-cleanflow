@@ -228,8 +228,20 @@ const EndOfDayTab = () => {
         <p className="text-sm text-muted-foreground">{new Date(selectedDate).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
       </div>
 
+      {data.noAssignments && (
+        <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 flex items-start gap-3">
+          <AlertTriangle size={20} className="text-warning mt-0.5 shrink-0" />
+          <div>
+            <h4 className="font-semibold text-sm text-warning">דוח ללא משימות מוגדרות</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              לא שובצו משימות לתאריך זה. הדוח ממולא ללא נתוני ביצוע משימות — רק צ׳קליסט מוכנות ואזורי הנהלה.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      {computed && (
         <KpiCard icon={<CheckCircle2 size={22} className="text-success" />} value={`${computed.completionRate}%`} label="אחוז השלמה" />
         <KpiCard icon={<TrendingUp size={22} className="text-info" />} value={`${computed.efficiency}%`} label="יעילות" />
         <KpiCard icon={<Clock size={22} className="text-accent" />} value={`${computed.totalActual}`} label={`דק׳ בפועל / ${computed.totalPlanned} תקן`} />
