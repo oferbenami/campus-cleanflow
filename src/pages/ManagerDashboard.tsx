@@ -413,6 +413,27 @@ const ManagerDashboard = () => {
         />
       )}
 
+      {/* Floating End-of-Shift Report Button */}
+      <button
+        onClick={() => setShowEodSheet(true)}
+        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-all text-sm font-semibold"
+      >
+        <ClipboardCheck size={20} />
+        דיווח סיום משמרת
+      </button>
+
+      {/* End-of-Shift Sheet */}
+      <Sheet open={showEodSheet} onOpenChange={setShowEodSheet}>
+        <SheetContent side="bottom" className="h-[90vh] overflow-y-auto p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle className="text-right text-lg">דיווח סיום משמרת</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-6">
+            <EndOfDayTab />
+          </div>
+        </SheetContent>
+      </Sheet>
+
     </div>
   );
 };
