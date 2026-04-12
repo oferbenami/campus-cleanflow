@@ -267,31 +267,36 @@ export async function generateEodPdf(data: EodPdfData): Promise<void> {
     link.click();
     document.body.removeChild(link);
 
-    // Also try to open in new tab (may be blocked by popup blocker)
-    // Use an iframe as fallback for viewing
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.top = "0";
-    iframe.style.left = "0";
-    iframe.style.width = "100vw";
-    iframe.style.height = "100vh";
-    iframe.style.zIndex = "99999";
-    iframe.style.border = "none";
-    iframe.style.background = "white";
-    iframe.src = blobUrl;
+    // Use overlay to show PDF with close button
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:rgba(0,0,0,0.5);display:flex;flex-direction:column";
     
-    // Add close button
+    // Header bar with close button
+    const header = document.createElement("div");
+    header.style.cssText = "display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#1e293b;color:white;font-family:Arial,sans-serif";
+    
+    const title = document.createElement("span");
+    title.textContent = `דוח משמרת — ${data.date}`;
+    title.style.fontSize = "14px";
+    
     const closeBtn = document.createElement("button");
-    closeBtn.textContent = "✕ סגור";
-    closeBtn.style.cssText = "position:fixed;top:10px;right:10px;z-index:100000;padding:8px 16px;background:#ef4444;color:white;border:none;border-radius:6px;font-size:16px;cursor:pointer;font-family:Arial";
+    closeBtn.textContent = "✕ סגור תצוגה";
+    closeBtn.style.cssText = "padding:6px 18px;background:#ef4444;color:white;border:none;border-radius:6px;font-size:15px;cursor:pointer;font-family:Arial,sans-serif;font-weight:bold";
     closeBtn.onclick = () => {
-      document.body.removeChild(iframe);
-      document.body.removeChild(closeBtn);
+      document.body.removeChild(overlay);
       URL.revokeObjectURL(blobUrl);
     };
     
-    document.body.appendChild(iframe);
-    document.body.appendChild(closeBtn);
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    
+    const iframe = document.createElement("iframe");
+    iframe.style.cssText = "flex:1;border:none;background:white";
+    iframe.src = blobUrl;
+    
+    overlay.appendChild(header);
+    overlay.appendChild(iframe);
+    document.body.appendChild(overlay);
   } finally {
     document.body.removeChild(container);
   }

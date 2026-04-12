@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import {
-  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon, FileDown,
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon, FileDown, Sun, Moon,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
