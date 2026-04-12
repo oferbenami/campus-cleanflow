@@ -158,20 +158,9 @@ const ExecutiveAreasChecklist = ({ date, onSubmitComplete }: Props) => {
 
   // Validation
   const validate = (): boolean => {
-    const errors: Record<string, string[]> = {};
-    areas.forEach((area) => {
-      const areaErrors: string[] = [];
-      if (area.status !== "ok") {
-        if (!area.gap_description.trim()) {
-          areaErrors.push("תיאור הפער חובה כאשר הסטטוס אינו תקין");
-        }
-      }
-      if (areaErrors.length > 0) {
-        errors[area.area_name] = areaErrors;
-      }
-    });
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    // No blocking validation — allow submission even with gaps
+    setValidationErrors({});
+    return true;
   };
 
   // Save mutation
