@@ -205,6 +205,73 @@ const EndOfDayTab = () => {
     };
   }, [data]);
 
+  // PDF download handler
+  const handleDownloadPdf = useCallback(async () => {
+    try {
+      // Fetch exec area checks & checklist for the date
+      const [execRes, checklistRes] = await Promise.all([
+        supabase.from("executive_area_checks").select("*").eq("site_id", SITE_ID).eq("date", dateStr),
+        supabase.from("site_readiness_checklists").select("*").eq("site_id", SITE_ID).eq("date", dateStr).limit(1),
+      ]);
+
+      const execChecks = execRes.data || [];
+      const checklist = checklistRes.data?.[0];
+
+      const pdfData: EodPdfData = {
+        date: dateStr,
+        shiftType: "morning",
+        noAssignments: data?.noAssignments || true,
+        completionRate: computed?.completionRate || 0,
+        efficiency: computed?.efficiency || 0,
+        totalPlanned: computed?.totalPlanned || 0,
+        totalActual: computed?.totalActual || 0,
+        slaRate: computed?.slaRate || 100,
+        slaBreach: computed?.slaBreach || 0,
+        auditAvg: computed?.auditAvg || null,
+        staffRows: computed?.staffData?.map((s: any) => ({
+          name: s.profile.full_name,
+          done: s.done,
+          total: s.total,
+          planned: s.planned,
+          actual: s.actual,
+          breaches: s.breaches,
+          avgScore: s.avgScore,
+        })) || [],
+        taskRows: computed?.tasks?.map((t: any) => ({
+          taskName: t.task_name,
+          location: computed.locMap[t.location_id]?.name || "—",
+          standardMinutes: t.standard_minutes,
+          actualMinutes: t.actual_minutes,
+          variancePercent: t.variance_percent,
+          status: t.status,
+        })) || [],
+        execAreas: execChecks.map((e: any) => ({
+          label: e.area_label,
+          status: e.status,
+          cleanlinessLevel: e.cleanliness_level,
+          gapDescription: e.gap_description || "",
+          requiresReclean: e.requires_reclean,
+        })),
+        checklistItems: checklist
+          ? (checklist.checklist_items_json as any[]).map((c: any) => ({
+              label: c.label,
+              status: c.status,
+              gapDescription: c.gap_description || "",
+            }))
+          : [],
+        handoverNotes: checklist?.handover_notes || "",
+        totalWorkers: checklist?.total_workers || 0,
+        totalActualHours: checklist?.total_actual_hours || 0,
+        deviationFromPlan: checklist?.deviation_from_plan || 0,
+      };
+
+      generateEodPdf(pdfData);
+      toast.success("דוח PDF הורד בהצלחה");
+    } catch (err: any) {
+      toast.error("שגיאה ביצירת PDF: " + err.message);
+    }
+  }, [dateStr, data, computed]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
