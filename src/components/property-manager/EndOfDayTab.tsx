@@ -209,7 +209,7 @@ const EndOfDayTab = () => {
     );
   }
 
-  if (!data || !computed) {
+  if (!data) {
     return (
       <div className="task-card text-center py-16">
         <Clock size={48} className="mx-auto mb-4 text-muted-foreground" />
