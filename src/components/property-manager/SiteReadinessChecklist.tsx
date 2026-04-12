@@ -389,6 +389,18 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
       toast.error(`${validationErrors.length} שגיאות — יש לתקן לפני שליחה`);
       return;
     }
+    const warnings = collectGapWarnings();
+    if (warnings.length > 0) {
+      setGapWarnings(warnings);
+      setShowGapWarning(true);
+      return;
+    }
+    saveMutation.mutate();
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowGapWarning(false);
+    setGapWarnings([]);
     saveMutation.mutate();
   };
 
