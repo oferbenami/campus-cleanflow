@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Users,
   AlertTriangle,
@@ -21,6 +22,7 @@ import {
   Trophy,
   LayoutGrid,
   MoreHorizontal,
+  ClipboardCheck,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
