@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { logActivity } from "@/components/manager/ActivityTimeline";
 import EndOfDayTab from "@/components/property-manager/EndOfDayTab";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Users,
   AlertTriangle,
@@ -21,6 +22,7 @@ import {
   Trophy,
   LayoutGrid,
   MoreHorizontal,
+  ClipboardCheck,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
@@ -55,7 +57,7 @@ const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
-  
+  const [showEodSheet, setShowEodSheet] = useState(false);
   const [now, setNow] = useState(new Date());
   const [assignments, setAssignments] = useState(mockAssignments);
   const { reports, loading: shortageLoading, resolveReport } = useShortageReports();
@@ -410,6 +412,27 @@ const ManagerDashboard = () => {
           onClose={() => setDrillDown(null)}
         />
       )}
+
+      {/* Floating End-of-Shift Report Button */}
+      <button
+        onClick={() => setShowEodSheet(true)}
+        className="fixed bottom-6 left-6 z-50 flex items-center gap-2 bg-primary text-primary-foreground px-5 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-all text-sm font-semibold"
+      >
+        <ClipboardCheck size={20} />
+        דיווח סיום משמרת
+      </button>
+
+      {/* End-of-Shift Sheet */}
+      <Sheet open={showEodSheet} onOpenChange={setShowEodSheet}>
+        <SheetContent side="bottom" className="h-[90vh] overflow-y-auto p-0">
+          <SheetHeader className="px-6 pt-6 pb-2">
+            <SheetTitle className="text-right text-lg">דיווח סיום משמרת</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-6">
+            <EndOfDayTab />
+          </div>
+        </SheetContent>
+      </Sheet>
 
     </div>
   );
