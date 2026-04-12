@@ -160,9 +160,28 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
   const toggleSection = (key: string) =>
     setExpandedSections((p) => ({ ...p, [key]: !p[key] }));
 
-  // Validation
+  // Soft-warning: detect gaps without description (non-blocking)
+  const [showGapWarning, setShowGapWarning] = useState(false);
+  const [gapWarnings, setGapWarnings] = useState<string[]>([]);
+
+  const collectGapWarnings = (): string[] => {
+    const warnings: string[] = [];
+    const allSections: { list: { id: string; label: string; status: ItemStatus; gap_description: string }[]; sectionName: string }[] = [
+      { list: items, sectionName: "מוכנות אתר" },
+      { list: cleaningActions, sectionName: "פעולות ניקיון" },
+      { list: specialAreas, sectionName: "אזורים מיוחדים" },
+    ];
+    for (const { list, sectionName } of allSections) {
+      for (const item of list) {
+        if ((item.status === "partial" || item.status === "not_ok") && !item.gap_description?.trim()) {
+          warnings.push(`${sectionName} → ${item.label}: חסר תיאור פער`);
+        }
+      }
+    }
+    return warnings;
+  };
+
   const validate = (): string[] => {
-    // No blocking validation — allow submission even with gaps
     return [];
   };
 
@@ -370,6 +389,18 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
       toast.error(`${validationErrors.length} שגיאות — יש לתקן לפני שליחה`);
       return;
     }
+    const warnings = collectGapWarnings();
+    if (warnings.length > 0) {
+      setGapWarnings(warnings);
+      setShowGapWarning(true);
+      return;
+    }
+    saveMutation.mutate();
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowGapWarning(false);
+    setGapWarnings([]);
     saveMutation.mutate();
   };
 
@@ -697,6 +728,43 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
           <p className="text-xs text-muted-foreground mt-1">
             {workforceSummary.totalWorkers} עובדים · {workforceSummary.totalHours.toFixed(1)} שעות
           </p>
+        </div>
+      )}
+
+      {/* Gap warning dialog (non-blocking) */}
+      {showGapWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card rounded-xl shadow-lg max-w-sm w-full p-5 space-y-4 border border-border">
+            <div className="flex items-center gap-2 text-warning">
+              <AlertTriangle size={20} />
+              <h3 className="font-bold text-sm">פערים ללא תיאור</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              נמצאו פריטים עם סטטוס חריג ללא תיאור פער. ניתן להמשיך בכל זאת.
+            </p>
+            <ul className="space-y-1 max-h-40 overflow-y-auto">
+              {gapWarnings.map((w, i) => (
+                <li key={i} className="text-xs text-warning flex items-start gap-1.5">
+                  <MinusCircle size={12} className="mt-0.5 shrink-0" />
+                  {w}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGapWarning(false)}
+                className="flex-1 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+              >
+                חזור ותקן
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+              >
+                הגש בכל זאת
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
