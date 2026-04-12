@@ -624,13 +624,13 @@ const EndOfDayTab = () => {
       </>)}
 
       {/* Shift & Site Score */}
-      <ShiftSiteScorePanel date={dateStr} shiftType="morning" />
+      <ShiftSiteScorePanel date={dateStr} shiftType={selectedShift} />
 
       {/* Site Readiness Checklist */}
-      <SiteReadinessChecklist date={dateStr} />
+      <SiteReadinessChecklist date={dateStr} shiftType={selectedShift} />
 
       {/* Executive Sensitive Areas */}
-      <ExecutiveAreasChecklist date={dateStr} />
+      <ExecutiveAreasChecklist date={dateStr} shiftType={selectedShift} />
     </div>
   );
 };
