@@ -477,6 +477,7 @@ const EndOfDayTab = () => {
           </table>
         </div>
       </div>
+      </>)}
 
       {/* Shift & Site Score */}
       <ShiftSiteScorePanel date={selectedDate} shiftType="morning" />
