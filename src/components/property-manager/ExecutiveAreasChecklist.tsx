@@ -85,6 +85,7 @@ function useExecKpis() {
 
 interface Props {
   date?: string;
+  shiftType?: string;
   onSubmitComplete?: () => void;
 }
 

@@ -93,6 +93,7 @@ function useEndOfDayData(date: string) {
 /* ─── Component ─── */
 
 const EndOfDayTab = () => {
+  const [selectedShift, setSelectedShift] = useState<"morning" | "evening">("morning");
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const dateStr = selectedDate.toISOString().split("T")[0];
@@ -306,6 +307,31 @@ const EndOfDayTab = () => {
           <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, d בMMMM yyyy", { locale: he })}</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Shift selector */}
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setSelectedShift("morning")}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors",
+                selectedShift === "morning"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <Sun size={14} /> בוקר
+            </button>
+            <button
+              onClick={() => setSelectedShift("evening")}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1.5 text-xs font-medium transition-colors",
+                selectedShift === "evening"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted"
+              )}
+            >
+              <Moon size={14} /> ערב
+            </button>
+          </div>
           <Popover open={pdfShiftOpen} onOpenChange={setPdfShiftOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
@@ -598,13 +624,13 @@ const EndOfDayTab = () => {
       </>)}
 
       {/* Shift & Site Score */}
-      <ShiftSiteScorePanel date={dateStr} shiftType="morning" />
+      <ShiftSiteScorePanel date={dateStr} shiftType={selectedShift} />
 
       {/* Site Readiness Checklist */}
-      <SiteReadinessChecklist date={dateStr} />
+      <SiteReadinessChecklist date={dateStr} shiftType={selectedShift} />
 
       {/* Executive Sensitive Areas */}
-      <ExecutiveAreasChecklist date={dateStr} />
+      <ExecutiveAreasChecklist date={dateStr} shiftType={selectedShift} />
     </div>
   );
 };
