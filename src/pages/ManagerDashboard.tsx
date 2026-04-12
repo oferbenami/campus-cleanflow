@@ -25,7 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
-import ManagerEndOfDay from "@/components/manager/ManagerEndOfDay";
+
 import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
 import { WorkloadHeatPanel, SlaRiskPanel, VarianceWidget, WorkloadBalancingPanel, computeWorkerBalances } from "@/components/manager/SchedulingWidgets";
@@ -54,7 +54,7 @@ const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
-  const [showEndOfDay, setShowEndOfDay] = useState(false);
+  
   const [now, setNow] = useState(new Date());
   const [assignments, setAssignments] = useState(mockAssignments);
   const { reports, loading: shortageLoading, resolveReport } = useShortageReports();
@@ -372,10 +372,6 @@ const ManagerDashboard = () => {
         />
       )}
 
-      {/* End of Day analysis */}
-      {showEndOfDay && (
-        <ManagerEndOfDay onClose={() => setShowEndOfDay(false)} />
-      )}
     </div>
   );
 };
