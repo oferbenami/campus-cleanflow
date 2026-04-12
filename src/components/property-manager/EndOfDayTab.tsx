@@ -241,7 +241,8 @@ const EndOfDayTab = () => {
       )}
 
       {/* KPIs */}
-      {computed && (
+      {computed && (<>
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <KpiCard icon={<CheckCircle2 size={22} className="text-success" />} value={`${computed.completionRate}%`} label="אחוז השלמה" />
         <KpiCard icon={<TrendingUp size={22} className="text-info" />} value={`${computed.efficiency}%`} label="יעילות" />
         <KpiCard icon={<Clock size={22} className="text-accent" />} value={`${computed.totalActual}`} label={`דק׳ בפועל / ${computed.totalPlanned} תקן`} />
