@@ -28,43 +28,55 @@ function useEndOfDayData(date: string) {
         .eq("site_id", SITE_ID)
         .eq("date", date);
 
-      if (!assignments?.length) return null;
+      const hasAssignments = (assignments?.length || 0) > 0;
 
-      const assignmentIds = assignments.map((a) => a.id);
-      const staffIds = [...new Set(assignments.map((a) => a.staff_user_id))];
+      let tasks: any[] = [];
+      let profiles: any[] = [];
+      let locations: any[] = [];
+      let audits: any[] = [];
 
-      // 2. Assigned tasks
-      const { data: tasks } = await supabase
-        .from("assigned_tasks")
-        .select("id, assignment_id, task_name, location_id, standard_minutes, actual_minutes, variance_percent, status, started_at, finished_at, priority, sequence_order")
-        .in("assignment_id", assignmentIds);
+      if (hasAssignments) {
+        const assignmentIds = assignments!.map((a) => a.id);
+        const staffIds = [...new Set(assignments!.map((a) => a.staff_user_id))];
 
-      // 3. Staff profiles
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_initials")
-        .in("id", staffIds);
+        // 2. Assigned tasks
+        const { data: tasksData } = await supabase
+          .from("assigned_tasks")
+          .select("id, assignment_id, task_name, location_id, standard_minutes, actual_minutes, variance_percent, status, started_at, finished_at, priority, sequence_order")
+          .in("assignment_id", assignmentIds);
+        tasks = tasksData || [];
 
-      // 4. Location names
-      const locationIds = [...new Set((tasks || []).map((t) => t.location_id))];
-      const { data: locations } = await supabase
-        .from("campus_locations")
-        .select("id, name, space_type")
-        .in("id", locationIds.length ? locationIds : ["_"]);
+        // 3. Staff profiles
+        const { data: profilesData } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_initials")
+          .in("id", staffIds);
+        profiles = profilesData || [];
 
-      // 5. Audit inspections for these tasks
-      const taskIds = (tasks || []).map((t) => t.id);
-      const { data: audits } = await supabase
-        .from("audit_inspections")
-        .select("id, assigned_task_id, total_score, scores_json")
-        .in("assigned_task_id", taskIds.length ? taskIds : ["_"]);
+        // 4. Location names
+        const locationIds = [...new Set(tasks.map((t: any) => t.location_id))];
+        const { data: locationsData } = await supabase
+          .from("campus_locations")
+          .select("id, name, space_type")
+          .in("id", locationIds.length ? locationIds : ["_"]);
+        locations = locationsData || [];
+
+        // 5. Audit inspections for these tasks
+        const taskIds = tasks.map((t: any) => t.id);
+        const { data: auditsData } = await supabase
+          .from("audit_inspections")
+          .select("id, assigned_task_id, total_score, scores_json")
+          .in("assigned_task_id", taskIds.length ? taskIds : ["_"]);
+        audits = auditsData || [];
+      }
 
       return {
         assignments: assignments || [],
-        tasks: tasks || [],
-        profiles: profiles || [],
-        locations: locations || [],
-        audits: audits || [],
+        tasks,
+        profiles,
+        locations,
+        audits,
+        noAssignments: !hasAssignments,
       };
     },
   });
