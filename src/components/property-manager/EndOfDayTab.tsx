@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import {
-  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon, FileDown,
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon, FileDown, Sun, Moon,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -205,13 +205,14 @@ const EndOfDayTab = () => {
     };
   }, [data]);
 
-  // PDF download handler
-  const handleDownloadPdf = useCallback(async () => {
+  const [pdfShiftOpen, setPdfShiftOpen] = useState(false);
+
+  const downloadPdfForShift = useCallback(async (shiftType: "morning" | "evening") => {
+    setPdfShiftOpen(false);
     try {
-      // Fetch exec area checks & checklist for the date
       const [execRes, checklistRes] = await Promise.all([
         supabase.from("executive_area_checks").select("*").eq("site_id", SITE_ID).eq("date", dateStr),
-        supabase.from("site_readiness_checklists").select("*").eq("site_id", SITE_ID).eq("date", dateStr).limit(1),
+        supabase.from("site_readiness_checklists").select("*").eq("site_id", SITE_ID).eq("date", dateStr).eq("shift_type", shiftType).limit(1),
       ]);
 
       const execChecks = execRes.data || [];
@@ -219,7 +220,7 @@ const EndOfDayTab = () => {
 
       const pdfData: EodPdfData = {
         date: dateStr,
-        shiftType: "morning",
+        shiftType,
         noAssignments: data?.noAssignments || true,
         completionRate: computed?.completionRate || 0,
         efficiency: computed?.efficiency || 0,
@@ -266,7 +267,7 @@ const EndOfDayTab = () => {
       };
 
       generateEodPdf(pdfData);
-      toast.success("דוח PDF הורד בהצלחה");
+      toast.success("דוח PDF נוצר בהצלחה");
     } catch (err: any) {
       toast.error("שגיאה ביצירת PDF: " + err.message);
     }
@@ -305,10 +306,25 @@ const EndOfDayTab = () => {
           <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, d בMMMM yyyy", { locale: he })}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadPdf}>
-            <FileDown size={16} />
-            הורד PDF
-          </Button>
+          <Popover open={pdfShiftOpen} onOpenChange={setPdfShiftOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <FileDown size={16} />
+                הורד PDF
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="end">
+              <p className="text-xs text-muted-foreground mb-2 text-center">בחר סוג משמרת</p>
+              <div className="flex flex-col gap-1">
+                <Button size="sm" variant="ghost" className="justify-start gap-2" onClick={() => downloadPdfForShift("morning")}>
+                  <Sun size={14} /> משמרת בוקר
+                </Button>
+                <Button size="sm" variant="ghost" className="justify-start gap-2" onClick={() => downloadPdfForShift("evening")}>
+                  <Moon size={14} /> משמרת ערב
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
