@@ -221,7 +221,7 @@ const EndOfDayTab = () => {
       <div className="task-card text-center py-16">
         <Clock size={48} className="mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-lg font-semibold mb-2">אין נתונים להיום</h3>
-        <p className="text-sm text-muted-foreground">לא נמצאו שיבוצים לתאריך {selectedDate}</p>
+        <p className="text-sm text-muted-foreground">לא נמצאו שיבוצים לתאריך {dateStr}</p>
       </div>
     );
   }
@@ -487,13 +487,13 @@ const EndOfDayTab = () => {
       </>)}
 
       {/* Shift & Site Score */}
-      <ShiftSiteScorePanel date={selectedDate} shiftType="morning" />
+      <ShiftSiteScorePanel date={dateStr} shiftType="morning" />
 
       {/* Site Readiness Checklist */}
-      <SiteReadinessChecklist date={selectedDate} />
+      <SiteReadinessChecklist date={dateStr} />
 
       {/* Executive Sensitive Areas */}
-      <ExecutiveAreasChecklist date={selectedDate} />
+      <ExecutiveAreasChecklist date={dateStr} />
     </div>
   );
 };
