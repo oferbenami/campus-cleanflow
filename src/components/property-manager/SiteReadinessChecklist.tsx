@@ -855,10 +855,13 @@ function StatusRow({
           <Textarea
             value={gap_description}
             onChange={(e) => onGapChange(e.target.value)}
-            placeholder="תיאור הפער..."
-            className="text-xs min-h-[40px]"
+            placeholder={status === "not_ok" ? "חובה — תאר את הפער..." : "תיאור הפער..."}
+            className={`text-xs min-h-[40px] ${status === "not_ok" && !gap_description?.trim() ? "border-destructive ring-1 ring-destructive/30" : ""}`}
             disabled={disabled}
           />
+          {status === "not_ok" && !gap_description?.trim() && (
+            <p className="text-[10px] text-destructive mt-0.5">חובה להזין תיאור פער כשהסטטוס אדום</p>
+          )}
         </div>
       )}
     </div>
