@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import {
-  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star,
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -11,6 +11,12 @@ import {
   PieChart, Pie, Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { he } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
 import SiteReadinessChecklist from "./SiteReadinessChecklist";
 import ShiftSiteScorePanel from "./ShiftSiteScorePanel";
