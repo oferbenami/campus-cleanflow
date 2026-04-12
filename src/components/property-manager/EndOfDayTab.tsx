@@ -325,6 +325,7 @@ const EndOfDayTab = () => {
               </div>
             </PopoverContent>
           </Popover>
+          <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <CalendarIcon size={16} />
