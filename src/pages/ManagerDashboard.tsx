@@ -342,27 +342,8 @@ const ManagerDashboard = () => {
         {activeTab === "incidentAnalytics" && <IncidentAnalyticsDashboard />}
 
         {activeTab === "endOfDay" && (
-          <div className="animate-slide-up space-y-6">
-            <div className="kpi-card">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp size={18} className="text-success" />
-                <h3 className="font-semibold">אחוז השלמה היום</h3>
-              </div>
-              <div className="flex items-center gap-4">
-                <p className="text-4xl font-bold mono">
-                  {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
-                </p>
-                <Progress value={(completedTasks / totalTasks) * 100} className="flex-1 h-3 [&>div]:bg-success" />
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowEndOfDay(true)}
-              className="btn-action-primary w-full flex items-center justify-center gap-3"
-            >
-              <BarChart3 size={20} />
-              ניתוח סוף יום
-            </button>
+          <div className="animate-slide-up">
+            <EndOfDayTab />
           </div>
         )}
 
