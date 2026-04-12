@@ -228,11 +228,31 @@ const EndOfDayTab = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
-          <BarChart3 size={20} /> סיכום סוף יום
-        </h2>
-        <p className="text-sm text-muted-foreground">{new Date(selectedDate).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-lg font-bold flex items-center gap-2 mb-1">
+            <BarChart3 size={20} /> סיכום סוף יום
+          </h2>
+          <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, d בMMMM yyyy", { locale: he })}</p>
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <CalendarIcon size={16} />
+              {format(selectedDate, "dd/MM/yyyy")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => d && setSelectedDate(d)}
+              disabled={(d) => d > today}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {data.noAssignments && (
