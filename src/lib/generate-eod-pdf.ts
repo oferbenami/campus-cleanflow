@@ -255,7 +255,12 @@ export async function generateEodPdf(data: EodPdfData): Promise<void> {
       heightLeft -= pageHeight;
     }
 
-    pdf.save(`shift-report-${data.date}.pdf`);
+    // Open PDF in new tab for viewing
+    const pdfBlob = pdf.output("blob");
+    const blobUrl = URL.createObjectURL(pdfBlob);
+    window.open(blobUrl, "_blank");
+    // Clean up blob URL after a delay
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
   } finally {
     document.body.removeChild(container);
   }
