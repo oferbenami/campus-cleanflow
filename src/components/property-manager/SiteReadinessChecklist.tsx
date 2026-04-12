@@ -162,40 +162,8 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
 
   // Validation
   const validate = (): string[] => {
-    const errs: string[] = [];
-
-    items.forEach((item) => {
-      if (item.status !== "ok" && item.status !== "na" && !item.gap_description.trim()) {
-        errs.push(`פריט "${item.label}" — תיאור פער חובה`);
-      }
-    });
-
-    cleaningActions.forEach((a) => {
-      if (a.status !== "ok" && a.status !== "na" && !a.gap_description.trim()) {
-        errs.push(`פעולת ניקיון "${a.label}" — תיאור פער חובה`);
-      }
-    });
-
-    specialAreas.forEach((a) => {
-      if (a.status !== "ok" && a.status !== "na" && !a.gap_description.trim()) {
-        errs.push(`אזור "${a.label}" — תיאור פער חובה`);
-      }
-    });
-
-    if (workforce.length === 0) {
-      errs.push("יש למלא את טבלת כוח האדם (לפחות עובד אחד)");
-    }
-    workforce.forEach((w, i) => {
-      if (!w.worker_name.trim()) errs.push(`שורה ${i + 1} בטבלת עובדים — שם חסר`);
-      if (!w.start_time) errs.push(`שורה ${i + 1} בטבלת עובדים — שעת התחלה חסרה`);
-      if (!w.end_time) errs.push(`שורה ${i + 1} בטבלת עובדים — שעת סיום חסרה`);
-    });
-
-    if (!handoverNotes.trim()) {
-      errs.push("הערות למשמרת הבאה — שדה חובה");
-    }
-
-    return errs;
+    // No blocking validation — allow submission even with gaps
+    return [];
   };
 
   // Computed workforce summary
