@@ -205,13 +205,14 @@ const EndOfDayTab = () => {
     };
   }, [data]);
 
-  // PDF download handler
-  const handleDownloadPdf = useCallback(async () => {
+  const [pdfShiftOpen, setPdfShiftOpen] = useState(false);
+
+  const downloadPdfForShift = useCallback(async (shiftType: "morning" | "evening") => {
+    setPdfShiftOpen(false);
     try {
-      // Fetch exec area checks & checklist for the date
       const [execRes, checklistRes] = await Promise.all([
         supabase.from("executive_area_checks").select("*").eq("site_id", SITE_ID).eq("date", dateStr),
-        supabase.from("site_readiness_checklists").select("*").eq("site_id", SITE_ID).eq("date", dateStr).limit(1),
+        supabase.from("site_readiness_checklists").select("*").eq("site_id", SITE_ID).eq("date", dateStr).eq("shift_type", shiftType).limit(1),
       ]);
 
       const execChecks = execRes.data || [];
@@ -219,7 +220,7 @@ const EndOfDayTab = () => {
 
       const pdfData: EodPdfData = {
         date: dateStr,
-        shiftType: "morning",
+        shiftType,
         noAssignments: data?.noAssignments || true,
         completionRate: computed?.completionRate || 0,
         efficiency: computed?.efficiency || 0,
@@ -266,7 +267,7 @@ const EndOfDayTab = () => {
       };
 
       generateEodPdf(pdfData);
-      toast.success("דוח PDF הורד בהצלחה");
+      toast.success("דוח PDF נוצר בהצלחה");
     } catch (err: any) {
       toast.error("שגיאה ביצירת PDF: " + err.message);
     }
