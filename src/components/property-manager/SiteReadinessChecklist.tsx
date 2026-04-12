@@ -730,6 +730,43 @@ const SiteReadinessChecklist = ({ date, shiftType = "morning" }: Props) => {
           </p>
         </div>
       )}
+
+      {/* Gap warning dialog (non-blocking) */}
+      {showGapWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card rounded-xl shadow-lg max-w-sm w-full p-5 space-y-4 border border-border">
+            <div className="flex items-center gap-2 text-warning">
+              <AlertTriangle size={20} />
+              <h3 className="font-bold text-sm">פערים ללא תיאור</h3>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              נמצאו פריטים עם סטטוס חריג ללא תיאור פער. ניתן להמשיך בכל זאת.
+            </p>
+            <ul className="space-y-1 max-h-40 overflow-y-auto">
+              {gapWarnings.map((w, i) => (
+                <li key={i} className="text-xs text-warning flex items-start gap-1.5">
+                  <MinusCircle size={12} className="mt-0.5 shrink-0" />
+                  {w}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowGapWarning(false)}
+                className="flex-1 py-2 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+              >
+                חזור ותקן
+              </button>
+              <button
+                onClick={handleConfirmSubmit}
+                className="flex-1 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
+              >
+                הגש בכל זאת
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
