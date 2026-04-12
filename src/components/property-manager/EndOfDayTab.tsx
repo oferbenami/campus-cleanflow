@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { SITE_ID } from "@/hooks/usePropertyManagerData";
 import {
-  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon,
+  CheckCircle2, AlertTriangle, Clock, TrendingUp, BarChart3, Users, Timer, Star, CalendarIcon, FileDown,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -19,6 +19,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ExecutiveAreasChecklist from "./ExecutiveAreasChecklist";
 import SiteReadinessChecklist from "./SiteReadinessChecklist";
+import { generateEodPdf, type EodPdfData } from "@/lib/generate-eod-pdf";
+import { toast } from "sonner";
 import ShiftSiteScorePanel from "./ShiftSiteScorePanel";
 
 /* ─── Data fetching ─── */
