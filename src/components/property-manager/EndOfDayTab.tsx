@@ -306,11 +306,25 @@ const EndOfDayTab = () => {
           <p className="text-sm text-muted-foreground">{format(selectedDate, "EEEE, d בMMMM yyyy", { locale: he })}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadPdf}>
-            <FileDown size={16} />
-            הורד PDF
-          </Button>
-          <Popover>
+          <Popover open={pdfShiftOpen} onOpenChange={setPdfShiftOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <FileDown size={16} />
+                הורד PDF
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-2" align="end">
+              <p className="text-xs text-muted-foreground mb-2 text-center">בחר סוג משמרת</p>
+              <div className="flex flex-col gap-1">
+                <Button size="sm" variant="ghost" className="justify-start gap-2" onClick={() => downloadPdfForShift("morning")}>
+                  <Sun size={14} /> משמרת בוקר
+                </Button>
+                <Button size="sm" variant="ghost" className="justify-start gap-2" onClick={() => downloadPdfForShift("evening")}>
+                  <Moon size={14} /> משמרת ערב
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2">
                 <CalendarIcon size={16} />
