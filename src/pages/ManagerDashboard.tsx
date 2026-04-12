@@ -57,7 +57,7 @@ const ManagerDashboard = () => {
   const [activeTab, setActiveTab] = useState<ManagerTab>("overview");
   const [selectedShift] = useState<"morning" | "evening">("morning");
   const [drillDown, setDrillDown] = useState<DrillDown>(null);
-  
+  const [showEodSheet, setShowEodSheet] = useState(false);
   const [now, setNow] = useState(new Date());
   const [assignments, setAssignments] = useState(mockAssignments);
   const { reports, loading: shortageLoading, resolveReport } = useShortageReports();
