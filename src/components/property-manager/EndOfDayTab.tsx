@@ -91,9 +91,10 @@ function useEndOfDayData(date: string) {
 /* ─── Component ─── */
 
 const EndOfDayTab = () => {
-  const today = new Date().toISOString().split("T")[0];
-  const [selectedDate] = useState(today);
-  const { data, isLoading } = useEndOfDayData(selectedDate);
+  const today = new Date();
+  const [selectedDate, setSelectedDate] = useState(today);
+  const dateStr = selectedDate.toISOString().split("T")[0];
+  const { data, isLoading } = useEndOfDayData(dateStr);
 
   const computed = useMemo(() => {
     if (!data) return null;
