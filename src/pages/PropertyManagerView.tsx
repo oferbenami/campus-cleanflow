@@ -11,7 +11,9 @@ import {
   Package,
   ShieldAlert,
   Bell,
+  Printer,
 } from "lucide-react";
+import { generateManualFormPdf } from "@/lib/generate-manual-form-pdf";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
