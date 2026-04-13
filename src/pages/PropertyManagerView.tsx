@@ -77,6 +77,13 @@ const PropertyManagerView = () => {
                 <p className="text-xs opacity-75">תאריך</p>
                 <p className="text-sm font-semibold mono">{todayFormatted}</p>
               </div>
+              <button
+                onClick={() => generateManualFormPdf()}
+                className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+                title="הורד טופס דיווח ידני"
+              >
+                <Printer size={18} />
+              </button>
               <button onClick={async () => { await signOut(); navigate("/auth", { replace: true }); }} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
                 <LogOut size={18} />
               </button>
