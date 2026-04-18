@@ -3,12 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Users, Trash2, Shield, Loader2 } from "lucide-react";
+import { Users, Trash2, Shield, Loader2, UserPlus } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type AppRole = Database["public"]["Enums"]["app_role"];
@@ -43,10 +45,16 @@ const UserManagement = () => {
   const [deleting, setDeleting] = useState(false);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
 
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newFullName, setNewFullName] = useState("");
+  const [newRole, setNewRole] = useState<AppRole>("cleaning_staff");
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch profiles and roles
       const { data: profiles, error: pErr } = await supabase
         .from("profiles")
         .select("id, full_name, avatar_initials, created_at");
@@ -67,7 +75,6 @@ const UserManagement = () => {
         role: roleMap.get(p.id) || "cleaning_staff",
       }));
 
-      // Sort: managers first, then by name
       merged.sort((a, b) => {
         const order: Record<AppRole, number> = { campus_manager: 0, property_manager: 1, supervisor: 2, cleaning_staff: 3 };
         return (order[a.role] - order[b.role]) || a.full_name.localeCompare(b.full_name, "he");
@@ -129,6 +136,34 @@ const UserManagement = () => {
     }
   };
 
+  const handleCreate = async () => {
+    if (!newEmail || !newPassword || !newFullName) {
+      toast({ title: "יש למלא את כל השדות", variant: "destructive" });
+      return;
+    }
+    setCreating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: { email: newEmail, password: newPassword, full_name: newFullName, role: newRole },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({ title: `${newFullName} נוצר בהצלחה` });
+      setCreateOpen(false);
+      setNewEmail("");
+      setNewPassword("");
+      setNewFullName("");
+      setNewRole("cleaning_staff");
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: "שגיאה ביצירת משתמש", description: err.message, variant: "destructive" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       <Card>
@@ -137,6 +172,10 @@ const UserManagement = () => {
             <Users size={20} />
             ניהול משתמשים
             <Badge variant="secondary" className="mr-auto">{users.length} משתמשים</Badge>
+            <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
+              <UserPlus size={15} />
+              משתמש חדש
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -212,9 +251,83 @@ const UserManagement = () => {
         </CardContent>
       </Card>
 
+      {/* Create user dialog */}
+      <Dialog open={createOpen} onOpenChange={(o) => !creating && setCreateOpen(o)}>
+        <DialogContent className="sm:max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus size={20} />
+              יצירת משתמש חדש
+            </DialogTitle>
+            <DialogDescription>
+              המשתמש יוכל להתחבר מיד עם הפרטים שתזין כאן.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-name">שם מלא</Label>
+              <Input
+                id="new-name"
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                placeholder="ישראל ישראלי"
+                disabled={creating}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-email">כתובת מייל</Label>
+              <Input
+                id="new-email"
+                type="email"
+                dir="ltr"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="user@example.com"
+                disabled={creating}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">סיסמה</Label>
+              <Input
+                id="new-password"
+                type="password"
+                dir="ltr"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="לפחות 6 תווים"
+                minLength={6}
+                disabled={creating}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>תפקיד</Label>
+              <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)} disabled={creating}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(ROLE_LABELS) as AppRole[]).map((r) => (
+                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>
+              ביטול
+            </Button>
+            <Button onClick={handleCreate} disabled={creating}>
+              {creating ? <Loader2 className="animate-spin" size={16} /> : <UserPlus size={16} />}
+              צור משתמש
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Delete confirmation dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => !deleting && setDeleteTarget(null)}>
-        <DialogContent>
+        <DialogContent dir="rtl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <Shield size={20} />
