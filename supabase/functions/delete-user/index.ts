@@ -28,14 +28,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if caller is a manager
-    const { data: roleData } = await callerClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .single();
+    const { data: myRole } = await callerClient.rpc("get_my_role");
 
-    if (!roleData || !["campus_manager", "property_manager"].includes(roleData.role)) {
+    if (!myRole || !["campus_manager", "property_manager"].includes(myRole)) {
       return new Response(JSON.stringify({ error: "Forbidden: manager role required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

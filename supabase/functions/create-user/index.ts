@@ -27,13 +27,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: roleData } = await callerClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .single();
+    const { data: myRole } = await callerClient.rpc("get_my_role");
 
-    if (!roleData || roleData.role !== "campus_manager") {
+    if (myRole !== "campus_manager") {
       return new Response(JSON.stringify({ error: "Forbidden: campus_manager role required" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

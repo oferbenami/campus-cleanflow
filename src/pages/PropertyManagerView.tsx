@@ -12,8 +12,10 @@ import {
   ShieldAlert,
   Bell,
   Printer,
+  FileDown,
 } from "lucide-react";
 import { generateManualFormPdf } from "@/lib/generate-manual-form-pdf";
+import ManualShiftReportDialog from "@/components/shared/ManualShiftReportDialog";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
@@ -26,6 +28,7 @@ type PMTab = "staff" | "workpackages" | "planning" | "assign" | "controlBoard" |
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("controlBoard");
+  const [showManualReport, setShowManualReport] = useState(false);
   const { signOut } = useAuth();
   const navigate = useNavigate();
 
@@ -78,9 +81,16 @@ const PropertyManagerView = () => {
                 <p className="text-sm font-semibold mono">{todayFormatted}</p>
               </div>
               <button
+                onClick={() => setShowManualReport(true)}
+                className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
+                title="דיווח ידני על סיום משמרת"
+              >
+                <FileDown size={18} />
+              </button>
+              <button
                 onClick={() => generateManualFormPdf()}
                 className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors"
-                title="הורד טופס דיווח ידני"
+                title="הורד טופס ריק להדפסה"
               >
                 <Printer size={18} />
               </button>
@@ -121,6 +131,8 @@ const PropertyManagerView = () => {
         {activeTab === "incidents" && <IncidentDispatchBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
       </div>
+
+      <ManualShiftReportDialog open={showManualReport} onClose={() => setShowManualReport(false)} />
     </div>
   );
 };

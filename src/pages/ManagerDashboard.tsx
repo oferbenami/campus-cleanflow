@@ -12,6 +12,7 @@ import {
   TrendingUp,
   BarChart3,
   FileText,
+  FileDown,
   ChevronLeft,
   PackageOpen,
   Gauge,
@@ -28,6 +29,7 @@ import { Progress } from "@/components/ui/progress";
 import { mockAssignments, mockStaff, type TaskAssignment } from "@/data/mockData";
 import { getPlannedMinutesUpToNow } from "@/data/staffSchedule";
 import DrillDownPanel from "@/components/manager/DrillDownPanel";
+import ManualShiftReportDialog from "@/components/shared/ManualShiftReportDialog";
 
 import TimeStandardsValidation from "@/components/manager/TimeStandardsValidation";
 import StaffTrackingGrid from "@/components/manager/StaffTrackingGrid";
@@ -110,6 +112,7 @@ const ManagerDashboard = () => {
   }, [assignments]);
 
   const [moreOpen, setMoreOpen] = useState(false);
+  const [showManualReport, setShowManualReport] = useState(false);
 
   const primaryTabs: { key: ManagerTab; icon: React.ElementType; label: string }[] = [
     { key: "overview", icon: Gauge, label: "סקירה" },
@@ -151,6 +154,9 @@ const ManagerDashboard = () => {
                 ערב
               </button>
             </div>
+            <button onClick={() => setShowManualReport(true)} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="דיווח ידני על סיום משמרת">
+              <FileDown size={18} />
+            </button>
             <button onClick={async () => { await signOut(); navigate("/auth", { replace: true }); }} className="p-2 rounded-lg bg-primary-foreground/10 hover:bg-primary-foreground/20 transition-colors" title="התנתק">
               <LogOut size={18} />
             </button>
@@ -434,6 +440,7 @@ const ManagerDashboard = () => {
         </SheetContent>
       </Sheet>
 
+      <ManualShiftReportDialog open={showManualReport} onClose={() => setShowManualReport(false)} />
     </div>
   );
 };
