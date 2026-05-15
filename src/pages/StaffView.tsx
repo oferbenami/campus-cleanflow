@@ -18,9 +18,15 @@ import {
   Trophy,
   Calendar,
   Wrench as WrenchIcon,
+  LogIn,
+  LogOut as ShiftEndIcon,
+  Sun,
+  Moon,
+  Package,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nContext";
 import { useStaffAssignment } from "@/hooks/useStaffAssignment";
+import { useMyPositionAssignment } from "@/hooks/useStaffingPositions";
 import LiveTaskTile, { getEscalationLevel } from "@/components/staff/LiveTaskTile";
 import NfcScanSimulator from "@/components/staff/NfcScanSimulator";
 import EndOfDayAnalysis from "@/components/staff/EndOfDayAnalysis";
@@ -37,13 +43,15 @@ import { useIncidents } from "@/hooks/useIncidents";
 import IncidentTaskTile from "@/components/staff/IncidentTaskTile";
 import breakIllustration from "@/assets/break-illustration.png";
 
-type StaffScreen = "welcome" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points" | "breakfix";
+type StaffScreen = "welcome" | "checkin" | "home" | "taskDetail" | "analysis" | "shortage" | "taskBoard" | "shifts" | "absence" | "points" | "breakfix";
 type ScanMode = { type: "entry" | "exit"; taskId: string; expectedUid: string | null; locationName: string } | null;
 
 const StaffView = () => {
   const { t } = useI18n();
   const { signOut, user } = useAuth();
-  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, pauseTaskForIncident, resumePausedTask, sendSlaAlert } = useStaffAssignment();
+  const { assignment, tasks, loading, error, startTask, finishTask, deferTask, resumeTask, pauseTaskForIncident, resumePausedTask, sendSlaAlert, checkInShift, checkOutShift } = useStaffAssignment();
+  const { data: myPosition } = useMyPositionAssignment();
+  const [checkingOut, setCheckingOut] = useState(false);
   const { submitShortageReport } = useShortageReports();
   const { myIncidents, myResolvedCount, startIncident, resolveIncident, reassignIncident, createIncident } = useIncidents();
   const [shortageSubmitting, setShortageSubmitting] = useState(false);
@@ -237,8 +245,55 @@ const StaffView = () => {
             <p className="text-sm text-muted-foreground">משמרת {assignment.shift_type === "morning" ? "בוקר" : "ערב"}</p>
           </div>
           <p className="text-3xl font-black text-primary">בהצלחה! 💪</p>
-          <button onClick={() => setScreen("home")} className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4">
+          <button
+            onClick={() => setScreen(assignment?.shift_started_at ? "home" : "checkin")}
+            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
+          >
             <Play size={22} /> יאללה, מתחילים
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (screen === "checkin") {
+    const positionName = myPosition?.staffing_positions?.name;
+    const pkgCount = myPosition?.staffing_positions?.staffing_position_packages?.length ?? 0;
+    const shiftLabel = assignment?.shift_type === "morning" ? "בוקר" : "ערב";
+    const shiftIcon = assignment?.shift_type === "morning"
+      ? <Sun size={20} className="text-amber-500" />
+      : <Moon size={20} className="text-blue-400" />;
+    const dateLabel = new Date().toLocaleDateString("he-IL", { day: "numeric", month: "long", year: "numeric" });
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm space-y-6 text-center">
+          <div className="flex items-center justify-center gap-2 text-2xl font-black">
+            {shiftIcon}
+            <span>משמרת {shiftLabel}</span>
+          </div>
+          <p className="text-muted-foreground text-sm">{dateLabel}</p>
+
+          {positionName && (
+            <div className="bg-primary/10 border-2 border-primary/20 rounded-2xl p-5 space-y-2 text-right" dir="rtl">
+              <p className="text-xs text-muted-foreground">תקן משרה</p>
+              <p className="text-lg font-bold text-primary">{positionName}</p>
+              {pkgCount > 0 && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                  <Package size={12} /> {pkgCount} חבילות עבודה
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={async () => {
+              await checkInShift();
+              setScreen("home");
+            }}
+            className="btn-action-primary w-full flex items-center justify-center gap-3 text-lg py-4"
+          >
+            <LogIn size={22} /> התחלת משמרת
           </button>
         </div>
       </div>
@@ -542,6 +597,22 @@ const StaffView = () => {
           <PackageOpen size={20} className="text-warning" />
           <span className="text-[10px] font-medium text-warning">חוסרים</span>
         </button>
+        {assignment?.shift_started_at && !assignment?.shift_ended_at && (
+          <button
+            onClick={async () => {
+              if (!window.confirm("לסיים את המשמרת?")) return;
+              setCheckingOut(true);
+              try { await checkOutShift(); } finally { setCheckingOut(false); }
+            }}
+            disabled={checkingOut}
+            className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-green-500/10 transition-colors"
+          >
+            {checkingOut
+              ? <Loader2 size={20} className="animate-spin text-green-600" />
+              : <ShiftEndIcon size={20} className="text-green-600" />}
+            <span className="text-[10px] font-medium text-green-600">סיום משמרת</span>
+          </button>
+        )}
       </div>
     </div>
   );

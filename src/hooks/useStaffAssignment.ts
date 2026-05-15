@@ -52,6 +52,9 @@ export interface AssignmentInfo {
   shift_type: "morning" | "evening";
   status: string;
   staff_name: string;
+  shift_started_at: string | null;
+  shift_ended_at: string | null;
+  position_id: string | null;
 }
 
 function parseChecklist(json: Json | null): ChecklistItem[] {
@@ -78,7 +81,7 @@ export function useStaffAssignment() {
       const today = new Date().toISOString().split("T")[0];
       const { data: assignmentData, error: aErr } = await supabase
         .from("assignments")
-        .select("id, date, shift_type, status, staff_user_id")
+        .select("id, date, shift_type, status, staff_user_id, shift_started_at, shift_ended_at, position_id")
         .eq("staff_user_id", user.id)
         .eq("date", today)
         .in("status", ["planned", "active"])
@@ -106,6 +109,9 @@ export function useStaffAssignment() {
         shift_type: assignmentData.shift_type as "morning" | "evening",
         status: assignmentData.status,
         staff_name: profile?.full_name || "",
+        shift_started_at: (assignmentData as any).shift_started_at ?? null,
+        shift_ended_at: (assignmentData as any).shift_ended_at ?? null,
+        position_id: (assignmentData as any).position_id ?? null,
       });
 
       const { data: tasksData, error: tErr } = await supabase
@@ -515,6 +521,48 @@ export function useStaffAssignment() {
     await resumeTask(paused.id);
   }, [tasks, resumeTask]);
 
+  /** Mark shift start — records shift_started_at and activates the assignment */
+  const checkInShift = useCallback(async () => {
+    if (!assignment) return;
+    const { error } = await supabase
+      .from("assignments")
+      .update({ shift_started_at: new Date().toISOString(), status: "active" } as any)
+      .eq("id", assignment.id);
+    if (error) throw error;
+
+    if (user?.id) {
+      await supabase.from("events_log").insert({
+        user_id: user.id,
+        site_id: SITE_ID,
+        assignment_id: assignment.id,
+        event_type: "shift_started" as any,
+        event_payload: {},
+      });
+    }
+    await fetchData();
+  }, [assignment, user?.id, fetchData]);
+
+  /** Mark shift end — records shift_ended_at */
+  const checkOutShift = useCallback(async () => {
+    if (!assignment) return;
+    const { error } = await supabase
+      .from("assignments")
+      .update({ shift_ended_at: new Date().toISOString(), status: "completed" } as any)
+      .eq("id", assignment.id);
+    if (error) throw error;
+
+    if (user?.id) {
+      await supabase.from("events_log").insert({
+        user_id: user.id,
+        site_id: SITE_ID,
+        assignment_id: assignment.id,
+        event_type: "shift_ended" as any,
+        event_payload: {},
+      });
+    }
+    await fetchData();
+  }, [assignment, user?.id, fetchData]);
+
   return {
     assignment,
     tasks,
@@ -530,6 +578,8 @@ export function useStaffAssignment() {
     pauseTaskForIncident,
     resumePausedTask,
     sendSlaAlert,
+    checkInShift,
+    checkOutShift,
     refetch: fetchData,
   };
 }

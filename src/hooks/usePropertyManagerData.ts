@@ -415,4 +415,171 @@ export function useCampusLocations() {
   });
 }
 
+/* ─── Auto-generate assignments from permanent position assignments ─── */
+
+/**
+ * Idempotent: creates `assignments` for any permanent position assignment
+ * that doesn't have one for today yet. Filters by day type (regular / friday_eve / holiday).
+ */
+export function useAutoGeneratePermanentAssignments() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (params: { date: string; shift: "morning" | "evening" }) => {
+      const { date, shift } = params;
+
+      // Determine today's day type
+      const dateObj = new Date(date);
+      const { data: specialDays } = await (supabase as any)
+        .from("special_calendar_days")
+        .select("date, day_type")
+        .eq("date", date);
+
+      let dayType: string = "regular";
+      const special = (specialDays || []).find((d: any) => d.date === date);
+      if (special) {
+        dayType = special.day_type === "holiday_eve" ? "friday_eve" : "holiday";
+      } else {
+        const dow = dateObj.getDay();
+        if (dow === 6) dayType = "holiday";
+        else if (dow === 5) dayType = "friday_eve";
+      }
+
+      // Fetch active permanent position assignments for the given shift
+      const { data: posAssignments, error: paErr } = await (supabase as any)
+        .from("staffing_position_assignments")
+        .select(`
+          id,
+          staffing_position_id,
+          staff_user_id,
+          applicable_day_types,
+          staffing_positions!staffing_position_id(id, shift_type, active)
+        `)
+        .lte("effective_from", date)
+        .or(`effective_until.is.null,effective_until.gte.${date}`);
+
+      if (paErr) throw paErr;
+
+      // Filter: matching shift + day type
+      const relevant = (posAssignments || []).filter((pa: any) => {
+        const pos = pa.staffing_positions;
+        if (!pos || !pos.active) return false;
+        if (pos.shift_type !== shift) return false;
+        return (pa.applicable_day_types || []).includes(dayType);
+      });
+
+      if (!relevant.length) return { generated: 0 };
+
+      // Fetch existing assignments for today (to avoid duplicates)
+      const { data: existing } = await supabase
+        .from("assignments")
+        .select("position_id, staff_user_id")
+        .eq("site_id", SITE_ID)
+        .eq("date", date)
+        .eq("shift_type", shift);
+
+      const existingKeys = new Set(
+        (existing || [])
+          .filter((a: any) => a.position_id)
+          .map((a: any) => `${a.staff_user_id}__${a.position_id}`)
+      );
+
+      // Fetch a fallback location once
+      const { data: fallbackLoc } = await supabase
+        .from("campus_locations")
+        .select("id")
+        .eq("site_id", SITE_ID)
+        .limit(1)
+        .maybeSingle();
+      const fallbackLocationId = fallbackLoc?.id || "00000000-0000-0000-0000-000000000000";
+
+      const shiftStart = shift === "morning" ? "07:00" : "16:00";
+      let generated = 0;
+
+      for (const pa of relevant) {
+        const key = `${pa.staff_user_id}__${pa.staffing_position_id}`;
+        if (existingKeys.has(key)) continue;
+
+        // Fetch work packages for this position
+        const { data: posPkgs } = await (supabase as any)
+          .from("staffing_position_packages")
+          .select("work_package_id")
+          .eq("staffing_position_id", pa.staffing_position_id);
+
+        const wpIds: string[] = (posPkgs || []).map((p: any) => p.work_package_id);
+        if (!wpIds.length) continue;
+
+        for (const wpId of wpIds) {
+          // Create one assignment per work package (matching existing convention)
+          const { data: assignment, error: aErr } = await supabase
+            .from("assignments")
+            .insert({
+              staff_user_id: pa.staff_user_id,
+              work_package_id: wpId,
+              shift_type: shift,
+              date,
+              site_id: SITE_ID,
+              created_by: user?.id || null,
+              status: "planned",
+              position_id: pa.staffing_position_id,
+            } as any)
+            .select("id")
+            .single();
+
+          if (aErr) {
+            console.error("Auto-generate assignment error:", aErr.message);
+            continue;
+          }
+
+          // Generate tasks from work_package_tasks
+          const { data: wpTasks } = await supabase
+            .from("work_package_tasks")
+            .select("*")
+            .eq("work_package_id", wpId);
+
+          if (wpTasks?.length) {
+            let cursor = shiftStart;
+            const tasksToInsert = wpTasks.map((t: any, i: number) => {
+              const startDate = new Date(`${date}T${cursor}:00`);
+              const mins = Number(t.standard_minutes) || 30;
+              const endDate = new Date(startDate.getTime() + mins * 60000);
+              cursor = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+              return {
+                assignment_id: assignment.id,
+                task_name: [t.space_type, t.description, t.cleaning_type].filter(Boolean).join(" - ") || `משימה ${i + 1}`,
+                location_id: fallbackLocationId,
+                standard_minutes: mins,
+                priority: "normal" as const,
+                checklist_json: [],
+                sequence_order: i + 1,
+                queue_order: i + 1,
+                window_start: startDate.toISOString(),
+                window_end: endDate.toISOString(),
+                status: "queued" as const,
+                source_type: "base",
+              };
+            });
+
+            await supabase.from("assigned_tasks").insert(tasksToInsert);
+          }
+        }
+
+        generated++;
+      }
+
+      return { generated };
+    },
+    onSuccess: ({ generated }: { generated: number }) => {
+      if (generated > 0) {
+        qc.invalidateQueries({ queryKey: ["pm-assignments"] });
+        toast({ title: `שובצו ${generated} עובדים אוטומטית מתקנות קבועות` });
+      }
+    },
+    onError: (err: any) => {
+      console.error("Auto-generate failed:", err.message);
+    },
+  });
+}
+
 export { SITE_ID };

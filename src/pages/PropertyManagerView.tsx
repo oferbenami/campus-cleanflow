@@ -13,18 +13,20 @@ import {
   Bell,
   Printer,
   FileDown,
+  Briefcase,
 } from "lucide-react";
 import { generateManualFormPdf } from "@/lib/generate-manual-form-pdf";
 import ManualShiftReportDialog from "@/components/shared/ManualShiftReportDialog";
 import StaffListTab from "@/components/property-manager/StaffListTab";
 import ShiftPlanningTab from "@/components/property-manager/ShiftPlanningTab";
+import StaffingPositionsTab from "@/components/property-manager/StaffingPositionsTab";
 import MasterDataTab from "@/components/property-manager/MasterDataTab";
 import WorkPackagesTab from "@/components/property-manager/WorkPackagesTab";
 import VisualControlBoard from "@/components/control-board/VisualControlBoard";
 import IncidentDispatchBoard from "@/components/incidents/IncidentDispatchBoard";
 import RealTimeAlertsTab from "@/components/property-manager/RealTimeAlertsTab";
 
-type PMTab = "staff" | "workpackages" | "planning" | "assign" | "controlBoard" | "incidents" | "alerts" | "masterdata";
+type PMTab = "staff" | "workpackages" | "planning" | "assign" | "controlBoard" | "incidents" | "alerts" | "masterdata" | "positions";
 
 const PropertyManagerView = () => {
   const [activeTab, setActiveTab] = useState<PMTab>("controlBoard");
@@ -45,6 +47,7 @@ const PropertyManagerView = () => {
     { key: "planning", label: "תכנון עתידי", icon: <CalendarPlus size={16} /> },
     { key: "incidents", label: "תקלות", icon: <ShieldAlert size={16} /> },
     { key: "workpackages", label: "חבילות עבודה", icon: <Package size={16} /> },
+    { key: "positions", label: "תקנות", icon: <Briefcase size={16} /> },
   ];
 
   const headerTabs: { key: PMTab; label: string; icon: React.ReactNode }[] = [
@@ -130,6 +133,7 @@ const PropertyManagerView = () => {
         {activeTab === "alerts" && <RealTimeAlertsTab />}
         {activeTab === "incidents" && <IncidentDispatchBoard />}
         {activeTab === "masterdata" && <MasterDataTab />}
+        {activeTab === "positions" && <StaffingPositionsTab />}
       </div>
 
       <ManualShiftReportDialog open={showManualReport} onClose={() => setShowManualReport(false)} />

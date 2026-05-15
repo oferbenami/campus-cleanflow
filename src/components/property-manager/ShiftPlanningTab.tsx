@@ -38,6 +38,7 @@ import {
   useStaffProfiles,
   useTodayAssignments,
   useCreateAssignment,
+  useAutoGeneratePermanentAssignments,
 } from "@/hooks/usePropertyManagerData";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkPackages, WorkPackageWithTasks } from "@/hooks/useWorkPackages";
@@ -94,8 +95,17 @@ const ShiftPlanningTab = ({ planDate: externalDate }: { planDate?: string }) => 
   const { data: defaultPackages = [] } = useStaffDefaultPackages();
   const setStaffDefaults = useSetStaffDefaults();
   const createAssignment = useCreateAssignment();
+  const autoGenerate = useAutoGeneratePermanentAssignments();
 
   const [shift, setShift] = useState<"morning" | "evening">("morning");
+
+  // Auto-generate permanent position assignments once when the tab loads (idempotent)
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    autoGenerate.mutate({ date: today, shift });
+  // Run only once on mount — shift changes do not retrigger to avoid duplicate generation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [assignments, setAssignments] = useState<WorkerAssignments>({});
   const [staffAvailability, setStaffAvailability] = useState<Record<string, StaffAvailability>>({});
   const [saving, setSaving] = useState(false);
